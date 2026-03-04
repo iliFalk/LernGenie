@@ -1,0 +1,5 @@
+{
+  "name": "LernQuiz Genie",
+  "description": "Automatische Quiz-Generierung aus deinen Lernmaterialien mit KI-Feedback.",
+  "requestFramePermissions": ["camera"]
+}
