@@ -16,8 +16,10 @@ import QuizView from "./components/QuizView";
 import ResultsView from "./components/ResultsView";
 import FlashcardsView from "./components/FlashcardsView";
 import StudyGuideView from "./components/StudyGuideView";
+import StatsView from "./components/StatsView";
+import SettingsView from "./components/SettingsView";
 
-type ViewState = "library" | "quiz" | "results" | "flashcards" | "study-guide";
+type ViewState = "library" | "quiz" | "results" | "flashcards" | "study-guide" | "stats" | "settings";
 
 export default function App() {
   const [view, setView] = useState<ViewState>("library");
@@ -121,11 +123,17 @@ export default function App() {
             <LibraryIcon size={20} />
             <span>Bibliothek</span>
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 cursor-not-allowed">
+          <button 
+            onClick={() => setView("stats")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${view === "stats" ? "bg-indigo-50 text-indigo-600 font-semibold" : "text-gray-500 hover:bg-gray-50"}`}
+          >
             <BarChart3 size={20} />
             <span>Statistiken</span>
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 cursor-not-allowed">
+          <button 
+            onClick={() => setView("settings")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${view === "settings" ? "bg-indigo-50 text-indigo-600 font-semibold" : "text-gray-500 hover:bg-gray-50"}`}
+          >
             <Settings size={20} />
             <span>Einstellungen</span>
           </button>
@@ -156,11 +164,17 @@ export default function App() {
             <LibraryIcon size={24} />
             <span className="text-[10px] font-bold uppercase tracking-wider">Bibliothek</span>
           </button>
-          <button className="flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] text-gray-300 cursor-not-allowed">
+          <button 
+            onClick={() => setView("stats")}
+            className={`flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] ${view === "stats" ? "text-indigo-600" : "text-gray-400"}`}
+          >
             <BarChart3 size={24} />
             <span className="text-[10px] font-bold uppercase tracking-wider">Stats</span>
           </button>
-          <button className="flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] text-gray-300 cursor-not-allowed">
+          <button 
+            onClick={() => setView("settings")}
+            className={`flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] ${view === "settings" ? "text-indigo-600" : "text-gray-400"}`}
+          >
             <Settings size={24} />
             <span className="text-[10px] font-bold uppercase tracking-wider">Settings</span>
           </button>
@@ -207,6 +221,36 @@ export default function App() {
                   onStartQuiz={handleStartQuiz}
                   onDelete={fetchPackages}
                 />
+              </motion.div>
+            )}
+
+            {view === "stats" && (
+              <motion.div
+                key="stats"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <div className="mb-8">
+                  <h2 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Deine Statistiken</h2>
+                  <p className="text-gray-500 text-sm sm:text-base">Verfolge deinen Lernfortschritt und deine Erfolge.</p>
+                </div>
+                <StatsView />
+              </motion.div>
+            )}
+
+            {view === "settings" && (
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <div className="mb-8">
+                  <h2 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Einstellungen</h2>
+                  <p className="text-gray-500 text-sm sm:text-base">Passe dein Lernerlebnis individuell an.</p>
+                </div>
+                <SettingsView />
               </motion.div>
             )}
 

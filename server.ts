@@ -73,6 +73,16 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  app.get("/api/results", (req, res) => {
+    const results = db.prepare(`
+      SELECT r.*, p.name as package_name 
+      FROM quiz_results r 
+      JOIN packages p ON r.package_id = p.id 
+      ORDER BY r.created_at ASC
+    `).all();
+    res.json(results);
+  });
+
   app.get("/api/results/:packageId", (req, res) => {
     const results = db.prepare("SELECT * FROM quiz_results WHERE package_id = ? ORDER BY created_at DESC").all(req.params.packageId);
     res.json(results);
