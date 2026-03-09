@@ -60,8 +60,8 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-10">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 font-bold hover:text-indigo-600 transition-colors">
-          <ChevronLeft size={20} />
+        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 font-bold hover:text-indigo-600 transition-colors min-h-[44px] min-w-[44px]">
+          <ChevronLeft size={24} />
           Zurück
         </button>
         <div className="text-center">

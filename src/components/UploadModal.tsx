@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
-import { X, Upload, Camera, FileText, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { X, Upload, Camera, FileText, CheckCircle2, AlertCircle, Loader2, Sparkles, Files } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { extractTextFromImage } from "../services/gemini";
+import { extractTextFromImage, generateTopicContent } from "../services/gemini";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -11,6 +11,7 @@ interface UploadModalProps {
 
 export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [step, setStep] = useState(1);
+  const [creationMode, setCreationMode] = useState<'upload' | 'generate'>('upload');
   const [name, setName] = useState("");
   const [grade, setGrade] = useState(10);
   const [files, setFiles] = useState<{ id: string; name: string; content: string; type: string; status: 'pending' | 'processing' | 'completed' | 'error' }[]>([]);
@@ -62,6 +63,35 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     }
 
     setIsProcessing(false);
+  };
+
+  const handleGenerateAI = async () => {
+    if (!name) return;
+    
+    setIsProcessing(true);
+    setProcessingMessage("KI generiert Lerninhalte...");
+    
+    const fileId = crypto.randomUUID();
+    const newFile = {
+      id: fileId,
+      name: `KI-Inhalt: ${name}`,
+      content: "",
+      type: "text/markdown",
+      status: 'processing' as const
+    };
+    
+    setFiles(prev => [...prev, newFile]);
+    
+    try {
+      const content = await generateTopicContent(name, grade);
+      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, content, status: 'completed' } : f));
+    } catch (error) {
+      console.error(error);
+      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, status: 'error' } : f));
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage("");
+    }
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -116,7 +146,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -124,12 +154,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       >
         <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg sm:text-xl font-bold">Neues Lernpaket</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <X size={20} />
+          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors">
+            <X size={24} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 sm:p-8">
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 sm:p-8">
           {step === 1 ? (
             <div className="space-y-6">
               <div>
@@ -144,13 +174,33 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
               </div>
 
               <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Wie möchtest du starten?</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setCreationMode('upload')}
+                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${creationMode === 'upload' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-700' : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200'}`}
+                  >
+                    <Files size={24} />
+                    <span className="text-xs font-bold">Eigene Dateien</span>
+                  </button>
+                  <button
+                    onClick={() => setCreationMode('generate')}
+                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${creationMode === 'generate' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-700' : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200'}`}
+                  >
+                    <Sparkles size={24} />
+                    <span className="text-xs font-bold">KI Generieren</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Klassenstufe (1-13)</label>
                 <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                   {[...Array(13)].map((_, i) => (
                     <button
                       key={i + 1}
                       onClick={() => setGrade(i + 1)}
-                      className={`py-2 rounded-lg font-medium transition-all ${grade === i + 1 ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-gray-50 text-gray-600 hover:bg-gray-100"}`}
+                      className={`h-11 rounded-lg font-medium transition-all ${grade === i + 1 ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-gray-50 text-gray-600 hover:bg-gray-100"}`}
                     >
                       {i + 1}
                     </button>
@@ -164,30 +214,50 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                   onClick={() => setStep(2)}
                   className="w-full bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Weiter zum Upload
+                  {creationMode === 'upload' ? 'Weiter zum Upload' : 'Weiter zur Generierung'}
                 </button>
               </div>
             </div>
           ) : (
             <div className="space-y-6">
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-200 rounded-3xl p-6 sm:p-10 flex flex-col items-center justify-center hover:border-indigo-400 hover:bg-indigo-50/30 transition-all cursor-pointer group"
-              >
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
-                  <Upload size={24} />
+              {creationMode === 'upload' ? (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-200 rounded-3xl p-6 sm:p-10 flex flex-col items-center justify-center hover:border-indigo-400 hover:bg-indigo-50/30 transition-all cursor-pointer group"
+                >
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
+                    <Upload size={24} />
+                  </div>
+                  <p className="font-bold text-gray-900 text-center">Dateien auswählen oder ablegen</p>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">PDF, Word, JPG, PNG (max. 10MB)</p>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    multiple 
+                    className="hidden" 
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  />
                 </div>
-                <p className="font-bold text-gray-900 text-center">Dateien auswählen oder ablegen</p>
-                <p className="text-xs sm:text-sm text-gray-500 mt-1">PDF, Word, JPG, PNG (max. 10MB)</p>
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  multiple 
-                  className="hidden" 
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                />
-              </div>
+              ) : (
+                <div className="bg-indigo-50/50 rounded-3xl p-8 border-2 border-indigo-100 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-indigo-600 mb-4">
+                    <Sparkles size={32} />
+                  </div>
+                  <h3 className="font-bold text-indigo-900 mb-2">KI-Inhalte für "{name}"</h3>
+                  <p className="text-sm text-indigo-700/70 mb-6">
+                    Unsere KI erstellt einen umfassenden Lerntext basierend auf deinem Thema und der Klassenstufe {grade}.
+                  </p>
+                  <button
+                    disabled={isProcessing || files.some(f => f.status === 'completed')}
+                    onClick={handleGenerateAI}
+                    className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                    {files.some(f => f.status === 'completed') ? 'Inhalt generiert' : 'Jetzt generieren'}
+                  </button>
+                </div>
+              )}
 
               {files.length > 0 && (
                 <div className="space-y-2">
@@ -218,9 +288,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                         </div>
                         <button 
                           onClick={() => setFiles(prev => prev.filter(f => f.id !== file.id))}
-                          className="text-gray-400 hover:text-red-500 shrink-0 ml-2"
+                          className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 shrink-0 ml-2"
                         >
-                          <X size={16} />
+                          <X size={20} />
                         </button>
                       </div>
                     ))}

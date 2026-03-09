@@ -56,7 +56,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
     <div className="max-w-3xl mx-auto">
       {/* Header / Progress */}
       <div className="flex items-center justify-between mb-8">
-        <button onClick={onCancel} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+        <button onClick={onCancel} className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors">
           <X size={24} />
         </button>
         <div className="flex-1 mx-8">
@@ -111,7 +111,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
                 key={i}
                 onClick={() => handleOptionSelect(i)}
                 disabled={isAnswered}
-                className={`w-full p-4 sm:p-5 rounded-xl sm:rounded-2xl text-left text-sm sm:text-base font-medium transition-all flex items-center justify-between border-2 ${
+                className={`w-full p-4 sm:p-5 rounded-xl sm:rounded-2xl text-left text-base font-medium transition-all flex items-center justify-between border-2 ${
                   state === "default" ? "bg-white border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30" :
                   state === "selected" ? "bg-indigo-50 border-indigo-600 text-indigo-700" :
                   state === "correct" ? "bg-emerald-50 border-emerald-500 text-emerald-700" :
@@ -145,9 +145,9 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 onClick={() => setShowHint(true)}
-                className="flex items-center gap-2 text-indigo-600 font-bold text-xs sm:text-sm hover:underline"
+                className="flex items-center gap-2 text-indigo-600 font-bold text-sm hover:underline min-h-[44px]"
               >
-                <Lightbulb size={14} />
+                <Lightbulb size={16} />
                 Brauchst du einen Hinweis?
               </motion.button>
             )}

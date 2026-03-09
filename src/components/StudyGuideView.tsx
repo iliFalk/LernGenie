@@ -54,8 +54,8 @@ export default function StudyGuideView({ package: pkg, onBack }: StudyGuideViewP
   return (
     <div className="max-w-4xl mx-auto pb-20">
       <div className="flex items-center justify-between mb-10">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 font-bold hover:text-indigo-600 transition-colors">
-          <ChevronLeft size={20} />
+        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 font-bold hover:text-indigo-600 transition-colors min-h-[44px] min-w-[44px]">
+          <ChevronLeft size={24} />
           Zurück
         </button>
         <div className="flex gap-3">
@@ -85,7 +85,7 @@ export default function StudyGuideView({ package: pkg, onBack }: StudyGuideViewP
         </div>
         
         <div className="p-6 sm:p-12 prose prose-indigo max-w-none">
-          <div className="markdown-body text-sm sm:text-base">
+          <div className="markdown-body text-base">
             <Markdown>{guide}</Markdown>
           </div>
         </div>

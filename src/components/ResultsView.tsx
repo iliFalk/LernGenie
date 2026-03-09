@@ -45,9 +45,9 @@ export default function ResultsView({ result, package: pkg, onBack, onShowFlashc
           </p>
           <button 
             onClick={onShowStudyGuide}
-            className="mt-3 text-[10px] sm:text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center justify-center gap-1 group"
+            className="mt-3 min-h-[44px] text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center justify-center gap-2 group"
           >
-            <Sparkles size={10} className="group-hover:scale-110 transition-transform" /> 
+            <Sparkles size={14} className="group-hover:scale-110 transition-transform" /> 
             Study Guide generieren
           </button>
         </div>
@@ -64,7 +64,7 @@ export default function ResultsView({ result, package: pkg, onBack, onShowFlashc
           </div>
           <ul className="space-y-2 sm:space-y-3">
             {analysis.strengths.map((s, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm sm:text-base text-gray-700 bg-emerald-50/30 p-3 rounded-xl border border-emerald-50">
+              <li key={i} className="flex items-start gap-3 text-base text-gray-700 bg-emerald-50/30 p-3 rounded-xl border border-emerald-50">
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-2 shrink-0" />
                 {s}
               </li>
@@ -82,7 +82,7 @@ export default function ResultsView({ result, package: pkg, onBack, onShowFlashc
           </div>
           <ul className="space-y-2 sm:space-y-3">
             {analysis.growthAreas.map((g, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm sm:text-base text-gray-700 bg-amber-50/30 p-3 rounded-xl border border-amber-50">
+              <li key={i} className="flex items-start gap-3 text-base text-gray-700 bg-amber-50/30 p-3 rounded-xl border border-amber-50">
                 <div className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-2 shrink-0" />
                 {g}
               </li>

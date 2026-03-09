@@ -43,12 +43,12 @@ export default function Library({ packages, onStartQuiz, onDelete }: LibraryProp
           onClick={() => onStartQuiz(pkg)}
           className="group bg-white p-5 sm:p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 hover:border-indigo-100 transition-all cursor-pointer relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 p-3 sm:p-4 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
             <button 
               onClick={(e) => handleDelete(e, pkg.id)}
-              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+              className="w-11 h-11 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
             >
-              <Trash2 size={18} />
+              <Trash2 size={20} />
             </button>
           </div>
 

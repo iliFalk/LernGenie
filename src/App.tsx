@@ -135,30 +135,32 @@ export default function App() {
       {/* Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30">
         {/* Floating Action Button above footer */}
-        <div className="flex justify-center mb-4">
-          <button 
-            onClick={() => setIsUploadModalOpen(true)}
-            className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-xl shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95 transition-transform border border-indigo-500"
-          >
-            <Plus size={24} />
-            <span className="text-sm">Neues Paket</span>
-          </button>
-        </div>
+        {view === "library" && (
+          <div className="flex justify-center mb-4">
+            <button 
+              onClick={() => setIsUploadModalOpen(true)}
+              className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-xl shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95 transition-transform border border-indigo-500 min-h-[44px]"
+            >
+              <Plus size={24} />
+              <span className="text-sm">Neues Paket</span>
+            </button>
+          </div>
+        )}
 
         {/* Footer Navigation */}
-        <div className="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-around pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+        <div className="bg-white border-t border-gray-200 px-6 py-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
           <button 
             onClick={() => setView("library")}
-            className={`flex flex-col items-center gap-1 ${view === "library" ? "text-indigo-600" : "text-gray-400"}`}
+            className={`flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] ${view === "library" ? "text-indigo-600" : "text-gray-400"}`}
           >
             <LibraryIcon size={24} />
             <span className="text-[10px] font-bold uppercase tracking-wider">Bibliothek</span>
           </button>
-          <button className="flex flex-col items-center gap-1 text-gray-300 cursor-not-allowed">
+          <button className="flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] text-gray-300 cursor-not-allowed">
             <BarChart3 size={24} />
             <span className="text-[10px] font-bold uppercase tracking-wider">Stats</span>
           </button>
-          <button className="flex flex-col items-center gap-1 text-gray-300 cursor-not-allowed">
+          <button className="flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] text-gray-300 cursor-not-allowed">
             <Settings size={24} />
             <span className="text-[10px] font-bold uppercase tracking-wider">Settings</span>
           </button>
@@ -166,7 +168,7 @@ export default function App() {
       </div>
 
       {/* Mobile Top Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-30">
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-100 px-6 py-4 pt-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-between z-30">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-indigo-100">
             <GraduationCap size={18} />
@@ -176,7 +178,7 @@ export default function App() {
       </div>
 
       {/* Main Content */}
-      <main className="lg:pl-64 min-h-screen pb-40 lg:pb-0 pt-16 lg:pt-0">
+      <main className="lg:pl-64 min-h-screen pb-40 lg:pb-0 pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-0">
         <div className="max-w-5xl mx-auto p-4 sm:p-8 pt-8 lg:pt-12">
           <AnimatePresence mode="wait">
             {view === "library" && (
@@ -261,7 +263,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center"
+            className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center px-safe py-safe"
           >
             <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
             <p className="text-xl font-bold text-gray-800 mb-2">{loadingMessage}</p>

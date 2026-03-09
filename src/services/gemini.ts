@@ -1,16 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Question, AnalysisData } from "../types";
+import * as Prompts from "../prompts";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export async function extractTextFromImage(base64Data: string, mimeType: string): Promise<string> {
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash", // Using flash for fast OCR
+    model: "gemini-3-flash-preview", // Using flash for fast OCR
     contents: [
       {
         parts: [
           { inlineData: { data: base64Data, mimeType } },
-          { text: "Extrahiere den gesamten Text aus diesem Bild. Wenn es sich um handgeschriebene Notizen handelt, transkribiere sie so genau wie möglich. Gib nur den extrahierten Text zurück." }
+          { text: Prompts.OCR_PROMPT }
         ]
       }
     ]
@@ -20,19 +21,8 @@ export async function extractTextFromImage(base64Data: string, mimeType: string)
 
 export async function generateQuiz(content: string, grade: number, count: number = 10): Promise<Question[]> {
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-pro", // Pro for better reasoning/quality
-    contents: `Analysiere das folgende Lernmaterial und erstelle ein Quiz mit ${count} Multiple-Choice-Fragen für die Klassenstufe ${grade}.
-    
-    WICHTIGE REGELN:
-    1. Alle Fragen MÜSSEN ausschließlich auf dem bereitgestellten Inhalt basieren.
-    2. Die Sprache muss für Klassenstufe ${grade} angemessen sein.
-    3. Jede Frage braucht:
-       - Einen hilfreichen Hinweis (Hint), der den Nutzer zum Nachdenken anregt, ohne die Lösung direkt zu verraten.
-       - Eine detaillierte Erklärung, warum die richtige Antwort korrekt ist, basierend auf dem Material.
-       - Ein Thema (Topic), zu dem die Frage gehört.
-    
-    Material:
-    ${content}`,
+    model: "gemini-3.1-pro-preview", // Pro for better reasoning/quality
+    contents: Prompts.QUIZ_PROMPT(count, grade, content),
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -70,11 +60,8 @@ export async function analyzePerformance(results: { question: Question; isCorrec
   }));
 
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
-    contents: `Analysiere die folgende Quiz-Performance und gib Stärken, Lernbereiche und eine Themen-Statistik zurück.
-    
-    Performance:
-    ${JSON.stringify(history)}`,
+    model: "gemini-3-flash-preview",
+    contents: Prompts.PERFORMANCE_ANALYSIS_PROMPT(JSON.stringify(history)),
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -107,9 +94,8 @@ export async function analyzePerformance(results: { question: Question; isCorrec
 
 export async function generateFlashcards(content: string): Promise<{ front: string; back: string }[]> {
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
-    contents: `Erstelle 10 Karteikarten (Flashcards) aus dem folgenden Material.
-    Material: ${content}`,
+    model: "gemini-3-flash-preview",
+    contents: Prompts.FLASHCARDS_PROMPT(content),
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -129,9 +115,16 @@ export async function generateFlashcards(content: string): Promise<{ front: stri
 
 export async function generateStudyGuide(content: string): Promise<string> {
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
-    contents: `Erstelle eine strukturierte Zusammenfassung (Study Guide) des folgenden Materials in Markdown-Format.
-    Material: ${content}`
+    model: "gemini-3-flash-preview",
+    contents: Prompts.STUDY_GUIDE_PROMPT(content)
+  });
+  return response.text || "";
+}
+
+export async function generateTopicContent(topic: string, grade: number): Promise<string> {
+  const response = await ai.models.generateContent({
+    model: "gemini-3.1-pro-preview",
+    contents: Prompts.TOPIC_GENERATION_PROMPT(topic, grade)
   });
   return response.text || "";
 }
