@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { X, Upload, Camera, FileText, CheckCircle2, AlertCircle, Loader2, Sparkles, Files } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { extractTextFromImage, generateTopicContent } from "../services/gemini";
+import { authFetch } from "../services/auth";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -112,7 +113,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     const packageId = crypto.randomUUID();
     
     // Create package
-    await fetch("/api/packages", {
+    await authFetch("/api/packages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: packageId, name, grade })
@@ -121,7 +122,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     // Create materials (only completed ones)
     const completedFiles = files.filter(f => f.status === 'completed');
     for (const file of completedFiles) {
-      await fetch("/api/materials", {
+      await authFetch("/api/materials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -150,11 +151,11 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white w-full max-w-2xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]"
+        className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh] transition-colors"
       >
-        <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg sm:text-xl font-bold">Neues Lernpaket</h2>
-          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors">
+        <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <h2 className="text-lg sm:text-xl font-bold dark:text-white">Neues Lernpaket</h2>
+          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500 dark:text-gray-400">
             <X size={24} />
           </button>
         </div>
@@ -163,29 +164,29 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
           {step === 1 ? (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Name des Themas</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Name des Themas</label>
                 <input 
                   type="text" 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="z.B. Photosynthese, Französische Revolution..."
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">Wie möchtest du starten?</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Wie möchtest du starten?</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setCreationMode('upload')}
-                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${creationMode === 'upload' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-700' : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200'}`}
+                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${creationMode === 'upload' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-600'}`}
                   >
                     <Files size={24} />
                     <span className="text-xs font-bold">Eigene Dateien</span>
                   </button>
                   <button
                     onClick={() => setCreationMode('generate')}
-                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${creationMode === 'generate' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-700' : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200'}`}
+                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${creationMode === 'generate' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-600'}`}
                   >
                     <Sparkles size={24} />
                     <span className="text-xs font-bold">KI Generieren</span>
@@ -194,13 +195,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Klassenstufe (1-13)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Klassenstufe (1-13)</label>
                 <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                   {[...Array(13)].map((_, i) => (
                     <button
                       key={i + 1}
                       onClick={() => setGrade(i + 1)}
-                      className={`h-11 rounded-lg font-medium transition-all ${grade === i + 1 ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-gray-50 text-gray-600 hover:bg-gray-100"}`}
+                      className={`h-11 rounded-lg font-medium transition-all ${grade === i + 1 ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none" : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                     >
                       {i + 1}
                     </button>
@@ -212,7 +213,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 <button 
                   disabled={!name}
                   onClick={() => setStep(2)}
-                  className="w-full bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {creationMode === 'upload' ? 'Weiter zum Upload' : 'Weiter zur Generierung'}
                 </button>
@@ -223,13 +224,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
               {creationMode === 'upload' ? (
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-200 rounded-3xl p-6 sm:p-10 flex flex-col items-center justify-center hover:border-indigo-400 hover:bg-indigo-50/30 transition-all cursor-pointer group"
+                  className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-3xl p-6 sm:p-10 flex flex-col items-center justify-center hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20 transition-all cursor-pointer group"
                 >
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
                     <Upload size={24} />
                   </div>
-                  <p className="font-bold text-gray-900 text-center">Dateien auswählen oder ablegen</p>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">PDF, Word, JPG, PNG (max. 10MB)</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-center">Dateien auswählen oder ablegen</p>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">PDF, Word, JPG, PNG (max. 10MB)</p>
                   <input 
                     type="file" 
                     ref={fileInputRef}
@@ -240,12 +241,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                   />
                 </div>
               ) : (
-                <div className="bg-indigo-50/50 rounded-3xl p-8 border-2 border-indigo-100 flex flex-col items-center text-center">
-                  <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-indigo-600 mb-4">
+                <div className="bg-indigo-50/50 dark:bg-indigo-900/20 rounded-3xl p-8 border-2 border-indigo-100 dark:border-indigo-900 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-white dark:bg-gray-900 rounded-2xl shadow-sm flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4">
                     <Sparkles size={32} />
                   </div>
-                  <h3 className="font-bold text-indigo-900 mb-2">KI-Inhalte für "{name}"</h3>
-                  <p className="text-sm text-indigo-700/70 mb-6">
+                  <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-2">KI-Inhalte für "{name}"</h3>
+                  <p className="text-sm text-indigo-700/70 dark:text-indigo-400/70 mb-6">
                     Unsere KI erstellt einen umfassenden Lerntext basierend auf deinem Thema und der Klassenstufe {grade}.
                   </p>
                   <button
@@ -261,10 +262,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
               {files.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-gray-700">Dateien ({files.length})</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dateien ({files.length})</h4>
                   <div className="space-y-2">
                     {files.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                      <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700">
                         <div className="flex items-center gap-3 overflow-hidden">
                           <div className="shrink-0">
                             {file.status === 'processing' ? (
@@ -278,8 +279,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                             )}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-medium truncate">{file.name}</span>
-                            <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+                            <span className="text-sm font-medium dark:text-white truncate">{file.name}</span>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               {file.status === 'processing' ? 'Wird verarbeitet...' : 
                                file.status === 'completed' ? 'Bereit' : 
                                file.status === 'error' ? 'Fehler' : 'Warten...'}
@@ -301,14 +302,14 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <button 
                   onClick={() => setStep(1)}
-                  className="order-2 sm:order-1 flex-1 bg-gray-100 text-gray-700 py-3 sm:py-4 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+                  className="order-2 sm:order-1 flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 sm:py-4 rounded-2xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
                 >
                   Zurück
                 </button>
                 <button 
                   disabled={!files.some(f => f.status === 'completed') || files.some(f => f.status === 'processing' || f.status === 'pending') || isProcessing}
                   onClick={handleSave}
-                  className="order-1 sm:order-2 flex-[2] bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="order-1 sm:order-2 flex-[2] bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isProcessing ? (
                     <>

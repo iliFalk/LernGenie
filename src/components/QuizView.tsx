@@ -56,22 +56,22 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
     <div className="max-w-3xl mx-auto">
       {/* Header / Progress */}
       <div className="flex items-center justify-between mb-8">
-        <button onClick={onCancel} className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors">
+        <button onClick={onCancel} className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors text-gray-500 dark:text-gray-400">
           <X size={24} />
         </button>
         <div className="flex-1 mx-8">
-          <div className="flex justify-between text-sm font-bold text-gray-500 mb-2">
+          <div className="flex justify-between text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">
             <span>Frage {currentIndex + 1} von {questions.length}</span>
             <div className="flex gap-4">
-              <span className="text-emerald-600 flex items-center gap-1">
+              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 size={14} /> {correctCount}
               </span>
-              <span className="text-rose-600 flex items-center gap-1">
+              <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
                 <AlertCircle size={14} /> {incorrectCount}
               </span>
             </div>
           </div>
-          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
@@ -86,13 +86,13 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
         key={currentIndex}
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="bg-white p-6 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl shadow-indigo-100/20 border border-gray-100"
+        className="bg-white dark:bg-gray-800 p-6 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl shadow-indigo-100/20 dark:shadow-none border border-gray-100 dark:border-gray-700 transition-colors"
       >
         <div className="mb-6 sm:mb-8">
-          <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3 sm:mb-4">
+          <span className="inline-block px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3 sm:mb-4">
             {currentQuestion.topic}
           </span>
-          <h3 className="text-xl sm:text-2xl font-bold leading-tight">{currentQuestion.text}</h3>
+          <h3 className="text-xl sm:text-2xl font-bold leading-tight text-gray-900 dark:text-white">{currentQuestion.text}</h3>
         </div>
 
         <div className="space-y-2 sm:space-y-3">
@@ -112,11 +112,11 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
                 onClick={() => handleOptionSelect(i)}
                 disabled={isAnswered}
                 className={`w-full p-4 sm:p-5 rounded-xl sm:rounded-2xl text-left text-base font-medium transition-all flex items-center justify-between border-2 ${
-                  state === "default" ? "bg-white border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30" :
-                  state === "selected" ? "bg-indigo-50 border-indigo-600 text-indigo-700" :
-                  state === "correct" ? "bg-emerald-50 border-emerald-500 text-emerald-700" :
-                  state === "incorrect" ? "bg-rose-50 border-rose-500 text-rose-700" :
-                  "bg-white border-gray-50 text-gray-400 opacity-50"
+                  state === "default" ? "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20 text-gray-900 dark:text-white" :
+                  state === "selected" ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-600 dark:border-indigo-500 text-indigo-700 dark:text-indigo-300" :
+                  state === "correct" ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300" :
+                  state === "incorrect" ? "bg-rose-50 dark:bg-rose-900/30 border-rose-500 dark:border-rose-400 text-rose-700 dark:text-rose-300" :
+                  "bg-white dark:bg-gray-900 border-gray-50 dark:border-gray-800 text-gray-400 dark:text-gray-600 opacity-50"
                 }`}
               >
                 <div className="flex items-center gap-3 sm:gap-4">
@@ -124,7 +124,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
                     state === "selected" ? "bg-indigo-600 text-white" :
                     state === "correct" ? "bg-emerald-500 text-white" :
                     state === "incorrect" ? "bg-rose-500 text-white" :
-                    "bg-gray-100 text-gray-500"
+                    "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                   }`}>
                     {String.fromCharCode(65 + i)}
                   </span>
@@ -145,7 +145,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 onClick={() => setShowHint(true)}
-                className="flex items-center gap-2 text-indigo-600 font-bold text-sm hover:underline min-h-[44px]"
+                className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-sm hover:underline min-h-[44px]"
               >
                 <Lightbulb size={16} />
                 Brauchst du einen Hinweis?
@@ -156,10 +156,10 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                className="bg-amber-50 border border-amber-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex gap-3"
+                className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/50 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex gap-3"
               >
-                <Lightbulb className="text-amber-500 shrink-0" size={18} />
-                <p className="text-xs sm:text-sm text-amber-800 italic">{currentQuestion.hint}</p>
+                <Lightbulb className="text-amber-500 dark:text-amber-400 shrink-0" size={18} />
+                <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200 italic">{currentQuestion.hint}</p>
               </motion.div>
             )}
 
@@ -167,20 +167,20 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl ${selectedOption === currentQuestion.correctIndex ? "bg-emerald-50 border border-emerald-100" : "bg-rose-50 border border-rose-100"}`}
+                className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl ${selectedOption === currentQuestion.correctIndex ? "bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/50" : "bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50"}`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   {selectedOption === currentQuestion.correctIndex ? (
-                    <span className="text-emerald-700 font-bold flex items-center gap-1 uppercase text-[10px] tracking-widest">
+                    <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1 uppercase text-[10px] tracking-widest">
                       <CheckCircle2 size={12} /> Richtig!
                     </span>
                   ) : (
-                    <span className="text-rose-700 font-bold flex items-center gap-1 uppercase text-[10px] tracking-widest">
+                    <span className="text-rose-700 dark:text-rose-400 font-bold flex items-center gap-1 uppercase text-[10px] tracking-widest">
                       <AlertCircle size={12} /> Nicht ganz
                     </span>
                   )}
                 </div>
-                <p className="text-gray-800 text-xs sm:text-sm leading-relaxed">
+                <p className="text-gray-800 dark:text-gray-200 text-xs sm:text-sm leading-relaxed">
                   <span className="font-bold">Erklärung:</span> {currentQuestion.explanation}
                 </p>
               </motion.div>

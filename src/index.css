@@ -4,6 +4,8 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   * {
     scrollbar-width: none;
@@ -53,12 +55,12 @@
 }
 
 /* Markdown Styling */
-.markdown-body h1 { @apply text-3xl font-black mb-6 mt-8 text-gray-900 border-b pb-2; }
-.markdown-body h2 { @apply text-2xl font-bold mb-4 mt-6 text-gray-800; }
-.markdown-body h3 { @apply text-xl font-bold mb-3 mt-5 text-gray-800; }
-.markdown-body p { @apply text-gray-700 leading-relaxed mb-4; }
+.markdown-body h1 { @apply text-3xl font-black mb-6 mt-8 text-gray-900 dark:text-white border-b dark:border-gray-700 pb-2; }
+.markdown-body h2 { @apply text-2xl font-bold mb-4 mt-6 text-gray-800 dark:text-gray-100; }
+.markdown-body h3 { @apply text-xl font-bold mb-3 mt-5 text-gray-800 dark:text-gray-200; }
+.markdown-body p { @apply text-gray-700 dark:text-gray-300 leading-relaxed mb-4; }
 .markdown-body ul { @apply list-disc pl-6 mb-4 space-y-2; }
 .markdown-body ol { @apply list-decimal pl-6 mb-4 space-y-2; }
-.markdown-body li { @apply text-gray-700; }
-.markdown-body strong { @apply font-bold text-gray-900; }
-.markdown-body blockquote { @apply border-l-4 border-indigo-200 pl-4 italic text-gray-600 mb-4; }
+.markdown-body li { @apply text-gray-700 dark:text-gray-300; }
+.markdown-body strong { @apply font-bold text-gray-900 dark:text-white; }
+.markdown-body blockquote { @apply border-l-4 border-indigo-200 dark:border-indigo-900 pl-4 italic text-gray-600 dark:text-gray-400 mb-4; }

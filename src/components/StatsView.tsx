@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import { QuizResult } from "../types";
 import { TrendingUp, Target, Award, Clock, ArrowLeft } from "lucide-react";
+import { authFetch } from "../services/auth";
 
 interface ExtendedResult extends QuizResult {
   package_name: string;
@@ -20,7 +21,7 @@ export default function StatsView() {
 
   const fetchResults = async () => {
     try {
-      const res = await fetch("/api/results");
+      const res = await authFetch("/api/results");
       const data = await res.json();
       setResults(data);
     } catch (error) {
@@ -40,12 +41,12 @@ export default function StatsView() {
 
   if (results.length === 0) {
     return (
-      <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
-        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+      <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
+        <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300 dark:text-gray-600">
           <TrendingUp size={32} />
         </div>
-        <h3 className="text-xl font-bold text-gray-800 mb-2">Noch keine Statistiken</h3>
-        <p className="text-gray-500 max-w-xs mx-auto">
+        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Noch keine Statistiken</h3>
+        <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
           Schließe dein erstes Quiz ab, um deinen Lernfortschritt hier zu verfolgen.
         </p>
       </div>
@@ -84,49 +85,49 @@ export default function StatsView() {
     <div className="space-y-8 pb-20 lg:pb-0">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center">
               <Award size={20} />
             </div>
-            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Ø Genauigkeit</span>
+            <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ø Genauigkeit</span>
           </div>
-          <div className="text-3xl font-bold text-gray-900">{Math.round(avgAccuracy)}%</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-white">{Math.round(avgAccuracy)}%</div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
               <Target size={20} />
             </div>
-            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Fragen gelöst</span>
+            <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fragen gelöst</span>
           </div>
-          <div className="text-3xl font-bold text-gray-900">{totalQuestions}</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-white">{totalQuestions}</div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center">
               <Clock size={20} />
             </div>
-            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Quizzes</span>
+            <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quizzes</span>
           </div>
-          <div className="text-3xl font-bold text-gray-900">{results.length}</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-white">{results.length}</div>
         </div>
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Line Chart */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <TrendingUp size={20} className="text-indigo-600" />
+        <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
+          <h3 className="text-lg font-bold mb-6 flex items-center gap-2 dark:text-white">
+            <TrendingUp size={20} className="text-indigo-600 dark:text-indigo-400" />
             Lernfortschritt
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={lineData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#F3F4F6'} />
                 <XAxis 
                   dataKey="date" 
                   axisLine={false} 
@@ -145,7 +146,9 @@ export default function StatsView() {
                     borderRadius: '16px', 
                     border: 'none', 
                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                    padding: '12px'
+                    padding: '12px',
+                    backgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#FFFFFF',
+                    color: document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000'
                   }}
                 />
                 <Line 
@@ -162,31 +165,33 @@ export default function StatsView() {
         </div>
 
         {/* Bar Chart */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <Award size={20} className="text-emerald-600" />
+        <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
+          <h3 className="text-lg font-bold mb-6 flex items-center gap-2 dark:text-white">
+            <Award size={20} className="text-emerald-600 dark:text-emerald-400" />
             Performance nach Fach
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#F3F4F6'} />
                 <XAxis type="number" domain={[0, 100]} hide />
                 <YAxis 
                   dataKey="name" 
                   type="category" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 12, fill: '#4B5563', fontWeight: 600 }}
+                  tick={{ fontSize: 12, fill: document.documentElement.classList.contains('dark') ? '#9CA3AF' : '#4B5563', fontWeight: 600 }}
                   width={100}
                 />
                 <Tooltip 
-                  cursor={{ fill: '#F9FAFB' }}
+                  cursor={{ fill: document.documentElement.classList.contains('dark') ? '#374151' : '#F9FAFB' }}
                   contentStyle={{ 
                     borderRadius: '16px', 
                     border: 'none', 
                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                    padding: '12px'
+                    padding: '12px',
+                    backgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#FFFFFF',
+                    color: document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000'
                   }}
                 />
                 <Bar dataKey="accuracy" radius={[0, 8, 8, 0]} barSize={24}>

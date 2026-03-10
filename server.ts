@@ -13,6 +13,7 @@ const db = new Database("study_quiz.db");
 db.exec(`
   CREATE TABLE IF NOT EXISTS packages (
     id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
     name TEXT NOT NULL,
     grade INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -29,6 +30,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS quiz_results (
     id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
     package_id TEXT NOT NULL,
     score INTEGER NOT NULL,
     total INTEGER NOT NULL,
@@ -45,52 +47,78 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
 
+  // Helper to handle user_id from headers
+  const getUserId = (req: express.Request) => {
+    return req.headers["x-user-id"] as string || "default_user";
+  };
+
   // API Routes
   app.get("/api/packages", (req, res) => {
-    const packages = db.prepare("SELECT * FROM packages ORDER BY created_at DESC").all();
+    const userId = getUserId(req);
+    const packages = db.prepare("SELECT * FROM packages WHERE user_id = ? ORDER BY created_at DESC").all(userId);
     res.json(packages);
   });
 
   app.post("/api/packages", (req, res) => {
     const { id, name, grade } = req.body;
-    db.prepare("INSERT INTO packages (id, name, grade) VALUES (?, ?, ?)").run(id, name, grade);
+    const userId = getUserId(req);
+    db.prepare("INSERT INTO packages (id, user_id, name, grade) VALUES (?, ?, ?, ?)").run(id, userId, name, grade);
     res.json({ success: true });
   });
 
   app.delete("/api/packages/:id", (req, res) => {
+    const userId = getUserId(req);
+    // Ensure user owns the package
+    const pkg = db.prepare("SELECT id FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId);
+    if (!pkg) return res.status(403).json({ error: "Unauthorized" });
+    
     db.prepare("DELETE FROM packages WHERE id = ?").run(req.params.id);
     res.json({ success: true });
   });
 
   app.get("/api/packages/:id/materials", (req, res) => {
+    const userId = getUserId(req);
+    // Verify ownership
+    const pkg = db.prepare("SELECT id FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId);
+    if (!pkg) return res.status(403).json({ error: "Unauthorized" });
+
     const materials = db.prepare("SELECT * FROM materials WHERE package_id = ?").all(req.params.id);
     res.json(materials);
   });
 
   app.post("/api/materials", (req, res) => {
     const { id, package_id, name, content_text, mime_type } = req.body;
+    const userId = getUserId(req);
+    // Verify ownership of the parent package
+    const pkg = db.prepare("SELECT id FROM packages WHERE id = ? AND user_id = ?").get(package_id, userId);
+    if (!pkg) return res.status(403).json({ error: "Unauthorized" });
+
     db.prepare("INSERT INTO materials (id, package_id, name, content_text, mime_type) VALUES (?, ?, ?, ?, ?)").run(id, package_id, name, content_text, mime_type);
     res.json({ success: true });
   });
 
   app.get("/api/results", (req, res) => {
+    const userId = getUserId(req);
     const results = db.prepare(`
       SELECT r.*, p.name as package_name 
       FROM quiz_results r 
       JOIN packages p ON r.package_id = p.id 
+      WHERE r.user_id = ?
       ORDER BY r.created_at ASC
-    `).all();
+    `).all(userId);
     res.json(results);
   });
 
   app.get("/api/results/:packageId", (req, res) => {
-    const results = db.prepare("SELECT * FROM quiz_results WHERE package_id = ? ORDER BY created_at DESC").all(req.params.packageId);
+    const userId = getUserId(req);
+    const results = db.prepare("SELECT * FROM quiz_results WHERE package_id = ? AND user_id = ? ORDER BY created_at DESC").all(req.params.packageId, userId);
     res.json(results);
   });
 
   app.post("/api/results", (req, res) => {
     const { id, package_id, score, total, accuracy, analysis } = req.body;
-    db.prepare("INSERT INTO quiz_results (id, package_id, score, total, accuracy, analysis) VALUES (?, ?, ?, ?, ?, ?)").run(id, package_id, score, total, accuracy, analysis);
+    const userId = getUserId(req);
+    db.prepare("INSERT INTO quiz_results (id, user_id, package_id, score, total, accuracy, analysis) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, userId, package_id, score, total, accuracy, analysis);
     res.json({ success: true });
   });
 
