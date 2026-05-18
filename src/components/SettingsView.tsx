@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { User, GraduationCap, Moon, Bell, Shield, LogOut, ChevronRight, Save, CheckCircle2 } from "lucide-react";
-import { motion } from "motion/react";
+import { User, GraduationCap, Moon, Bell, Shield, LogOut, ChevronRight, Save, CheckCircle2, Code, Key } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface SettingsViewProps {
   darkMode?: boolean;
@@ -15,6 +15,11 @@ export default function SettingsView({ darkMode: propDarkMode, onToggleDarkMode 
   const [isDarkMode, setIsDarkMode] = useState(() => propDarkMode ?? document.documentElement.classList.contains("dark"));
   const [notificationTime, setNotificationTime] = useState(() => localStorage.getItem("notification_time") || "08:00");
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => localStorage.getItem("notifications_enabled") === "true");
+  
+  const [isDevMode, setIsDevMode] = useState(() => localStorage.getItem("dev_mode_enabled") === "true");
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("custom_api_key") || "");
+  const [aiProvider, setAiProvider] = useState(() => localStorage.getItem("ai_provider") || "gemini");
+  const [modelName, setModelName] = useState(() => localStorage.getItem("ai_model") || "");
 
   useEffect(() => {
     if (propDarkMode !== undefined) {
@@ -27,6 +32,10 @@ export default function SettingsView({ darkMode: propDarkMode, onToggleDarkMode 
     localStorage.setItem("user_grade", grade);
     localStorage.setItem("notification_time", notificationTime);
     localStorage.setItem("notifications_enabled", isNotificationsEnabled.toString());
+    localStorage.setItem("dev_mode_enabled", isDevMode.toString());
+    localStorage.setItem("custom_api_key", apiKey);
+    localStorage.setItem("ai_provider", aiProvider);
+    localStorage.setItem("ai_model", modelName);
     setShowSaved(true);
     setTimeout(() => setShowSaved(false), 3000);
   };
@@ -171,6 +180,99 @@ export default function SettingsView({ darkMode: propDarkMode, onToggleDarkMode 
               </motion.div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Developer Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
+        <div className="p-4 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2">Entwickler</span>
+        </div>
+        
+        <div className="divide-y divide-gray-50 dark:divide-gray-700">
+          <button 
+            onClick={() => setIsDevMode(!isDevMode)}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                <Code size={20} />
+              </div>
+              <div className="text-left">
+                <div className="font-bold text-gray-900 dark:text-white">Developer Mode</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Erweiterte Optionen freischalten</div>
+              </div>
+            </div>
+            <div className={`w-12 h-6 rounded-full relative transition-colors ${isDevMode ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
+              <motion.div 
+                animate={{ x: isDevMode ? 24 : 4 }}
+                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+              />
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {isDevMode && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="px-6 py-4 space-y-4"
+              >
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      AI Provider
+                    </label>
+                    <select 
+                      value={aiProvider}
+                      onChange={(e) => setAiProvider(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-200 outline-none transition-all appearance-none"
+                    >
+                      <option value="gemini">Default (Gemini)</option>
+                      <option value="openrouter">OpenRouter</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      <Key size={14} />
+                      API Key
+                    </label>
+                    <input 
+                      type="password" 
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900 outline-none transition-all font-mono text-sm"
+                      placeholder={aiProvider === 'gemini' ? "Dein Gemini API Key..." : "Dein OpenRouter API Key..."}
+                    />
+                  </div>
+
+                  {aiProvider === 'openrouter' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        OpenRouter Model
+                      </label>
+                      <input 
+                        type="text" 
+                        value={modelName}
+                        onChange={(e) => setModelName(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                        placeholder="google/gemini-2.0-flash-exp:free"
+                      />
+                    </motion.div>
+                  )}
+
+                  <p className="text-[10px] text-gray-400">
+                    Diese Einstellungen ermöglichen es dir, eigene API-Endpunkte (wie OpenRouter) zu nutzen. Die Schlüssel werden nur lokal in deinem Browser gespeichert.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

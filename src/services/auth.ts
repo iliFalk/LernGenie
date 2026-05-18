@@ -17,10 +17,20 @@ export const getUserId = (): string => {
 
 export const authFetch = (url: string, options: RequestInit = {}) => {
   const userId = getUserId();
-  const headers = {
-    ...options.headers,
+  
+  const headers: Record<string, string> = {
+    ...Object.fromEntries(Object.entries(options.headers || {})),
     "x-user-id": userId,
   };
+
+  // Include developer settings if present
+  const customKey = localStorage.getItem("custom_api_key");
+  const aiProvider = localStorage.getItem("ai_provider");
+  const aiModel = localStorage.getItem("ai_model");
+
+  if (customKey) headers["x-ai-key"] = customKey;
+  if (aiProvider) headers["x-ai-provider"] = aiProvider;
+  if (aiModel) headers["x-ai-model"] = aiModel;
 
   return fetch(url, { ...options, headers });
 };

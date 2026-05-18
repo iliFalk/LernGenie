@@ -3,6 +3,8 @@ import { createServer as createViteServer } from "vite";
 import Database from "better-sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
+import { callLLM } from "./llm";
+import * as Prompts from "./src/prompts/index";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +53,122 @@ async function startServer() {
   const getUserId = (req: express.Request) => {
     return req.headers["x-user-id"] as string || "default_user";
   };
+
+  const getAIConfig = (req: express.Request) => {
+    return {
+      provider: (req.headers["x-ai-provider"] as string) || "gemini",
+      apiKey: req.headers["x-ai-key"] as string,
+      model: req.headers["x-ai-model"] as string,
+    };
+  };
+
+  // AI Proxy Routes
+  app.post("/api/ai/ocr", async (req, res) => {
+    try {
+      const { base64Data, mimeType } = req.body;
+      const config = getAIConfig(req);
+      
+      const response = await callLLM({
+        ...config,
+        prompt: Prompts.OCR_PROMPT,
+        imageData: { data: base64Data, mimeType }
+      });
+      
+      res.json({ text: response });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai/quiz", async (req, res) => {
+    try {
+      const { content, grade, count } = req.body;
+      const config = getAIConfig(req);
+      const promptData = Prompts.QUIZ_PROMPT(count || 10, grade || 5, content);
+      
+      // Extract prompt text from Prompts.QUIZ_PROMPT which returns an array of contents for Gemini
+      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
+
+      const response = await callLLM({
+        ...config,
+        prompt: promptText,
+        isJson: true,
+      });
+      res.json(JSON.parse(response));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai/analyze", async (req, res) => {
+    try {
+      const { history } = req.body;
+      const config = getAIConfig(req);
+      const promptData = Prompts.PERFORMANCE_ANALYSIS_PROMPT(JSON.stringify(history));
+      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
+
+      const response = await callLLM({
+        ...config,
+        prompt: promptText,
+        isJson: true,
+      });
+      res.json(JSON.parse(response));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai/flashcards", async (req, res) => {
+    try {
+      const { content } = req.body;
+      const config = getAIConfig(req);
+      const promptData = Prompts.FLASHCARDS_PROMPT(content);
+      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
+
+      const response = await callLLM({
+        ...config,
+        prompt: promptText,
+        isJson: true,
+      });
+      res.json(JSON.parse(response));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai/study-guide", async (req, res) => {
+    try {
+      const { content } = req.body;
+      const config = getAIConfig(req);
+      const promptData = Prompts.STUDY_GUIDE_PROMPT(content);
+      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
+
+      const response = await callLLM({
+        ...config,
+        prompt: promptText,
+      });
+      res.json({ text: response });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai/topic", async (req, res) => {
+    try {
+      const { topic, grade } = req.body;
+      const config = getAIConfig(req);
+      const promptData = Prompts.TOPIC_GENERATION_PROMPT(topic, grade);
+      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
+
+      const response = await callLLM({
+        ...config,
+        prompt: promptText,
+      });
+      res.json({ text: response });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // API Routes
   app.get("/api/packages", (req, res) => {
