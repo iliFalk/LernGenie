@@ -1,7 +1,201 @@
 @import "tailwindcss";
 
+:root {
+  /* Default light theme colors - Proportional Premium Light Arc Theme */
+  --background: #F3F7FA;
+  --foreground: #0A0F18;
+  
+  /* Light Primitives & Background Ramps */
+  --_arc-light-50:  #FFFFFF; /* Panels, cards background */
+  --_arc-light-100: #F3F7FA; /* Main app background */
+  --_arc-light-200: #E1EBF2; /* Nested elements, inputs, gray chips */
+  --_arc-light-300: #CBDCE9; /* Borders, separators, inactive states */
+
+  /* Light Primary Ramp (Teal/Cyan interactive highlights for excellent light contrast) */
+  --_arc-light-cyan-300: #06B6D4;
+  --_arc-light-cyan-400: #0891B2;
+  --_arc-light-cyan-500: #0E7490; /* Main primary element fill */
+  --_arc-light-cyan-600: #155E75; /* Hover states */
+  --_arc-light-cyan-700: #164E63; /* Pressed & high contrast accent */
+
+  /* Standard Elegant Light Grayscale - Proportional, high contrast, soft ice-blue/grey tone */
+  --arc-gray-50: #F8FCFE;   /* Very light card background helper */
+  --arc-gray-100: #F0F6FA;  /* Default sub-panel background */
+  --arc-gray-200: #E1EBF2;  /* Light border/divider shade */
+  --arc-gray-300: #CBDCE9;  /* Secondary border shade */
+  --arc-gray-400: #92AFCD;  /* Light captions / placeholders */
+  --arc-gray-500: #5A84AC;  /* Subdued descriptors / metadata style */
+  --arc-gray-600: #3C6186;  /* Neutral line dividers & labels */
+  --arc-gray-700: #27425E;  /* Secondary text / description */
+  --arc-gray-800: #15273C;  /* Primary body text / robust contrast */
+  --arc-gray-900: #0A1626;  /* High contrast titles / headlines */
+  --arc-gray-950: #040912;  /* Darkest deep accent text */
+
+  /* Brand Interactive Tokens for Buttons, Focus States, Selection */
+  --arc-indigo-50: rgba(14, 116, 144, 0.05);
+  --arc-indigo-150: rgba(14, 116, 144, 0.12);
+  --arc-indigo-100: rgba(14, 116, 144, 0.18);
+  --arc-indigo-200: var(--_arc-light-cyan-300);
+  --arc-indigo-300: var(--_arc-light-cyan-400);
+  --arc-indigo-400: var(--_arc-light-cyan-600);
+  --arc-indigo-500: var(--_arc-light-cyan-500);
+  --arc-indigo-600: var(--_arc-light-cyan-500);
+  --arc-indigo-700: var(--_arc-light-cyan-600);
+  --arc-indigo-800: var(--_arc-light-cyan-700);
+  --arc-indigo-900: var(--_arc-light-50);
+  --arc-indigo-950: var(--_arc-light-100);
+
+  /* Highlight Status Overrides */
+  --arc-green-50: #F0FDF4;
+  --arc-green-100: #DCFCE7;
+  --arc-green-500: #10B981;
+  --arc-green-600: #059669;
+  --arc-green-900: #064E3B;
+  
+  --arc-amber-50: #FFFBEB;
+  --arc-amber-100: #FEF3C7;
+  --arc-amber-500: #F59E0B;
+  --arc-amber-600: #D97706;
+  --arc-amber-900: #78350F;
+
+  --arc-orange-500: #FF6B35;
+  --arc-red-500: #FF3B3B;
+
+  /* Web-Liquid-Glass variables for Light Mode */
+  --glass-bg-rgb: 255, 255, 255;
+  --glass-border-color: rgba(14, 116, 144, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.6);
+  --glass-scanline-color: rgba(14, 116, 144, 0.015);
+}
+
+.dark {
+  --background: #05080D;
+  --foreground: #E0F2FE;
+
+  /* Primitives (CYAN, BACKGROUND, STATUS, TEXT) */
+  --_arc-cyan-300: #67E8F9;
+  --_arc-cyan-400: #22D3EE;
+  --_arc-cyan-500: #00D4FF;
+  --_arc-cyan-600: #0891B2;
+  --_arc-cyan-700: #00F5FF;
+
+  --_arc-dark-50:  #1A2633;
+  --_arc-dark-100: #0F1923;
+  --_arc-dark-200: #0A0E17;
+  --_arc-dark-300: #05080D;
+
+  --_arc-green-500:  #10B981;
+  --_arc-amber-500:  #F59E0B;
+  --_arc-orange-500: #FF6B35;
+  --_arc-red-500:    #FF3B3B;
+
+  --_arc-blue-100: #E0F2FE;
+  --_arc-blue-200: #7DD3FC;
+  --_arc-blue-300: #38BDF8;
+  --_arc-blue-400: #22D3EE;
+  --_arc-blue-600: #4B7A8C;
+
+  /* Backgrounds & Layers mapping standard dark backgrounds */
+  --arc-gray-950: var(--_arc-dark-300); /* ambient background */
+  --arc-gray-900: var(--_arc-dark-200); /* base background */
+  --arc-gray-800: var(--_arc-dark-100); /* Panels/cards content background shadow */
+  --arc-gray-700: var(--_arc-dark-50);  /* Nested tags, inputs, alerts bg */
+  --arc-gray-600: #121F2D;              /* Subtle item lists separator */
+
+  /* Text colors high-AAA-contrast mapping standards */
+  --arc-gray-50: var(--_arc-blue-100);
+  --arc-gray-100: var(--_arc-blue-100); /* high */
+  --arc-gray-200: var(--_arc-blue-200); /* medium */
+  --arc-gray-300: var(--_arc-blue-200); /* medium secondary */
+  --arc-gray-400: var(--_arc-blue-300); /* low metadata */
+  --arc-gray-500: var(--_arc-blue-400); /* data values */
+  --arc-gray-600: var(--_arc-blue-600); /* subtle decorative line indicators */
+
+  /* Cyber Indigo (Cyan) Interaction Palette */
+  --arc-indigo-50: rgba(0, 212, 255, 0.08);
+  --arc-indigo-150: rgba(0, 212, 255, 0.15);
+  --arc-indigo-100: rgba(0, 212, 255, 0.2);
+  --arc-indigo-200: var(--_arc-cyan-300);
+  --arc-indigo-300: var(--_arc-cyan-400);
+  --arc-indigo-400: var(--_arc-cyan-700);
+  --arc-indigo-500: var(--_arc-cyan-500);
+  --arc-indigo-600: var(--_arc-cyan-500);
+  --arc-indigo-700: var(--_arc-cyan-700);
+  --arc-indigo-800: var(--_arc-cyan-600);
+  --arc-indigo-900: var(--_arc-dark-100);
+  --arc-indigo-950: var(--_arc-dark-300);
+
+  /* Status overrides */
+  --arc-green-50: rgba(16, 185, 129, 0.06);
+  --arc-green-100: rgba(16, 185, 129, 0.18);
+  --arc-green-500: var(--_arc-green-500);
+  --arc-green-600: #0e9f6e;
+  --arc-green-900: rgba(16, 185, 129, 0.3);
+
+  --arc-amber-50: rgba(245, 158, 11, 0.06);
+  --arc-amber-100: rgba(245, 158, 11, 0.18);
+  --arc-amber-500: var(--_arc-amber-500);
+  --arc-amber-600: #d97706;
+  --arc-amber-900: rgba(245, 158, 11, 0.3);
+
+  --arc-orange-500: var(--_arc-orange-500);
+  --arc-red-500: var(--_arc-red-500);
+
+  /* Web-Liquid-Glass variables for Dark Mode */
+  --glass-bg-rgb: 15, 25, 35; /* #0F1923 Deep ambient color */
+  --glass-border-color: rgba(0, 212, 255, 0.22); /* Radiant Arc blue border */
+  --glass-highlight: rgba(255, 255, 255, 0.12); /* specularity top */
+  --glass-scanline-color: rgba(0, 212, 255, 0.02);
+}
+
 @theme {
   --font-sans: "Inter", sans-serif;
+
+  /* Overwrite default colors dynamic pointers */
+  --color-indigo-50: var(--arc-indigo-50);
+  --color-indigo-100: var(--arc-indigo-100);
+  --color-indigo-200: var(--arc-indigo-200);
+  --color-indigo-300: var(--arc-indigo-300);
+  --color-indigo-400: var(--arc-indigo-400);
+  --color-indigo-500: var(--arc-indigo-500);
+  --color-indigo-600: var(--arc-indigo-600);
+  --color-indigo-700: var(--arc-indigo-700);
+  --color-indigo-800: var(--arc-indigo-800);
+  --color-indigo-900: var(--arc-indigo-900);
+  --color-indigo-950: var(--arc-indigo-950);
+
+  --color-gray-50: var(--arc-gray-50);
+  --color-gray-100: var(--arc-gray-100);
+  --color-gray-200: var(--arc-gray-200);
+  --color-gray-300: var(--arc-gray-300);
+  --color-gray-400: var(--arc-gray-400);
+  --color-gray-500: var(--arc-gray-500);
+  --color-gray-600: var(--arc-gray-600);
+  --color-gray-700: var(--arc-gray-700);
+  --color-gray-800: var(--arc-gray-800);
+  --color-gray-900: var(--arc-gray-900);
+  --color-gray-950: var(--arc-gray-950);
+
+  --color-green-50: var(--arc-green-50);
+  --color-green-100: var(--arc-green-100);
+  --color-green-500: var(--arc-green-500);
+  --color-green-600: var(--arc-green-600);
+  --color-green-900: var(--arc-green-900);
+
+  --color-emerald-50: var(--arc-green-50);
+  --color-emerald-100: var(--arc-green-100);
+  --color-emerald-500: var(--arc-green-500);
+  --color-emerald-600: var(--arc-green-600);
+  --color-emerald-900: var(--arc-green-900);
+
+  --color-amber-50: var(--arc-amber-50);
+  --color-amber-100: var(--arc-amber-100);
+  --color-amber-500: var(--arc-amber-500);
+  --color-amber-600: var(--arc-amber-600);
+  --color-amber-900: var(--arc-amber-900);
+
+  --color-orange-500: var(--arc-orange-500);
+  --color-red-500: var(--arc-red-500);
 }
 
 @variant dark (&:where(.dark, .dark *));
@@ -51,6 +245,39 @@
   }
   .min-h-screen-safe {
     min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  /* Web-Liquid-Glass Utility Classes conforming to specification */
+  .glass-ghost {
+    background-color: rgba(var(--glass-bg-rgb), 0.2);
+    backdrop-filter: blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    border: 1px solid var(--glass-border-color);
+  }
+  
+  .glass-light {
+    background-color: rgba(var(--glass-bg-rgb), 0.4);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    border: 1px solid var(--glass-border-color);
+  }
+
+  .glass-standard {
+    background-color: rgba(var(--glass-bg-rgb), 0.6);
+    backdrop-filter: blur(16px) saturate(180%) brightness(1.05);
+    -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.05);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    border: 1px solid var(--glass-border-color);
+  }
+
+  .glass-heavy {
+    background-color: rgba(var(--glass-bg-rgb), 0.8);
+    backdrop-filter: blur(24px) saturate(200%) brightness(1.1);
+    -webkit-backdrop-filter: blur(24px) saturate(200%) brightness(1.1);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    border: 1px solid var(--glass-border-color);
   }
 }
 

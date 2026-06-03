@@ -30,12 +30,12 @@ export default function Library({ packages, onStartQuiz, onDelete }: LibraryProp
 
   if (packages.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 px-6 bg-white/50 dark:bg-gray-800/50 rounded-[40px] border-2 border-dashed border-gray-200/60 dark:border-gray-700/60 transition-colors">
-        <div className="w-20 h-20 bg-gray-50/50 dark:bg-gray-900/50 rounded-full flex items-center justify-center text-gray-300 dark:text-gray-600 mb-6">
+      <div className="flex flex-col items-center justify-center py-24 px-6 glass-ghost rounded-[40px] border-2 border-dashed border-gray-200/40 dark:border-gray-700/40 transition-all">
+        <div className="w-20 h-20 bg-gray-50/50 dark:bg-gray-900/50 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500 mb-6">
           <BookOpen size={40} strokeWidth={1.5} />
         </div>
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Noch keine Lernpakete</h3>
-        <p className="text-gray-400 dark:text-gray-500 max-w-[240px] text-center text-sm leading-relaxed">
+        <p className="text-gray-600 dark:text-gray-400 max-w-[240px] text-center text-sm leading-relaxed">
           Lade deine Notizen oder Fotos hoch, um dein erstes Quiz zu erstellen.
         </p>
       </div>
@@ -51,7 +51,7 @@ export default function Library({ packages, onStartQuiz, onDelete }: LibraryProp
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
           onClick={() => onStartQuiz(pkg)}
-          className="group bg-white dark:bg-gray-800 p-5 sm:p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 dark:hover:shadow-none hover:border-indigo-100 dark:hover:border-indigo-900 transition-all cursor-pointer relative overflow-hidden"
+          className="group glass-standard p-5 sm:p-6 rounded-3xl shadow-sm hover:shadow-xl hover:shadow-indigo-100/30 dark:hover:shadow-none hover:border-indigo-400 dark:hover:border-[#00D4FF] transition-all cursor-pointer relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
             <button 

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { 
   ArrowLeft, BrainCircuit, Sparkles, FileText, Award, Target, 
-  HelpCircle, ChevronRight, BookOpen, Clock, Calendar, CheckCircle2 
+  HelpCircle, ChevronRight, BookOpen, Clock, Calendar, CheckCircle2,
+  X, Copy
 } from "lucide-react";
 import { StudyPackage, QuizResult, Material } from "../types";
 import { authFetch } from "../services/auth";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
+import Markdown from "react-markdown";
 
 interface PackageDetailViewProps {
   pkg: StudyPackage;
@@ -28,6 +30,8 @@ export default function PackageDetailView({
   const [results, setResults] = useState<QuizResult[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -117,7 +121,7 @@ export default function PackageDetailView({
         
         {/* Left Column: Quick Study Options */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-[32px] p-6 shadow-sm space-y-4">
+          <div className="glass-standard rounded-[32px] p-6 shadow-sm space-y-4">
             <h3 className="font-bold text-gray-800 dark:text-white text-lg">Lern-Modus</h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4">
               Übe mit den bereits gespeicherten Quizfragen oder generiere neue Materialien mit KI.
@@ -158,7 +162,7 @@ export default function PackageDetailView({
           </div>
 
           {/* Materials Section */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-[32px] p-6 shadow-sm">
+          <div className="glass-standard rounded-[32px] p-6 shadow-sm">
             <h3 className="font-bold text-gray-800 dark:text-white text-lg mb-4 flex items-center gap-2">
               <BookOpen size={18} className="text-indigo-500" />
               Lernmaterialien
@@ -168,15 +172,25 @@ export default function PackageDetailView({
             ) : (
               <div className="space-y-3">
                 {materials.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800/60">
-                    <FileText size={18} className="text-gray-400 dark:text-gray-500 shrink-0" />
+                  <button 
+                    key={m.id} 
+                    onClick={() => {
+                      setSelectedMaterial(m);
+                      setCopied(false);
+                    }}
+                    className="w-full text-left flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-gray-800/30 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 rounded-xl border border-gray-100/80 dark:border-gray-800/50 hover:border-indigo-100 dark:hover:border-indigo-900/40 transition-all cursor-pointer group active:scale-[0.99] min-h-[56px]"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950/40 flex items-center justify-center shrink-0 transition-colors">
+                      <FileText size={16} />
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{m.name}</p>
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                        {m.content_text ? `${Math.round(m.content_text.length / 100) / 10} KB` : "0 KB"}
+                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{m.name}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                        {m.content_text ? `${Math.round(m.content_text.length / 100) / 10} KB` : "0 KB"} • Vorschau anzeigen
                       </p>
                     </div>
-                  </div>
+                    <ChevronRight size={14} className="text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  </button>
                 ))}
               </div>
             )}
@@ -187,25 +201,25 @@ export default function PackageDetailView({
         <div className="lg:col-span-8 space-y-6">
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm text-center">
+            <div className="glass-light p-4 rounded-2xl shadow-sm text-center">
               <Award size={18} className="text-indigo-500 mx-auto mb-2" />
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Ø Genauigkeit</p>
               <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{avgAccuracy}%</p>
             </div>
             
-            <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm text-center">
+            <div className="glass-light p-4 rounded-2xl shadow-sm text-center">
               <Target size={18} className="text-emerald-500 mx-auto mb-2" />
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Beste Punkte</p>
               <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{maxScore}</p>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm text-center">
+            <div className="glass-light p-4 rounded-2xl shadow-sm text-center">
               <HelpCircle size={18} className="text-amber-500 mx-auto mb-2" />
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Gelöste Fragen</p>
               <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{totalCorrect}/{totalAsked}</p>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm text-center">
+            <div className="glass-light p-4 rounded-2xl shadow-sm text-center">
               <Clock size={18} className="text-purple-500 mx-auto mb-2" />
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Versuche</p>
               <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{totalQuizzes}</p>
@@ -214,8 +228,8 @@ export default function PackageDetailView({
 
           {/* Performance chart */}
           {totalQuizzes > 0 && (
-            <div className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-[32px] border border-gray-100 dark:border-gray-800 shadow-sm">
-              <h3 className="font-bold text-gray-800 dark:text-white text-lg mb-6 flex items-center gap-2">
+            <div className="glass-standard p-6 sm:p-8 rounded-[32px] shadow-sm">
+              <h3 className="font-bold text-gray-850 dark:text-white text-lg mb-6 flex items-center gap-2">
                 <Target size={18} className="text-indigo-500" />
                 Lernkurve (Verlauf)
               </h3>
@@ -261,8 +275,8 @@ export default function PackageDetailView({
           )}
 
           {/* Previous Attempts List */}
-          <div className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-[32px] border border-gray-100 dark:border-gray-800 shadow-sm">
-            <h3 className="font-bold text-gray-800 dark:text-white text-lg mb-4 flex items-center gap-2">
+          <div className="glass-standard p-6 sm:p-8 rounded-[32px] shadow-sm">
+            <h3 className="font-bold text-gray-850 dark:text-white text-lg mb-4 flex items-center gap-2">
               <CheckCircle2 size={18} className="text-emerald-500" />
               Bisherige Versuche und Auswertungen
             </h3>
@@ -317,6 +331,99 @@ export default function PackageDetailView({
         </div>
 
       </div>
+
+      {/* Material Preview Modal */}
+      <AnimatePresence>
+        {selectedMaterial && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedMaterial(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            {/* Modal Container */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
+              className="relative glass-heavy rounded-[32px] shadow-2xl w-full max-w-3xl overflow-hidden z-10 flex flex-col max-h-[85vh]"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-gray-200/40 dark:border-gray-700/40 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                    <FileText size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-extrabold text-gray-800 dark:text-white text-base truncate pr-2">
+                      {selectedMaterial.name}
+                    </h3>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-wider mt-0.5">
+                      {selectedMaterial.mime_type || "Dokument"} • {selectedMaterial.content_text ? `${Math.round(selectedMaterial.content_text.length / 100) / 10} KB` : "0 KB"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button 
+                    onClick={() => {
+                      if (selectedMaterial.content_text) {
+                        navigator.clipboard.writeText(selectedMaterial.content_text);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }
+                    }}
+                    className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 text-xs font-semibold ${
+                      copied 
+                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400" 
+                        : "text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                    title="Inhalt kopieren"
+                  >
+                    <Copy size={16} />
+                    {copied && <span>Kopiert!</span>}
+                  </button>
+                  <button 
+                    onClick={() => setSelectedMaterial(null)}
+                    className="p-2.5 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all cursor-pointer"
+                    title="Schließen"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable Body */}
+              <div className="p-6 sm:p-8 overflow-y-auto max-h-[calc(85vh-140px)] prose prose-indigo dark:prose-invert max-w-none">
+                <div className="markdown-body text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {selectedMaterial.content_text ? (
+                    <Markdown>{selectedMaterial.content_text}</Markdown>
+                  ) : (
+                    <p className="text-gray-400 dark:text-gray-500 italic text-center py-12">
+                      Dieses Dokument enthält keine extrahierten Textinhalte.
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Footer */}
+              <div className="p-4 border-t border-gray-200/40 dark:border-gray-700/40 flex justify-end gap-3 shrink-0">
+                <button 
+                  onClick={() => setSelectedMaterial(null)}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer min-h-[38px] flex items-center justify-center"
+                >
+                  Schließen
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

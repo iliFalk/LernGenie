@@ -3,6 +3,7 @@ export interface StudyPackage {
   name: string;
   grade: number;
   created_at?: string;
+  subject?: string;
 }
 
 export interface Material {

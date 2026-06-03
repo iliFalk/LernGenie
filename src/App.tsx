@@ -128,11 +128,12 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen bg-[#F8F9FA] dark:bg-gray-950 text-[#1A1A1A] dark:text-white font-sans transition-colors ${darkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen bg-[#F3F7FA] dark:bg-gray-950 text-[#15273C] dark:text-[#E0F2FE] font-sans transition-colors ${darkMode ? 'dark' : ''} overflow-x-hidden`}>
+
       {/* Sidebar (Desktop) */}
-      <div className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-6 flex-col z-20 transition-colors">
+      <div className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 glass-heavy p-6 flex-col z-20 transition-all">
         <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none">
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200/50 dark:shadow-none">
             <GraduationCap size={24} />
           </div>
           <h1 className="font-bold text-xl tracking-tight dark:text-white">LernGenie</h1>
@@ -179,7 +180,7 @@ export default function App() {
         )}
 
         {/* Footer Navigation */}
-        <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-6 py-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] transition-colors">
+        <div className="glass-heavy border-t border-gray-200/50 dark:border-gray-800/50 px-6 py-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] transition-all">
           <button 
             onClick={() => setView("library")}
             className={`flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] ${view === "library" ? "text-indigo-600 dark:text-indigo-400" : "text-gray-400"}`}
@@ -205,7 +206,7 @@ export default function App() {
       </div>
 
       {/* Mobile Top Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-6 py-4 pt-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-between z-30 transition-colors">
+      <div className="lg:hidden fixed top-0 left-0 right-0 glass-heavy border-b border-gray-100/50 dark:border-gray-800/50 px-6 py-4 pt-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-between z-30 transition-all">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-indigo-100 dark:shadow-none">
             <GraduationCap size={18} />

@@ -23,6 +23,7 @@ db.exec(`
     user_id TEXT NOT NULL,
     name TEXT NOT NULL,
     grade INTEGER NOT NULL,
+    subject TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -55,6 +56,12 @@ db.exec(`
     FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE
   );
 `);
+
+try {
+  db.exec("ALTER TABLE packages ADD COLUMN subject TEXT;");
+} catch (e) {
+  // Column already exists or error which can be ignored
+}
 
 async function startServer() {
   const app = express();
@@ -104,6 +111,121 @@ async function startServer() {
       }
     } catch (_) {}
     return message;
+  };
+
+  const getOrClassifySubject = async (packageId: string, name: string, req: express.Request): Promise<string> => {
+    try {
+      // First, check if db has a cached subject
+      const row = db.prepare("SELECT subject FROM packages WHERE id = ?").get(packageId) as { subject?: string } | undefined;
+      if (row && row.subject) {
+        return row.subject;
+      }
+
+      const nameLower = name.toLowerCase().trim();
+      let deducedSubject = "";
+
+      // Quick rules for instant responsive mapping
+      if (nameLower === "m" || nameLower.includes("mathe") || nameLower.includes("math") || nameLower.includes("rechnen") || nameLower.includes("algebra") || nameLower.includes("geometrie") || nameLower.includes("zahlen")) {
+        deducedSubject = "Mathematik";
+      } else if (nameLower === "d" || nameLower.includes("deutsch") || nameLower.includes("aufsatz") || nameLower.includes("rechtschreib") || nameLower.includes("grammatik") || nameLower.includes("diktat") || nameLower.includes("literatur")) {
+        deducedSubject = "Deutsch";
+      } else if (nameLower === "e" || nameLower.includes("engl") || nameLower.includes("english") || nameLower.includes("vokabeln") || nameLower.includes("vocab")) {
+        deducedSubject = "Englisch";
+      } else if (nameLower.includes("bio") || nameLower.includes("genetik") || nameLower.includes("naturkunde") || nameLower.includes("pflanze") || nameLower.includes("tier") || nameLower.includes("mensch") || nameLower.includes("evolution")) {
+        deducedSubject = "Biologie";
+      } else if (nameLower.includes("phys") || nameLower.includes("mechanik") || nameLower.includes("optik") || nameLower.includes("magnet") || nameLower.includes("strom") || nameLower.includes("atom")) {
+        deducedSubject = "Physik";
+      } else if (nameLower.includes("chem") || nameLower.includes("substanz") || nameLower.includes("molekül") || nameLower.includes("periodensystem") || nameLower.includes("elemente")) {
+        deducedSubject = "Chemie";
+      } else if (nameLower.includes("geschicht") || nameLower.includes("history") || nameLower.includes("weltkrieg") || nameLower.includes("mittelalter") || nameLower.includes("antike") || nameLower.includes("historisch") || nameLower.includes("kaiser") || nameLower.includes("ddr")) {
+        deducedSubject = "Geschichte";
+      } else if (nameLower.includes("geogr") || nameLower.includes("geo") || nameLower.includes("erdkunde") || nameLower.includes("landkarte") || nameLower.includes("kontinent") || nameLower.includes("stadt") || nameLower.includes("vulkan") || nameLower.includes("klima")) {
+        deducedSubject = "Geographie";
+      } else if (nameLower.includes("franz") || nameLower.includes("french") || nameLower.includes("français")) {
+        deducedSubject = "Französisch";
+      } else if (nameLower.includes("lat") || nameLower.includes("latin") || nameLower.includes("latein")) {
+        deducedSubject = "Latein";
+      } else if (nameLower.includes("span") || nameLower.includes("spanisch") || nameLower.includes("espanol")) {
+        deducedSubject = "Spanisch";
+      } else if (nameLower.includes("relig") || nameLower.includes("ethik") || nameLower.includes("bibel") || nameLower.includes("gott") || nameLower.includes("glaube")) {
+        deducedSubject = "Religion & Ethik";
+      } else if (nameLower.includes("sport") || nameLower.includes("turnen") || nameLower.includes("bewegung") || nameLower.includes("athlet")) {
+        deducedSubject = "Sport";
+      } else if (nameLower.includes("kunst") || nameLower.includes("zeichnen") || nameLower.includes("art") || nameLower.includes("malen") || nameLower.includes("bild")) {
+        deducedSubject = "Kunst";
+      } else if (nameLower.includes("musik") || nameLower.includes("noten") || nameLower.includes("concert") || nameLower.includes("instrument") || nameLower.includes("gesang") || nameLower.includes("singen")) {
+        deducedSubject = "Musik";
+      } else if (nameLower.includes("info") || nameLower.includes("prog") || nameLower.includes("comput") || nameLower.includes("it") || nameLower.includes("software")) {
+        deducedSubject = "Informatik";
+      } else if (nameLower.includes("wirtsch") || nameLower.includes("bwl") || nameLower.includes("vwl") || nameLower.includes("oekonom") || nameLower.includes("geld") || nameLower.includes("markt") || nameLower.includes("unternehmen")) {
+        deducedSubject = "Wirtschaft";
+      } else if (nameLower.includes("polit") || nameLower.includes("sowi") || nameLower.includes("demokratie") || nameLower.includes("recht") || nameLower.includes("gesellschaft") || nameLower.includes("staat")) {
+        deducedSubject = "Politik & Sozialwissenschaften";
+      }
+
+      if (deducedSubject) {
+        db.prepare("UPDATE packages SET subject = ? WHERE id = ?").run(deducedSubject, packageId);
+        return deducedSubject;
+      }
+
+      // Dynamic LLM AI classification fallback
+      const materials = db.prepare("SELECT name, content_text FROM materials WHERE package_id = ? LIMIT 2").all(packageId) as { name: string; content_text: string }[];
+      const materialsContext = materials.map(m => `Material Name: ${m.name}\nInhalt: ${m.content_text?.substring(0, 400) || ""}`).join("\n\n");
+
+      const config = getAIConfig(req);
+      const systemPrompt = `Du bist ein intelligenter Assistent für Schüler und Lehrer. Deine Aufgabe ist es, anhand des Namens eines Lernpakets (und eventuellen Inhalten der Dokumente) das passende schulische Hauptfach auf Deutsch zuzuordnen.
+Wähle ausschließlich eines der folgenden Standard-Schulfächer aus:
+- Mathematik
+- Deutsch
+- Englisch
+- Französisch
+- Spanisch
+- Latein
+- Biologie
+- Physik
+- Chemie
+- Geschichte
+- Geographie
+- Wirtschaft
+- Informatik
+- Politik & Sozialwissenschaften
+- Religion & Ethik
+- Musik
+- Kunst
+- Sport
+- Sonstiges (nur wenn absolut unklar)
+
+Gib NUR den genauen Namen dieses Fachs zurück, ohne zusätzliche Sätze, Zeichen, Erklärungen oder Formatierungen.
+Beispiel Name: "Matheklausur Terme"
+Ausgabe: Mathematik
+
+Beispiel Name: "Vocab Unit 3"
+Ausgabe: Englisch`;
+
+      const response = await callLLM({
+        ...config,
+        prompt: `${systemPrompt}\n\nEingabe Name: "${name}"\nMaterial-Kontext: "${materialsContext}"\nAusgabe:`,
+        useFlashModel: true
+      });
+
+      let cleaned = response.replace(/[*_#`"]/g, "").trim();
+      // Match with known list roughly or keep as is if short and reasonable
+      const validSubjects = [
+        "Mathematik", "Deutsch", "Englisch", "Französisch", "Spanisch", "Latein", 
+        "Biologie", "Physik", "Chemie", "Geschichte", "Geographie", "Wirtschaft", 
+        "Informatik", "Politik & Sozialwissenschaften", "Religion & Ethik", "Musik", 
+        "Kunst", "Sport", "Sonstiges"
+      ];
+      
+      const matched = validSubjects.find(s => cleaned.toLowerCase() === s.toLowerCase() || s.toLowerCase().includes(cleaned.toLowerCase()) || cleaned.toLowerCase().includes(s.toLowerCase()));
+      const finalSubject = matched || cleaned || "Sonstiges";
+
+      db.prepare("UPDATE packages SET subject = ? WHERE id = ?").run(finalSubject, packageId);
+      return finalSubject;
+    } catch (err) {
+      console.error("Failed to classify subject with LLM:", err);
+      return "Sonstiges";
+    }
   };
 
   // AI Proxy Routes
@@ -219,10 +341,23 @@ async function startServer() {
   });
 
   // API Routes
-  app.get("/api/packages", (req, res) => {
-    const userId = getUserId(req);
-    const packages = db.prepare("SELECT * FROM packages WHERE user_id = ? ORDER BY created_at DESC").all(userId);
-    res.json(packages);
+  app.get("/api/packages", async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const packages = db.prepare("SELECT * FROM packages WHERE user_id = ? ORDER BY created_at DESC").all(userId) as any[];
+      const enhancedPackages = [];
+      for (const pkg of packages) {
+        const subject = await getOrClassifySubject(pkg.id, pkg.name, req);
+        enhancedPackages.push({
+          ...pkg,
+          subject
+        });
+      }
+      res.json(enhancedPackages);
+    } catch (err: any) {
+      console.error("Error in get /api/packages:", err);
+      res.status(500).json({ error: err?.message || String(err) });
+    }
   });
 
   app.post("/api/packages", (req, res) => {
@@ -403,16 +538,30 @@ async function startServer() {
     res.json({ success: true });
   });
 
-  app.get("/api/results", (req, res) => {
-    const userId = getUserId(req);
-    const results = db.prepare(`
-      SELECT r.*, p.name as package_name 
-      FROM quiz_results r 
-      JOIN packages p ON r.package_id = p.id 
-      WHERE r.user_id = ?
-      ORDER BY r.created_at ASC
-    `).all(userId);
-    res.json(results);
+  app.get("/api/results", async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const results = db.prepare(`
+        SELECT r.*, p.name as package_name, p.id as package_id
+        FROM quiz_results r 
+        JOIN packages p ON r.package_id = p.id 
+        WHERE r.user_id = ?
+        ORDER BY r.created_at ASC
+      `).all(userId) as any[];
+
+      const enhancedResults = [];
+      for (const result of results) {
+        const subject = await getOrClassifySubject(result.package_id, result.package_name, req);
+        enhancedResults.push({
+          ...result,
+          subject
+        });
+      }
+      res.json(enhancedResults);
+    } catch (err: any) {
+      console.error("Error in get /api/results:", err);
+      res.status(500).json({ error: err?.message || String(err) });
+    }
   });
 
   app.get("/api/results/:packageId", (req, res) => {
