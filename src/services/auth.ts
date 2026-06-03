@@ -24,13 +24,16 @@ export const authFetch = (url: string, options: RequestInit = {}) => {
   };
 
   // Include developer settings if present
-  const customKey = localStorage.getItem("custom_api_key");
-  const aiProvider = localStorage.getItem("ai_provider");
-  const aiModel = localStorage.getItem("ai_model");
+  const isDevMode = localStorage.getItem("dev_mode_enabled") === "true";
+  if (isDevMode) {
+    const customKey = localStorage.getItem("custom_api_key");
+    const aiProvider = localStorage.getItem("ai_provider");
+    const aiModel = localStorage.getItem("ai_model");
 
-  if (customKey) headers["x-ai-key"] = customKey;
-  if (aiProvider) headers["x-ai-provider"] = aiProvider;
-  if (aiModel) headers["x-ai-model"] = aiModel;
+    if (customKey) headers["x-ai-key"] = customKey;
+    if (aiProvider) headers["x-ai-provider"] = aiProvider;
+    if (aiModel) headers["x-ai-model"] = aiModel;
+  }
 
   return fetch(url, { ...options, headers });
 };

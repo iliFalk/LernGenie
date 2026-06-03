@@ -10,10 +10,40 @@ interface ResultsViewProps {
   onShowFlashcards: () => void;
   onShowStudyGuide: () => void;
   onRetry: () => void;
+  onRegenerate: () => void;
 }
 
-export default function ResultsView({ result, package: pkg, onBack, onShowFlashcards, onShowStudyGuide, onRetry }: ResultsViewProps) {
-  const analysis: AnalysisData = JSON.parse(result.analysis);
+export default function ResultsView({ result, package: pkg, onBack, onShowFlashcards, onShowStudyGuide, onRetry, onRegenerate }: ResultsViewProps) {
+  let analysis: Partial<AnalysisData> | null = null;
+  try {
+    analysis = JSON.parse(result.analysis);
+  } catch (e) {
+    console.error("Failed to parse quiz analysis:", e);
+  }
+
+  const strengths = Array.isArray(analysis?.strengths)
+    ? analysis.strengths
+    : (Array.isArray((analysis as any)?.Strengths)
+        ? (analysis as any).Strengths
+        : (Array.isArray((analysis as any)?.staerken)
+            ? (analysis as any).staerken
+            : []));
+
+  const growthAreas = Array.isArray(analysis?.growthAreas)
+    ? analysis.growthAreas
+    : (Array.isArray((analysis as any)?.GrowthAreas)
+        ? (analysis as any).GrowthAreas
+        : (Array.isArray((analysis as any)?.lernbereiche)
+            ? (analysis as any).lernbereiche
+            : []));
+
+  const finalStrengths = strengths.length > 0 
+    ? strengths 
+    : ["Hervorragendes Engagement beim Lernen!", "Du hast das Quiz mit Motivation absolviert."];
+
+  const finalGrowthAreas = growthAreas.length > 0 
+    ? growthAreas 
+    : ["Wiederhole den Stoff regelmäßig, um dein Wissen langfristig zu festigen.", "Nutze die Flashcards und den Study Guide zur Vertiefung."];
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
@@ -63,7 +93,7 @@ export default function ResultsView({ result, package: pkg, onBack, onShowFlashc
             <h3 className="text-lg sm:text-xl font-bold dark:text-white">Deine Stärken</h3>
           </div>
           <ul className="space-y-2 sm:space-y-3">
-            {analysis.strengths.map((s, i) => (
+            {finalStrengths.map((s, i) => (
               <li key={i} className="flex items-start gap-3 text-base text-gray-700 dark:text-gray-300 bg-emerald-50/30 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-50 dark:border-emerald-900/50">
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-2 shrink-0" />
                 {s}
@@ -81,7 +111,7 @@ export default function ResultsView({ result, package: pkg, onBack, onShowFlashc
             <h3 className="text-lg sm:text-xl font-bold dark:text-white">Lernbereiche</h3>
           </div>
           <ul className="space-y-2 sm:space-y-3">
-            {analysis.growthAreas.map((g, i) => (
+            {finalGrowthAreas.map((g, i) => (
               <li key={i} className="flex items-start gap-3 text-base text-gray-700 dark:text-gray-300 bg-amber-50/30 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-50 dark:border-amber-900/50">
                 <div className="w-1.5 h-1.5 bg-amber-500 rounded-full mt-2 shrink-0" />
                 {g}
@@ -127,14 +157,21 @@ export default function ResultsView({ result, package: pkg, onBack, onShowFlashc
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8">
           <button 
             onClick={onRetry}
-            className="flex-1 bg-white text-indigo-600 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 transition-all"
+            className="flex-1 bg-white text-indigo-600 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 border border-indigo-200 transition-all min-h-[48px]"
           >
             <RefreshCw size={18} />
             Quiz wiederholen
           </button>
           <button 
+            onClick={onRegenerate}
+            className="flex-1 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all min-h-[48px]"
+          >
+            <Sparkles size={18} />
+            Neue Fragen generieren
+          </button>
+          <button 
             onClick={onBack}
-            className="flex-1 bg-indigo-500 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-400 transition-all"
+            className="flex-1 bg-indigo-600 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all min-h-[48px]"
           >
             Zurück zur Bibliothek
           </button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, ChevronLeft, ChevronRight, RefreshCw, Sparkles, BrainCircuit } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { StudyPackage, Material } from "../types";
-import { generateFlashcards } from "../services/gemini";
+import { getCachedFlashcards } from "../services/gemini";
 import { authFetch } from "../services/auth";
 
 interface FlashcardsViewProps {
@@ -20,14 +20,13 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
     loadFlashcards();
   }, []);
 
-  const loadFlashcards = async () => {
+  const loadFlashcards = async (regenerate: boolean = false) => {
     setIsLoading(true);
     try {
-      const res = await authFetch(`/api/packages/${pkg.id}/materials`);
-      const materials: Material[] = await res.json();
-      const content = materials.map(m => m.content_text).join("\n\n");
-      const generated = await generateFlashcards(content);
+      const generated = await getCachedFlashcards(pkg.id, regenerate);
       setCards(generated);
+      setCurrentIndex(0);
+      setIsFlipped(false);
     } catch (error) {
       console.error(error);
     } finally {
@@ -58,6 +57,28 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
     );
   }
 
+  if (cards.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto py-20 text-center">
+        <div className="w-16 h-16 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <X size={32} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Fehler beim Erstellen der Flashcards</h3>
+        <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
+          Der KI-Service konnte keine Flashcards generieren. Bitte überprüfe deine Internetverbindung oder deinen API-Key in den Einstellungen.
+        </p>
+        <div className="flex justify-center gap-4">
+          <button onClick={onBack} className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors min-h-[44px]">
+            Zurück
+          </button>
+          <button onClick={() => loadFlashcards(false)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors min-h-[44px]">
+            Erneut versuchen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-10">
@@ -69,7 +90,14 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
           <h2 className="text-2xl font-black dark:text-white">Flashcards</h2>
           <p className="text-gray-400 dark:text-gray-500 text-sm font-bold uppercase tracking-widest">{pkg.name}</p>
         </div>
-        <div className="w-20"></div>
+        <button 
+          onClick={() => loadFlashcards(true)} 
+          title="Neu generieren"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all min-h-[36px]"
+        >
+          <RefreshCw size={14} className="animate-hover-spin" />
+          <span>Neu generieren</span>
+        </button>
       </div>
 
       <div className="relative h-[320px] sm:h-[400px] w-full perspective-1000 mb-8 sm:mb-12">

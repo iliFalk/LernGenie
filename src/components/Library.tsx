@@ -14,8 +14,17 @@ export default function Library({ packages, onStartQuiz, onDelete }: LibraryProp
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (confirm("Möchtest du dieses Lernpaket wirklich löschen?")) {
-      await authFetch(`/api/packages/${id}`, { method: "DELETE" });
-      onDelete();
+      try {
+        const res = await authFetch(`/api/packages/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          onDelete();
+        } else {
+          alert("Fehler beim Löschen des Lernpakets.");
+        }
+      } catch (err) {
+        console.error("Delete error:", err);
+        alert("Netzwerkfehler: Konnte das Lernpaket nicht löschen.");
+      }
     }
   };
 

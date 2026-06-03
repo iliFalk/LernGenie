@@ -1,5 +1,6 @@
 {
   "name": "LernQuiz Genie",
   "description": "Automatische Quiz-Generierung aus deinen Lernmaterialien mit KI-Feedback.",
-  "requestFramePermissions": ["camera"]
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

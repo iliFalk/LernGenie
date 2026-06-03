@@ -15,7 +15,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   const [creationMode, setCreationMode] = useState<'upload' | 'generate'>('upload');
   const [name, setName] = useState("");
   const [grade, setGrade] = useState(10);
-  const [files, setFiles] = useState<{ id: string; name: string; content: string; type: string; status: 'pending' | 'processing' | 'completed' | 'error' }[]>([]);
+  const [files, setFiles] = useState<{ id: string; name: string; content: string; type: string; status: 'pending' | 'processing' | 'completed' | 'error'; errorMsg?: string }[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,10 +56,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
         // Update status to completed and add content
         setFiles(prev => prev.map(f => f.id === fileId ? { ...f, content: extractedText, status: 'completed' } : f));
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
         // Update status to error
-        setFiles(prev => prev.map(f => f.id === fileId ? { ...f, status: 'error' } : f));
+        setFiles(prev => prev.map(f => f.id === fileId ? { ...f, status: 'error', errorMsg: error?.message || "Fehler bei der Textextraktion" } : f));
       }
     }
 
@@ -110,38 +110,51 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     setIsProcessing(true);
     setProcessingMessage("Speichere Lernpaket...");
 
-    const packageId = crypto.randomUUID();
-    
-    // Create package
-    await authFetch("/api/packages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: packageId, name, grade })
-    });
-
-    // Create materials (only completed ones)
-    const completedFiles = files.filter(f => f.status === 'completed');
-    for (const file of completedFiles) {
-      await authFetch("/api/materials", {
+    try {
+      const packageId = crypto.randomUUID();
+      
+      // Create package
+      const pkgResponse = await authFetch("/api/packages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: crypto.randomUUID(),
-          package_id: packageId,
-          name: file.name,
-          content_text: file.content,
-          mime_type: file.type
-        })
+        body: JSON.stringify({ id: packageId, name, grade })
       });
-    }
 
-    setIsProcessing(false);
-    onSuccess();
-    // Reset state
-    setName("");
-    setGrade(10);
-    setFiles([]);
-    setStep(1);
+      if (!pkgResponse.ok) {
+        throw new Error("Lernpaket konnte nicht erstellt werden.");
+      }
+
+      // Create materials (only completed ones)
+      const completedFiles = files.filter(f => f.status === 'completed');
+      for (const file of completedFiles) {
+        const matResponse = await authFetch("/api/materials", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: crypto.randomUUID(),
+            package_id: packageId,
+            name: file.name,
+            content_text: file.content,
+            mime_type: file.type
+          })
+        });
+        if (!matResponse.ok) {
+          throw new Error(`Material "${file.name}" konnte nicht gespeichert werden.`);
+        }
+      }
+
+      onSuccess();
+      // Reset state
+      setName("");
+      setGrade(10);
+      setFiles([]);
+      setStep(1);
+    } catch (error: any) {
+      console.error("Fehler beim Speichern des Lernpakets:", error);
+      alert("Fehler beim Speichern des Lernpakets: " + (error?.message || "Verbindungsfehler"));
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -280,10 +293,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                           </div>
                           <div className="flex flex-col min-w-0">
                             <span className="text-sm font-medium dark:text-white truncate">{file.name}</span>
-                            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate max-w-[200px]">
                               {file.status === 'processing' ? 'Wird verarbeitet...' : 
                                file.status === 'completed' ? 'Bereit' : 
-                               file.status === 'error' ? 'Fehler' : 'Warten...'}
+                               file.status === 'error' ? `Fehler: ${file.errorMsg || 'Fehler'}` : 'Warten...'}
                             </span>
                           </div>
                         </div>

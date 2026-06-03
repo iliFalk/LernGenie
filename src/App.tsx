@@ -7,7 +7,7 @@ import React, { useState, useEffect } from "react";
 import { BookOpen, Plus, Library as LibraryIcon, ChevronRight, Settings, Search, FileText, Camera, Upload, Trash2, X, BrainCircuit, Sparkles, CheckCircle2, AlertCircle, ArrowRight, RefreshCw, BarChart3, GraduationCap } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { StudyPackage, Material, Question, QuizResult, AnalysisData } from "./types";
-import { extractTextFromImage, generateQuiz, analyzePerformance, generateFlashcards, generateStudyGuide } from "./services/gemini";
+import { extractTextFromImage, generateQuiz, getCachedQuiz, analyzePerformance, generateFlashcards, generateStudyGuide } from "./services/gemini";
 import { authFetch } from "./services/auth";
 
 // Components
@@ -19,8 +19,9 @@ import FlashcardsView from "./components/FlashcardsView";
 import StudyGuideView from "./components/StudyGuideView";
 import StatsView from "./components/StatsView";
 import SettingsView from "./components/SettingsView";
+import PackageDetailView from "./components/PackageDetailView";
 
-type ViewState = "library" | "quiz" | "results" | "flashcards" | "study-guide" | "stats" | "settings";
+type ViewState = "library" | "quiz" | "results" | "flashcards" | "study-guide" | "stats" | "settings" | "package-detail";
 
 export default function App() {
   const [view, setView] = useState<ViewState>("library");
@@ -46,27 +47,30 @@ export default function App() {
   }, [darkMode]);
 
   const fetchPackages = async () => {
-    const res = await authFetch("/api/packages");
-    const data = await res.json();
-    setPackages(data);
+    try {
+      const res = await authFetch("/api/packages");
+      if (res.ok) {
+        const data = await res.json();
+        setPackages(data);
+      } else {
+        console.error("Failed to fetch packages:", res.status, res.statusText);
+      }
+    } catch (err) {
+      console.error("Failed to fetch packages:", err);
+    }
   };
 
-  const handleStartQuiz = async (pkg: StudyPackage) => {
+  const handleStartQuiz = async (pkg: StudyPackage, regenerate: boolean = false) => {
     setIsLoading(true);
-    setLoadingMessage("Analysiere Lernmaterialien...");
+    setLoadingMessage(regenerate ? "Generiere neue Quizfragen..." : "Lade Quiz...");
     try {
-      const res = await authFetch(`/api/packages/${pkg.id}/materials`);
-      const materials: Material[] = await res.json();
-      const fullContent = materials.map(m => m.content_text).join("\n\n");
-      
-      setLoadingMessage("Generiere Quizfragen...");
-      const questions = await generateQuiz(fullContent, pkg.grade);
+      const questions = await getCachedQuiz(pkg.id, regenerate);
       setActiveQuiz(questions);
       setSelectedPackage(pkg);
       setView("quiz");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Fehler bei der Quiz-Generierung.");
+      alert("Fehler bei der Quiz-Generierung: " + (error?.message || "unbekannter Fehler"));
     } finally {
       setIsLoading(false);
     }
@@ -78,30 +82,39 @@ export default function App() {
     setIsLoading(true);
     setLoadingMessage("Analysiere deine Performance...");
     
-    const score = results.filter(r => r.isCorrect).length;
-    const total = results.length;
-    const accuracy = (score / total) * 100;
-    
-    const analysis = await analyzePerformance(results);
-    
-    const result: QuizResult = {
-      id: crypto.randomUUID(),
-      package_id: selectedPackage.id,
-      score,
-      total,
-      accuracy,
-      analysis: JSON.stringify(analysis)
-    };
+    try {
+      const score = results.filter(r => r.isCorrect).length;
+      const total = results.length;
+      const accuracy = (score / total) * 100;
+      
+      const analysis = await analyzePerformance(results);
+      
+      const result: QuizResult = {
+        id: crypto.randomUUID(),
+        package_id: selectedPackage.id,
+        score,
+        total,
+        accuracy,
+        analysis: JSON.stringify(analysis)
+      };
 
-    await authFetch("/api/results", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(result)
-    });
+      await authFetch("/api/results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(result)
+      });
 
-    setQuizResults(result);
-    setView("results");
-    setIsLoading(false);
+      setQuizResults(result);
+      setView("results");
+    } catch (error: any) {
+      console.error("Failed to process quiz completion:", error);
+      alert("Fehler beim Speichern der Antworten: " + (error?.message || "Verbindungsfehler"));
+      // Still show local results if analysis succeeded or can be recovered
+      // In case of total failure we'll at least go back to the library cleanly
+      setView("library");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleShowFlashcards = async () => {
@@ -228,8 +241,32 @@ export default function App() {
 
                 <Library 
                   packages={packages} 
-                  onStartQuiz={handleStartQuiz}
+                  onStartQuiz={(pkg) => {
+                    setSelectedPackage(pkg);
+                    setView("package-detail");
+                  }}
                   onDelete={fetchPackages}
+                />
+              </motion.div>
+            )}
+
+            {view === "package-detail" && selectedPackage && (
+              <motion.div
+                key="package-detail"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <PackageDetailView
+                  pkg={selectedPackage}
+                  onBack={() => setView("library")}
+                  onStartQuiz={(pkg, regenerate) => handleStartQuiz(pkg, regenerate)}
+                  onShowFlashcards={handleShowFlashcards}
+                  onShowStudyGuide={handleShowStudyGuide}
+                  onViewResultDetails={(result) => {
+                    setQuizResults(result);
+                    setView("results");
+                  }}
                 />
               </motion.div>
             )}
@@ -268,7 +305,7 @@ export default function App() {
               <QuizView 
                 questions={activeQuiz} 
                 onComplete={handleQuizComplete}
-                onCancel={() => setView("library")}
+                onCancel={() => setView("package-detail")}
               />
             )}
 
@@ -276,24 +313,25 @@ export default function App() {
               <ResultsView 
                 result={quizResults}
                 package={selectedPackage}
-                onBack={() => setView("library")}
+                onBack={() => setView("package-detail")}
                 onShowFlashcards={handleShowFlashcards}
                 onShowStudyGuide={handleShowStudyGuide}
-                onRetry={() => handleStartQuiz(selectedPackage)}
+                onRetry={() => handleStartQuiz(selectedPackage, false)}
+                onRegenerate={() => handleStartQuiz(selectedPackage, true)}
               />
             )}
 
             {view === "flashcards" && selectedPackage && (
               <FlashcardsView 
                 package={selectedPackage}
-                onBack={() => setView("results")}
+                onBack={() => setView("package-detail")}
               />
             )}
 
             {view === "study-guide" && selectedPackage && (
               <StudyGuideView 
                 package={selectedPackage}
-                onBack={() => setView("results")}
+                onBack={() => setView("package-detail")}
               />
             )}
           </AnimatePresence>
