@@ -4,7 +4,13 @@ import {
   BarChart, Bar, Cell 
 } from "recharts";
 import { QuizResult } from "../types";
-import { TrendingUp, Target, Award, Clock, ArrowLeft } from "lucide-react";
+import { 
+  ChartLine, 
+  Trophy, 
+  Checkmark, 
+  Catalog, 
+  Calendar 
+} from "@carbon/icons-react";
 import { authFetch } from "../services/auth";
 
 interface ExtendedResult extends QuizResult {
@@ -23,8 +29,10 @@ export default function StatsView() {
   const fetchResults = async () => {
     try {
       const res = await authFetch("/api/results");
-      const data = await res.json();
-      setResults(data);
+      if (res.ok) {
+        const data = await res.json();
+        setResults(data);
+      }
     } catch (error) {
       console.error("Failed to fetch results:", error);
     } finally {
@@ -34,21 +42,24 @@ export default function StatsView() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+      <div className="flex flex-col items-center justify-center h-64">
+        <div className="w-10 h-10 border-4 border-[var(--cds-border-subtle-01)] border-t-[#0f62fe] rounded-full animate-spin mb-3" />
+        <p className="text-xs font-mono text-[var(--cds-text-secondary)]">Statistiken werden geladen...</p>
       </div>
     );
   }
 
   if (results.length === 0) {
     return (
-      <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
-        <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300 dark:text-gray-600">
-          <TrendingUp size={32} />
+      <div className="cds--tile p-12 text-center border-dashed border-2 border-[var(--cds-border-subtle-01)] flex flex-col items-center justify-center">
+        <div className="w-16 h-16 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] flex items-center justify-center text-[var(--cds-text-secondary)] mb-4">
+          <ChartLine size={32} />
         </div>
-        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Noch keine Statistiken</h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
-          Schließe dein erstes Quiz ab, um deinen Lernfortschritt hier zu verfolgen.
+        <h3 className="text-lg font-semibold text-[var(--cds-text-primary)] mb-1">
+          Noch keine Statistiken verfügbar
+        </h3>
+        <p className="text-xs text-[var(--cds-text-secondary)] max-w-xs">
+          Absolviere dein erstes Quiz in einem beliebigen Lernpaket, um hier Auswertungen und Lernkurven zu sehen.
         </p>
       </div>
     );
@@ -58,16 +69,16 @@ export default function StatsView() {
   const totalQuestions = results.reduce((acc, curr) => acc + curr.total, 0);
   const correctAnswers = results.reduce((acc, curr) => acc + curr.score, 0);
 
-  // Prepare data for line chart (Accuracy over time)
-  const lineData = results.map((r, i) => ({
-    name: `Quiz ${i + 1}`,
+  // Line chart data (Chronological)
+  const lineData = [...results].reverse().map((r, i) => ({
+    name: `Q${i + 1}`,
     accuracy: Math.round(r.accuracy),
     date: r.created_at ? new Date(r.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : ""
   }));
 
-  // Prepare data for bar chart grouped by Subject (Fach)
+  // Bar chart data (Grouped by Subject)
   const subjectStats = results.reduce((acc: any, curr) => {
-    const rawSubject = curr.subject || "Sonstiges";
+    const rawSubject = curr.subject || "Allgemein";
     if (!acc[rawSubject]) {
       acc[rawSubject] = { name: rawSubject, totalAccuracy: 0, count: 0, score: 0, total: 0 };
     }
@@ -86,179 +97,200 @@ export default function StatsView() {
     ratioPercent: s.total > 0 ? Math.round((s.score / s.total) * 100) : 0
   })).sort((a: any, b: any) => b.accuracy - a.accuracy);
 
-  const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#3B82F6', '#06B6D4'];
+  // Discrete color palette
+  const PALETTE_COLORS = ['#0f62fe', '#198038', '#0072c3', '#6929c4', '#b28600', '#005d5d', '#9f1853'];
 
   return (
-    <div className="space-y-8 pb-20 lg:pb-12">
-      {/* Stats Grid */}
+    <div className="space-y-6 pb-16">
+      
+      {/* 3 Metric Tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center">
-              <Award size={20} />
-            </div>
-            <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ø Genauigkeit</span>
-          </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white">{Math.round(avgAccuracy)}%</div>
+        <div className="cds--tile p-6 border-l-4 border-l-[#0f62fe]">
+          <span className="text-xs font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+            Ø Gesamtgenauigkeit
+          </span>
+          <p className="text-3xl sm:text-4xl font-mono font-semibold text-[var(--cds-text-primary)] mt-2">
+            {Math.round(avgAccuracy)}%
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
-              <Target size={20} />
-            </div>
-            <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Richtige Antworten</span>
-          </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white">{correctAnswers} / {totalQuestions}</div>
+        <div className="cds--tile p-6 border-l-4 border-l-[#24a148]">
+          <span className="text-xs font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+            Richtig beantwortet
+          </span>
+          <p className="text-3xl sm:text-4xl font-mono font-semibold text-[var(--cds-text-primary)] mt-2">
+            {correctAnswers}
+            <span className="text-base text-[var(--cds-text-helper)] ml-1">/{totalQuestions} Fragen</span>
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center">
-              <Clock size={20} />
-            </div>
-            <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Versuche</span>
-          </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white">{results.length}</div>
+        <div className="cds--tile p-6 border-l-4 border-l-[#8a3ffc]">
+          <span className="text-xs font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+            Absolvierte Quizzes
+          </span>
+          <p className="text-3xl sm:text-4xl font-mono font-semibold text-[var(--cds-text-primary)] mt-2">
+            {results.length}
+          </p>
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Line Chart */}
-        <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
-          <h3 className="text-lg font-bold mb-6 flex items-center gap-2 dark:text-white">
-            <TrendingUp size={20} className="text-indigo-600 dark:text-indigo-400" />
-            Lernfortschritt (nach Datum)
-          </h3>
-          <div className="h-[300px] w-full">
+      {/* Chart Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Accuracy over time */}
+        <div className="cds--tile p-6">
+          <div className="border-b border-[var(--cds-border-subtle-01)] pb-3 mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-primary)]">
+              Genauigkeitsverlauf
+            </h3>
+            <span className="text-xs font-mono text-[var(--cds-text-helper)]">
+              Score in %
+            </span>
+          </div>
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={lineData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#F3F4F6'} />
+                <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="#e0e0e0" className="dark:stroke-[#393939]" />
                 <XAxis 
-                  dataKey="date" 
+                  dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 12, fill: '#9CA3AF' }}
-                  dy={10}
+                  tick={{ fontSize: 11, fill: '#8d8d8d', fontFamily: 'monospace' }}
+                  dy={6}
                 />
                 <YAxis 
+                  domain={[0, 100]} 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 12, fill: '#9CA3AF' }}
-                  domain={[0, 100]}
+                  tick={{ fontSize: 11, fill: '#8d8d8d', fontFamily: 'monospace' }}
                 />
                 <Tooltip 
                   contentStyle={{ 
-                    borderRadius: '16px', 
-                    border: 'none', 
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                    padding: '12px',
-                    backgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#FFFFFF',
-                    color: document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000'
+                    borderRadius: '0px', 
+                    border: '1px solid #393939', 
+                    boxShadow: 'none',
+                    padding: '6px 12px',
+                    backgroundColor: '#161616',
+                    color: '#f4f4f4',
+                    fontFamily: 'monospace',
+                    fontSize: '12px'
                   }}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="accuracy" 
-                  stroke="#4F46E5" 
-                  strokeWidth={4} 
-                  dot={{ r: 6, fill: '#4F46E5', strokeWidth: 2, stroke: '#fff' }}
-                  activeDot={{ r: 8, strokeWidth: 0 }}
+                  stroke="#0f62fe" 
+                  strokeWidth={2} 
+                  dot={{ r: 3, fill: '#0f62fe', strokeWidth: 1, stroke: '#ffffff' }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Bar Chart */}
-        <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
-          <h3 className="text-lg font-bold mb-6 flex items-center gap-2 dark:text-white">
-            <Award size={20} className="text-emerald-600 dark:text-emerald-400" />
-            Performance nach Schulfach
-          </h3>
-          <div className="h-[300px] w-full">
+        {/* Accuracy by Subject */}
+        <div className="cds--tile p-6">
+          <div className="border-b border-[var(--cds-border-subtle-01)] pb-3 mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-primary)]">
+              Leistung nach Fach / Bereich
+            </h3>
+            <span className="text-xs font-mono text-[var(--cds-text-helper)]">
+              Ø Genauigkeit
+            </span>
+          </div>
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={document.documentElement.classList.contains('dark') ? '#374151' : '#F3F4F6'} />
-                <XAxis type="number" domain={[0, 100]} hide />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
+              <BarChart data={barData} layout="vertical" margin={{ left: 20 }}>
+                <CartesianGrid strokeDasharray="2 2" horizontal={false} stroke="#e0e0e0" className="dark:stroke-[#393939]" />
+                <XAxis 
+                  type="number" 
+                  domain={[0, 100]} 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 12, fill: document.documentElement.classList.contains('dark') ? '#9CA3AF' : '#4B5563', fontWeight: 600 }}
-                  width={110}
+                  tick={{ fontSize: 11, fill: '#8d8d8d', fontFamily: 'monospace' }}
+                />
+                <YAxis 
+                  type="category" 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#8d8d8d' }}
                 />
                 <Tooltip 
-                  cursor={{ fill: document.documentElement.classList.contains('dark') ? '#374151' : '#F9FAFB' }}
                   contentStyle={{ 
-                    borderRadius: '16px', 
-                    border: 'none', 
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                    padding: '12px',
-                    backgroundColor: document.documentElement.classList.contains('dark') ? '#1F2937' : '#FFFFFF',
-                    color: document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#000000'
+                    borderRadius: '0px', 
+                    border: '1px solid #393939', 
+                    boxShadow: 'none',
+                    padding: '6px 12px',
+                    backgroundColor: '#161616',
+                    color: '#f4f4f4',
+                    fontFamily: 'monospace',
+                    fontSize: '12px'
                   }}
                 />
-                <Bar dataKey="accuracy" radius={[0, 8, 8, 0]} barSize={24}>
-                  {barData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Bar dataKey="accuracy" fill="#0f62fe" barSize={16}>
+                  {barData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={PALETTE_COLORS[index % PALETTE_COLORS.length]} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
+
       </div>
 
-      {/* Detailed Subject Overview Section */}
-      <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
-        <h3 className="text-lg font-bold mb-6 text-gray-800 dark:text-white">
-          Detaillierte Fächer-Übersicht
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {barData.map((item: any, i) => {
-            const barFill = COLORS[i % COLORS.length];
-            return (
-              <div 
-                key={item.name} 
-                className="p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 flex flex-col justify-between"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <span className="font-extrabold text-gray-800 dark:text-white text-base">
-                      {item.name}
-                    </span>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {item.quizzesCount} {item.quizzesCount === 1 ? 'Quiz' : 'Quizzes'} absolviert
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span 
-                      className="text-sm font-black px-2.5 py-1 rounded-xl"
-                      style={{ backgroundColor: `${barFill}15`, color: barFill }}
-                    >
-                      {item.accuracy}% Ø
-                    </span>
-                    <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 mt-1">
-                      {item.correctRatio} richtig
-                    </span>
-                  </div>
-                </div>
+      {/* Historical Quiz Table */}
+      <div className="cds--tile p-0 overflow-hidden">
+        <div className="p-4 border-b border-[var(--cds-border-subtle-01)] bg-[var(--cds-layer-02)] flex items-center justify-between">
+          <h3 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-primary)]">
+            Absolvierte Quiz-Einheiten
+          </h3>
+          <span className="text-xs font-mono text-[var(--cds-text-secondary)]">
+            {results.length} Einträge
+          </span>
+        </div>
 
-                {/* Progress bar container */}
-                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mt-2">
-                  <div 
-                    className="h-2 rounded-full transition-all duration-500" 
-                    style={{ width: `${item.accuracy}%`, backgroundColor: barFill }}
-                  />
+        <div className="divide-y divide-[var(--cds-border-subtle-01)]">
+          {results.map((r, i) => (
+            <div key={r.id || i} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[var(--cds-layer-02)] transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-8 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] text-xs font-mono font-semibold flex items-center justify-center text-[var(--cds-text-primary)]">
+                  #{results.length - i}
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-[var(--cds-text-primary)]">
+                    {r.package_name || "Lernpaket"}
+                  </h4>
+                  <p className="text-[11px] font-mono text-[var(--cds-text-helper)] flex items-center gap-1.5 mt-0.5">
+                    <Calendar size={12} />
+                    {r.created_at ? new Date(r.created_at).toLocaleString("de-DE", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    }) : ""}
+                  </p>
                 </div>
               </div>
-            );
-          })}
+
+              <div className="flex items-center gap-3 self-end sm:self-auto font-mono text-xs">
+                <span className="text-[var(--cds-text-secondary)]">
+                  {r.score}/{r.total} richtig
+                </span>
+                <span className={`cds--tag ${
+                  r.accuracy >= 80 ? 'cds--tag--green' : r.accuracy >= 50 ? 'cds--tag--blue' : 'cds--tag--red'
+                } text-[11px]`}>
+                  {Math.round(r.accuracy)}%
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+
     </div>
   );
 }

@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { User, GraduationCap, Moon, Bell, Shield, LogOut, ChevronRight, Save, CheckCircle2, Code, Key } from "lucide-react";
+import { 
+  User, 
+  Save, 
+  Checkmark, 
+  Moon, 
+  Sun, 
+  Notification, 
+  Code, 
+  Password, 
+  Information,
+  Settings as SettingsIcon,
+  ChevronDown
+} from "@carbon/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface SettingsViewProps {
@@ -7,7 +19,10 @@ interface SettingsViewProps {
   onToggleDarkMode?: () => void;
 }
 
-export default function SettingsView({ darkMode: propDarkMode, onToggleDarkMode }: SettingsViewProps) {
+export default function SettingsView({ 
+  darkMode: propDarkMode, 
+  onToggleDarkMode
+}: SettingsViewProps) {
   const [name, setName] = useState(() => localStorage.getItem("user_name") || "Lern-Profi");
   const [grade, setGrade] = useState(() => localStorage.getItem("user_grade") || "5");
   const [showSaved, setShowSaved] = useState(false);
@@ -43,7 +58,6 @@ export default function SettingsView({ darkMode: propDarkMode, onToggleDarkMode 
   const toggleDarkMode = () => {
     if (onToggleDarkMode) {
       onToggleDarkMode();
-      localStorage.setItem("dark_mode", (!isDarkMode).toString());
     } else {
       const newMode = !isDarkMode;
       setIsDarkMode(newMode);
@@ -57,228 +71,253 @@ export default function SettingsView({ darkMode: propDarkMode, onToggleDarkMode 
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-20 lg:pb-0">
-      {/* Profile Section */}
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
-        <div className="flex items-center gap-6 mb-8">
-          <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-            <User size={40} />
+    <div className="max-w-3xl mx-auto space-y-6 pb-16">
+      
+      {/* Carbon Success Notification */}
+      <AnimatePresence>
+        {showSaved && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="cds--inline-notification cds--inline-notification--success flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <Checkmark size={18} className="text-[#24a148]" />
+              <span className="text-xs font-semibold">Einstellungen erfolgreich gespeichert.</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Profile Tile */}
+      <div className="cds--tile p-6 space-y-6">
+        <div className="flex items-center gap-4 border-b border-[var(--cds-border-subtle-01)] pb-4">
+          <div className="w-12 h-12 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] flex items-center justify-center text-[#0f62fe]">
+            <User size={24} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{name}</h3>
-            <p className="text-gray-500 dark:text-gray-400">Klasse {grade} • LernGenie Premium</p>
+            <h3 className="text-base font-semibold text-[var(--cds-text-primary)]">{name}</h3>
+            <p className="text-xs font-mono text-[var(--cds-text-helper)]">Klasse {grade} • LernGenie System</p>
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Dein Name</label>
+            <label className="cds--label">Benutzername</label>
             <input 
               type="text" 
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900 outline-none transition-all"
-              placeholder="Wie möchtest du genannt werden?"
+              className="cds--text-input"
+              placeholder="Name eingeben"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Deine Klassenstufe</label>
-            <select 
-              value={grade}
-              onChange={(e) => setGrade(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900 outline-none transition-all appearance-none bg-white"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map(g => (
-                <option key={g} value={g}>Klasse {g}</option>
-              ))}
-            </select>
+            <label className="cds--label">Klassenstufe</label>
+            <div className="relative">
+              <select 
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+                className="cds--select pr-10"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map(g => (
+                  <option key={g} value={g}>Klasse {g}</option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--cds-text-secondary)]">
+                <ChevronDown size={16} />
+              </div>
+            </div>
           </div>
+        </div>
 
+        <div className="pt-2">
           <button 
+            id="btn-save-profile-settings"
             onClick={handleSave}
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-[0.98] transition-all shadow-lg shadow-indigo-100 dark:shadow-none"
+            className="cds--btn cds--btn--primary"
           >
-            {showSaved ? (
-              <>
-                <CheckCircle2 size={20} />
-                Gespeichert!
-              </>
-            ) : (
-              <>
-                <Save size={20} />
-                Änderungen speichern
-              </>
-            )}
+            <Save size={16} className="mr-2" />
+            <span>Einstellungen speichern</span>
           </button>
         </div>
       </div>
 
-      {/* Preferences Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
-        <div className="p-4 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2">Präferenzen</span>
+      {/* Design System & Theme Tile */}
+      <div className="cds--tile p-6 space-y-4">
+        <div className="border-b border-[var(--cds-border-subtle-01)] pb-3">
+          <span className="text-xs font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+            Erscheinungsbild
+          </span>
+          <h3 className="text-sm font-semibold text-[var(--cds-text-primary)]">
+            Design & Farbschema
+          </h3>
         </div>
-        
-        <div className="divide-y divide-gray-50 dark:divide-gray-700">
-          <button 
-            onClick={toggleDarkMode}
-            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                <Moon size={20} />
-              </div>
-              <div className="text-left">
-                <div className="font-bold text-gray-900 dark:text-white">Dark Mode</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Augenschonend bei Nacht</div>
-              </div>
-            </div>
-            <div className={`w-12 h-6 rounded-full relative transition-colors ${isDarkMode ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
-              <motion.div 
-                animate={{ x: isDarkMode ? 24 : 4 }}
-                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
-              />
-            </div>
-          </button>
 
-          <div className="px-6 py-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400">
-                  <Bell size={20} />
-                </div>
-                <div className="text-left">
-                  <div className="font-bold text-gray-900 dark:text-white">Benachrichtigungen</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Lern-Erinnerungen und Tipps</div>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsNotificationsEnabled(!isNotificationsEnabled)}
-                className={`w-12 h-6 rounded-full relative transition-colors ${isNotificationsEnabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'}`}
-              >
-                <motion.div 
-                  animate={{ x: isNotificationsEnabled ? 24 : 4 }}
-                  className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
-                />
-              </button>
+        <div className="p-4 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] text-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-[var(--cds-text-primary)]">Aktives Theme</span>
+            <span className="cds--tag cds--tag--blue text-xs font-mono">Standard</span>
+          </div>
+          <p className="text-[var(--cds-text-secondary)] leading-relaxed">
+            Klares, kontrastreiches Interface mit präziser Linienführung, moderner Typografie und vollständiger Barrierefreiheit.
+          </p>
+        </div>
+
+        {/* Dark Mode Switch */}
+        <div className="flex items-center justify-between pt-3 pb-1 border-t border-[var(--cds-border-subtle-01)] gap-4">
+          <div className="flex items-center gap-3 min-w-0 pr-2">
+            <div className="w-8 h-8 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] flex items-center justify-center text-[var(--cds-text-secondary)] shrink-0">
+              {isDarkMode ? <Moon size={16} /> : <Sun size={16} />}
             </div>
-            
-            {isNotificationsEnabled && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                className="pl-14 pt-2"
-              >
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Erinnerungszeit</label>
-                <input 
-                  type="time" 
-                  value={notificationTime}
-                  onChange={(e) => setNotificationTime(e.target.value)}
-                  className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900 transition-all"
-                />
-              </motion.div>
-            )}
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-[var(--cds-text-primary)] block">Dunkles Farbschema</span>
+              <span className="text-[11px] text-[var(--cds-text-secondary)] block">Umschalten zwischen hellem und dunklem Modus</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-mono text-[var(--cds-text-helper)] select-none">
+              {isDarkMode ? "Ein" : "Aus"}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isDarkMode}
+              onClick={toggleDarkMode}
+              className={`cds--toggle-btn ${isDarkMode ? "cds--toggle-btn--checked" : ""}`}
+              aria-label="Dunkles Farbschema umschalten"
+            >
+              <span className="cds--toggle-thumb" />
+            </button>
           </div>
         </div>
+
+        {/* Notification toggle */}
+        <div className="flex items-center justify-between pt-3 pb-1 border-t border-[var(--cds-border-subtle-01)] gap-4">
+          <div className="flex items-center gap-3 min-w-0 pr-2">
+            <div className="w-8 h-8 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] flex items-center justify-center text-[var(--cds-text-secondary)] shrink-0">
+              <Notification size={16} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-[var(--cds-text-primary)] block">Lern-Erinnerungen</span>
+              <span className="text-[11px] text-[var(--cds-text-secondary)] block">Tägliche Erinnerung an Lernziele</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-mono text-[var(--cds-text-helper)] select-none">
+              {isNotificationsEnabled ? "Ein" : "Aus"}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isNotificationsEnabled}
+              onClick={() => setIsNotificationsEnabled(!isNotificationsEnabled)}
+              className={`cds--toggle-btn ${isNotificationsEnabled ? "cds--toggle-btn--checked" : ""}`}
+              aria-label="Lern-Erinnerungen umschalten"
+            >
+              <span className="cds--toggle-thumb" />
+            </button>
+          </div>
+        </div>
+
+        {isNotificationsEnabled && (
+          <div className="pl-11 pt-2">
+            <label className="cds--label">Erinnerungszeit</label>
+            <input 
+              type="time" 
+              value={notificationTime}
+              onChange={(e) => setNotificationTime(e.target.value)}
+              className="cds--text-input max-w-xs font-mono"
+            />
+          </div>
+        )}
       </div>
 
-      {/* Developer Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
-        <div className="p-4 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2">Entwickler</span>
+      {/* Developer Options Tile */}
+      <div className="cds--tile p-6 space-y-4">
+        <div className="flex items-center justify-between border-b border-[var(--cds-border-subtle-01)] pb-3 gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <Code size={18} className="text-[var(--cds-text-secondary)] shrink-0" />
+            <h3 className="text-sm font-semibold text-[var(--cds-text-primary)] truncate">
+              Erweiterte Entwickler-Optionen
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-mono text-[var(--cds-text-helper)] select-none">
+              {isDevMode ? "Ein" : "Aus"}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isDevMode}
+              onClick={() => setIsDevMode(!isDevMode)}
+              className={`cds--toggle-btn ${isDevMode ? "cds--toggle-btn--checked" : ""}`}
+              aria-label="Entwicklermodus umschalten"
+            >
+              <span className="cds--toggle-thumb" />
+            </button>
+          </div>
         </div>
-        
-        <div className="divide-y divide-gray-50 dark:divide-gray-700">
-          <button 
-            onClick={() => setIsDevMode(!isDevMode)}
-            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                <Code size={20} />
-              </div>
-              <div className="text-left">
-                <div className="font-bold text-gray-900 dark:text-white">Developer Mode</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Erweiterte Optionen freischalten</div>
+
+        {isDevMode && (
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="cds--label">KI-Provider</label>
+              <div className="relative">
+                <select 
+                  value={aiProvider}
+                  onChange={(e) => setAiProvider(e.target.value)}
+                  className="cds--select pr-10"
+                >
+                  <option value="gemini">Google Gemini (Empfohlen)</option>
+                  <option value="openrouter">OpenRouter API</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--cds-text-secondary)]">
+                  <ChevronDown size={16} />
+                </div>
               </div>
             </div>
-            <div className={`w-12 h-6 rounded-full relative transition-colors ${isDevMode ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
-              <motion.div 
-                animate={{ x: isDevMode ? 24 : 4 }}
-                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+
+            <div>
+              <label className="cds--label">Eigener API-Key (Optional)</label>
+              <input 
+                type="password" 
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="cds--text-input font-mono text-xs"
+                placeholder="Standardmäßig wird der Server-Schlüssel verwendet"
               />
             </div>
-          </button>
 
-          <AnimatePresence>
-            {isDevMode && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="px-6 py-4 space-y-4"
-              >
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                      AI Provider
-                    </label>
-                    <select 
-                      value={aiProvider}
-                      onChange={(e) => setAiProvider(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-200 outline-none transition-all appearance-none"
-                    >
-                      <option value="gemini">Default (Gemini)</option>
-                      <option value="openrouter">OpenRouter</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                      <Key size={14} />
-                      API Key
-                    </label>
-                    <input 
-                      type="password" 
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900 outline-none transition-all font-mono text-sm"
-                      placeholder={aiProvider === 'gemini' ? "Dein Gemini API Key..." : "Dein OpenRouter API Key..."}
-                    />
-                  </div>
-
-                  {aiProvider === 'openrouter' && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                        OpenRouter Model
-                      </label>
-                      <input 
-                        type="text" 
-                        value={modelName}
-                        onChange={(e) => setModelName(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
-                        placeholder="google/gemini-2.0-flash-exp:free"
-                      />
-                    </motion.div>
-                  )}
-
-                  <p className="text-[10px] text-gray-400">
-                    Diese Einstellungen ermöglichen es dir, eigene API-Endpunkte (wie OpenRouter) zu nutzen. Die Schlüssel werden nur lokal in deinem Browser gespeichert.
-                  </p>
-                </div>
-              </motion.div>
+            {aiProvider === 'openrouter' && (
+              <div>
+                <label className="cds--label">OpenRouter Modell-ID</label>
+                <input 
+                  type="text" 
+                  value={modelName}
+                  onChange={(e) => setModelName(e.target.value)}
+                  className="cds--text-input font-mono text-xs"
+                  placeholder="google/gemini-2.0-flash-exp:free"
+                />
+              </div>
             )}
-          </AnimatePresence>
-        </div>
+
+            <p className="text-[11px] text-[var(--cds-text-helper)]">
+              Benutzerdefinierte API-Keys werden ausschließlich verschlüsselt im lokalen Browserspeicher gehalten.
+            </p>
+          </div>
+        )}
       </div>
 
-      <div className="text-center text-xs text-gray-400 py-4">
-        LernGenie v1.0.0 • Made with ❤️ for Students
+      <div className="text-center text-xs font-mono text-[var(--cds-text-helper)] py-4">
+        LernGenie v2.0 • KI-gestützte Lernplattform
       </div>
+
     </div>
   );
 }

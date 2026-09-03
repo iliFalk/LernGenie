@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, RefreshCw, Sparkles, BrainCircuit } from "lucide-react";
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Renew, 
+  Idea, 
+  Close, 
+  Notebook,
+  Help
+} from "@carbon/icons-react";
 import { motion, AnimatePresence } from "motion/react";
-import { StudyPackage, Material } from "../types";
+import { StudyPackage } from "../types";
 import { getCachedFlashcards } from "../services/gemini";
-import { authFetch } from "../services/auth";
 
 interface FlashcardsViewProps {
   package: StudyPackage;
@@ -28,7 +35,7 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
       setCurrentIndex(0);
       setIsFlipped(false);
     } catch (error) {
-      console.error(error);
+      console.error("Error loading flashcards:", error);
     } finally {
       setIsLoading(false);
     }
@@ -50,28 +57,30 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-40">
-        <div className="w-12 h-12 border-4 border-indigo-100 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-500 dark:text-gray-400 font-medium">Erstelle Flashcards...</p>
+      <div className="flex flex-col items-center justify-center py-32">
+        <div className="w-10 h-10 border-4 border-[var(--cds-border-subtle-01)] border-t-[#0f62fe] rounded-full animate-spin mb-4" />
+        <p className="text-sm font-mono text-[var(--cds-text-secondary)]">Flashcards werden generiert...</p>
       </div>
     );
   }
 
   if (cards.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto py-20 text-center">
-        <div className="w-16 h-16 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <X size={32} />
+      <div className="max-w-xl mx-auto py-16 text-center cds--tile p-8 space-y-4">
+        <div className="w-12 h-12 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] flex items-center justify-center text-[#da1e28] mx-auto">
+          <Close size={24} />
         </div>
-        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Fehler beim Erstellen der Flashcards</h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
-          Der KI-Service konnte keine Flashcards generieren. Bitte überprüfe deine Internetverbindung oder deinen API-Key in den Einstellungen.
+        <h3 className="text-lg font-semibold text-[var(--cds-text-primary)]">
+          Keine Flashcards verfügbar
+        </h3>
+        <p className="text-xs text-[var(--cds-text-secondary)] max-w-sm mx-auto">
+          Die Flashcards konnten nicht geladen werden. Bitte prüfe deine Verbindung oder versuche eine Neugenerierung.
         </p>
-        <div className="flex justify-center gap-4">
-          <button onClick={onBack} className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors min-h-[44px]">
+        <div className="flex justify-center gap-3 pt-2">
+          <button onClick={onBack} className="cds--btn cds--btn--secondary text-xs">
             Zurück
           </button>
-          <button onClick={() => loadFlashcards(false)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors min-h-[44px]">
+          <button onClick={() => loadFlashcards(false)} className="cds--btn cds--btn--primary text-xs">
             Erneut versuchen
           </button>
         </div>
@@ -80,34 +89,57 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-10">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 dark:text-gray-400 font-bold hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors min-h-[44px] min-w-[44px]">
-          <ChevronLeft size={24} />
-          Zurück
-        </button>
-        <div className="text-center">
-          <h2 className="text-2xl font-black dark:text-white">Flashcards</h2>
-          <p className="text-gray-400 dark:text-gray-500 text-sm font-bold uppercase tracking-widest">{pkg.name}</p>
+    <div className="max-w-2xl mx-auto space-y-6">
+      
+      {/* Carbon Breadcrumbs & Header */}
+      <div>
+        <div className="cds--breadcrumb">
+          <button onClick={onBack} className="hover:underline text-[var(--cds-text-secondary)]">Lernpakete</button>
+          <span className="cds--breadcrumb-separator">/</span>
+          <button onClick={onBack} className="hover:underline text-[var(--cds-text-secondary)] truncate max-w-xs">{pkg.name}</button>
+          <span className="cds--breadcrumb-separator">/</span>
+          <span className="text-[var(--cds-text-primary)] font-medium">Flashcards</span>
         </div>
-        <button 
-          onClick={() => loadFlashcards(true)} 
-          title="Neu generieren"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all min-h-[36px]"
-        >
-          <RefreshCw size={14} className="animate-hover-spin" />
-          <span>Neu generieren</span>
-        </button>
+
+        <div className="border-b border-[var(--cds-border-subtle-01)] pb-4 flex items-center justify-between">
+          <button 
+            onClick={onBack} 
+            className="cds--btn cds--btn--tertiary text-xs h-10 px-3"
+          >
+            <ArrowLeft size={16} className="mr-2" />
+            <span>Zurück</span>
+          </button>
+
+          <div className="text-center">
+            <h2 className="text-base font-semibold text-[var(--cds-text-primary)]">
+              Karteikarten-Training
+            </h2>
+            <span className="text-[11px] font-mono text-[var(--cds-text-helper)]">
+              {pkg.name}
+            </span>
+          </div>
+
+          <button 
+            onClick={() => loadFlashcards(true)} 
+            title="Neu generieren"
+            className="cds--btn cds--btn--ghost text-xs h-10 px-3"
+          >
+            <Renew size={16} className="mr-2" />
+            <span className="hidden sm:inline">Neu generieren</span>
+          </button>
+        </div>
       </div>
 
-      <div className="relative h-[320px] sm:h-[400px] w-full perspective-1000 mb-8 sm:mb-12">
+      {/* 3D Flip Card Container */}
+      <div className="relative h-72 sm:h-80 w-full perspective-1000">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
-            initial={{ opacity: 0, x: 50 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="w-full h-full cursor-pointer"
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.15 }}
+            className="w-full h-full cursor-pointer select-none"
             onClick={() => setIsFlipped(!isFlipped)}
           >
             <motion.div
@@ -115,44 +147,79 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
               className="relative w-full h-full preserve-3d"
             >
-              {/* Front */}
-              <div className="absolute inset-0 backface-hidden bg-white dark:bg-gray-800 rounded-[2rem] sm:rounded-[3rem] shadow-2xl shadow-indigo-100/30 dark:shadow-none border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center p-6 sm:p-12 text-center transition-colors">
-                <span className="absolute top-6 sm:top-8 left-6 sm:left-8 text-[10px] sm:text-xs font-black text-indigo-200 dark:text-indigo-900 uppercase tracking-[0.2em]">Frage</span>
-                <BrainCircuit className="text-indigo-100 dark:text-indigo-900 absolute top-6 sm:top-8 right-6 sm:right-8" size={32} />
-                <h3 className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-white leading-tight">{cards[currentIndex]?.front}</h3>
-                <p className="mt-6 sm:mt-8 text-indigo-400 dark:text-indigo-500 text-xs sm:text-sm font-bold animate-pulse">Tippen zum Umdrehen</p>
+              {/* Front: Question */}
+              <div className="absolute inset-0 backface-hidden cds--tile p-8 flex flex-col justify-between border-2 border-[var(--cds-border-subtle-01)] hover:border-[#0f62fe] transition-colors">
+                <div className="flex items-center justify-between border-b border-[var(--cds-border-subtle-01)] pb-3">
+                  <span className="cds--tag cds--tag--blue text-[11px] font-mono uppercase tracking-wider">
+                    Vorderseite • Frage
+                  </span>
+                  <Notebook size={18} className="text-[#0f62fe]" />
+                </div>
+
+                <div className="my-auto text-center px-4">
+                  <h3 className="text-lg sm:text-xl font-normal text-[var(--cds-text-primary)] leading-relaxed">
+                    {cards[currentIndex]?.front}
+                  </h3>
+                </div>
+
+                <div className="pt-3 border-t border-[var(--cds-border-subtle-01)] text-center">
+                  <span className="text-xs font-mono text-[var(--cds-text-helper)]">
+                    Klicken zum Umdrehen
+                  </span>
+                </div>
               </div>
 
-              {/* Back */}
-              <div className="absolute inset-0 backface-hidden bg-indigo-600 dark:bg-indigo-700 rounded-[2rem] sm:rounded-[3rem] shadow-2xl shadow-indigo-100/50 dark:shadow-none flex flex-col items-center justify-center p-6 sm:p-12 text-center rotate-y-180 transition-colors">
-                <span className="absolute top-6 sm:top-8 left-6 sm:left-8 text-[10px] sm:text-xs font-black text-indigo-300 dark:text-indigo-400 uppercase tracking-[0.2em]">Antwort</span>
-                <Sparkles className="text-indigo-400 dark:text-indigo-300 absolute top-6 sm:top-8 right-6 sm:right-8" size={32} />
-                <h3 className="text-lg sm:text-2xl font-bold text-white leading-tight">{cards[currentIndex]?.back}</h3>
+              {/* Back: Answer */}
+              <div className="absolute inset-0 backface-hidden bg-[#0f62fe] text-white p-8 flex flex-col justify-between rotate-y-180 border-2 border-[#0043ce]">
+                <div className="flex items-center justify-between border-b border-white/20 pb-3">
+                  <span className="px-2 py-0.5 bg-[#0043ce] text-white text-[11px] font-mono uppercase tracking-wider">
+                    Rückseite • Antwort
+                  </span>
+                  <Idea size={18} className="text-white" />
+                </div>
+
+                <div className="my-auto text-center px-4">
+                  <h3 className="text-lg sm:text-xl font-normal text-white leading-relaxed">
+                    {cards[currentIndex]?.back}
+                  </h3>
+                </div>
+
+                <div className="pt-3 border-t border-white/20 text-center">
+                  <span className="text-xs font-mono text-blue-100">
+                    Klicken für Frage
+                  </span>
+                </div>
               </div>
             </motion.div>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      <div className="flex items-center justify-between px-4">
+      {/* Navigation Toolbar */}
+      <div className="cds--tile p-3 flex items-center justify-between">
         <button 
           onClick={prevCard}
-          className="w-12 h-12 sm:w-14 sm:h-14 bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-lg transition-all border border-gray-100 dark:border-gray-700"
+          className="cds--btn cds--btn--secondary text-xs h-10 px-4"
+          aria-label="Vorherige Karte"
         >
-          <ChevronLeft size={24} />
+          <ArrowLeft size={16} className="mr-2" />
+          <span>Zurück</span>
         </button>
         
-        <div className="text-gray-400 dark:text-gray-500 font-black text-base sm:text-lg">
-          {currentIndex + 1} <span className="text-gray-200 dark:text-gray-700">/</span> {cards.length}
+        <div className="font-mono text-xs font-semibold text-[var(--cds-text-primary)]">
+          {currentIndex + 1} <span className="text-[var(--cds-text-helper)]">/</span> {cards.length}
         </div>
 
         <button 
           onClick={nextCard}
-          className="w-12 h-12 sm:w-14 sm:h-14 bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-lg transition-all border border-gray-100 dark:border-gray-700"
+          className="cds--btn cds--btn--primary text-xs h-10 px-4"
+          aria-label="Nächste Karte"
         >
-          <ChevronRight size={24} />
+          <span>Weiter</span>
+          <ArrowRight size={16} className="ml-2" />
         </button>
       </div>
+
     </div>
   );
 }

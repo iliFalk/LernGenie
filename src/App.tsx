@@ -4,10 +4,25 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { BookOpen, Plus, Library as LibraryIcon, ChevronRight, Settings, Search, FileText, Camera, Upload, Trash2, X, BrainCircuit, Sparkles, CheckCircle2, AlertCircle, ArrowRight, RefreshCw, BarChart3, GraduationCap } from "lucide-react";
+import { 
+  Folder, 
+  ChartLine, 
+  Settings as SettingsIcon, 
+  Add, 
+  Search, 
+  Notification, 
+  Moon, 
+  Sun, 
+  User, 
+  Menu, 
+  Close,
+  Education,
+  Catalog,
+  Information
+} from "@carbon/icons-react";
 import { motion, AnimatePresence } from "motion/react";
-import { StudyPackage, Material, Question, QuizResult, AnalysisData } from "./types";
-import { extractTextFromImage, generateQuiz, getCachedQuiz, analyzePerformance, generateFlashcards, generateStudyGuide } from "./services/gemini";
+import { StudyPackage, Question, QuizResult } from "./types";
+import { getCachedQuiz, analyzePerformance } from "./services/gemini";
 import { authFetch } from "./services/auth";
 
 // Components
@@ -33,10 +48,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("dark_mode") === "true");
+  const [isSideNavOpen, setIsSideNavOpen] = useState(false);
 
   useEffect(() => {
     fetchPackages();
-    // Initialize dark mode from localStorage
     if (darkMode) {
       document.documentElement.classList.add("dark");
       document.body.classList.add("dark");
@@ -109,8 +124,6 @@ export default function App() {
     } catch (error: any) {
       console.error("Failed to process quiz completion:", error);
       alert("Fehler beim Speichern der Antworten: " + (error?.message || "Verbindungsfehler"));
-      // Still show local results if analysis succeeded or can be recovered
-      // In case of total failure we'll at least go back to the library cleanly
       setView("library");
     } finally {
       setIsLoading(false);
@@ -127,116 +140,230 @@ export default function App() {
     setView("study-guide");
   };
 
-  return (
-    <div className={`min-h-screen bg-[#F3F7FA] dark:bg-gray-950 text-[#15273C] dark:text-[#E0F2FE] font-sans transition-colors ${darkMode ? 'dark' : ''} overflow-x-hidden`}>
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem("dark_mode", next.toString());
+  };
 
-      {/* Sidebar (Desktop) */}
-      <div className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 glass-heavy p-6 flex-col z-20 transition-all">
-        <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200/50 dark:shadow-none">
-            <GraduationCap size={24} />
+  return (
+    <div className={`min-h-screen bg-[var(--cds-background)] text-[var(--cds-text-primary)] font-sans transition-colors ${darkMode ? 'dark' : ''} overflow-x-hidden`}>
+
+      {/* ==========================================================================
+          CARBON DESIGN SYSTEM UI SHELL: FOOTER (No Header)
+          Height: 48px (3rem), Background: #161616, Border-Top: #393939
+          ========================================================================== */}
+      <footer className="fixed bottom-0 left-0 right-0 h-12 bg-[#161616] border-t border-[#393939] z-50 flex items-center justify-between px-0 select-none">
+        
+        {/* Left Section: Menu trigger + Brand */}
+        <div className="flex items-center h-full">
+          <button 
+            id="menu-toggle"
+            onClick={() => setIsSideNavOpen(!isSideNavOpen)}
+            className="w-12 h-12 flex items-center justify-center text-white hover:bg-[#393939] border-r border-[#393939] transition-colors focus:outline-2 focus:outline-[#0f62fe] focus:outline-offset-[-2px] lg:hidden"
+            aria-label="Side navigation toggle"
+          >
+            {isSideNavOpen ? <Close size={20} /> : <Menu size={20} />}
+          </button>
+
+          <div 
+            onClick={() => {
+              setView("library");
+              setIsSideNavOpen(false);
+            }}
+            className="flex items-center h-full px-4 text-white hover:bg-[#262626] transition-colors cursor-pointer"
+          >
+            <span className="text-[#0f62fe] mr-2">
+              <Education size={20} />
+            </span>
+            <span className="font-semibold text-sm tracking-tight text-white">LernGenie</span>
           </div>
-          <h1 className="font-bold text-xl tracking-tight dark:text-white">LernGenie</h1>
         </div>
 
-        <nav className="flex-1 space-y-1">
+        {/* Center: Current Context Breadcrumb (Hidden on small mobile) */}
+        <div className="hidden md:flex items-center text-xs text-[#c6c6c6] font-mono">
+          <span className="hover:text-white cursor-pointer" onClick={() => setView("library")}>Lernpakete</span>
+          <span className="mx-2 text-[#6f6f6f]">/</span>
+          <span className="text-white font-medium capitalize">
+            {view === "library" && "Bibliothek"}
+            {view === "package-detail" && (selectedPackage?.name || "Detail")}
+            {view === "quiz" && "Quiz-Modus"}
+            {view === "results" && "Auswertung"}
+            {view === "flashcards" && "Flashcards"}
+            {view === "study-guide" && "Study Guide"}
+            {view === "stats" && "Statistiken"}
+            {view === "settings" && "Einstellungen"}
+          </span>
+        </div>
+
+        {/* Right Section: Global Action Bar */}
+        <div className="flex items-center h-full">
+          {/* Quick Add (Visible on Desktop Footer) */}
           <button 
-            onClick={() => setView("library")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${view === "library" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold" : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+            id="btn-footer-new-pkg"
+            onClick={() => setIsUploadModalOpen(true)}
+            className="hidden sm:flex items-center gap-2 h-12 px-4 text-xs font-normal text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors focus:outline-2 focus:outline-white focus:outline-offset-[-2px]"
           >
-            <LibraryIcon size={20} />
+            <Add size={16} />
+            <span>Neues Paket</span>
+          </button>
+
+          {/* Dark / Light Toggle */}
+          <button 
+            id="btn-theme-toggle"
+            onClick={toggleDarkMode}
+            title={darkMode ? "Zum hellen Modus wechseln" : "Zum dunklen Modus wechseln"}
+            className="w-12 h-12 flex items-center justify-center text-white hover:bg-[#393939] border-l border-[#393939] transition-colors focus:outline-2 focus:outline-[#0f62fe] focus:outline-offset-[-2px]"
+            aria-label="Theme toggle"
+          >
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+
+          {/* Settings / Profile Action */}
+          <button 
+            id="btn-footer-settings"
+            onClick={() => {
+              setView("settings");
+              setIsSideNavOpen(false);
+            }}
+            title="Einstellungen"
+            className={`w-12 h-12 flex items-center justify-center text-white hover:bg-[#393939] border-l border-[#393939] transition-colors focus:outline-2 focus:outline-[#0f62fe] focus:outline-offset-[-2px] ${view === "settings" ? "bg-[#393939]" : ""}`}
+            aria-label="Settings"
+          >
+            <SettingsIcon size={20} />
+          </button>
+        </div>
+      </footer>
+
+      {/* ==========================================================================
+          SIDENAV
+          Width: 256px (16rem), Top: 0, Bottom: 48px (3rem), Left: 0
+          ========================================================================== */}
+      
+      {/* Mobile Backdrop Overlay */}
+      {isSideNavOpen && (
+        <div 
+          onClick={() => setIsSideNavOpen(false)}
+          className="fixed inset-0 bg-black/60 z-30 lg:hidden"
+        />
+      )}
+
+      <aside 
+        className={`fixed top-0 left-0 bottom-12 w-64 bg-[var(--cds-layer-01)] border-r border-[var(--cds-border-subtle-01)] z-40 flex flex-col transition-transform duration-200 ease-in-out ${
+          isSideNavOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        {/* SideNav Brand Header */}
+        <div className="h-12 border-b border-[var(--cds-border-subtle-01)] px-4 flex items-center gap-2 bg-[var(--cds-layer-02)]">
+          <Education size={20} className="text-[#0f62fe]" />
+          <span className="font-semibold text-sm tracking-tight text-[var(--cds-text-primary)]">LernGenie</span>
+        </div>
+
+        {/* Navigation Category Label */}
+        <div className="px-4 pt-4 pb-2 text-[11px] font-mono tracking-wider uppercase text-[var(--cds-text-helper)]">
+          Navigation
+        </div>
+
+        <nav className="flex-1 space-y-0.5">
+          <button 
+            id="nav-library-btn"
+            onClick={() => {
+              setView("library");
+              setIsSideNavOpen(false);
+            }}
+            className={`w-full h-12 flex items-center gap-3 px-4 text-sm transition-colors border-l-4 ${
+              view === "library" || view === "package-detail" || view === "quiz" || view === "results" || view === "flashcards" || view === "study-guide"
+                ? "border-[#0f62fe] bg-[var(--cds-layer-02)] text-[var(--cds-text-primary)] font-semibold" 
+                : "border-transparent text-[var(--cds-text-secondary)] hover:bg-[var(--cds-layer-02)] hover:text-[var(--cds-text-primary)]"
+            }`}
+          >
+            <Folder size={18} />
             <span>Bibliothek</span>
           </button>
+
           <button 
-            onClick={() => setView("stats")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${view === "stats" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold" : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+            id="nav-stats-btn"
+            onClick={() => {
+              setView("stats");
+              setIsSideNavOpen(false);
+            }}
+            className={`w-full h-12 flex items-center gap-3 px-4 text-sm transition-colors border-l-4 ${
+              view === "stats" 
+                ? "border-[#0f62fe] bg-[var(--cds-layer-02)] text-[var(--cds-text-primary)] font-semibold" 
+                : "border-transparent text-[var(--cds-text-secondary)] hover:bg-[var(--cds-layer-02)] hover:text-[var(--cds-text-primary)]"
+            }`}
           >
-            <BarChart3 size={20} />
+            <ChartLine size={18} />
             <span>Statistiken</span>
           </button>
+
           <button 
-            onClick={() => setView("settings")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${view === "settings" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold" : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+            id="nav-settings-btn"
+            onClick={() => {
+              setView("settings");
+              setIsSideNavOpen(false);
+            }}
+            className={`w-full h-12 flex items-center gap-3 px-4 text-sm transition-colors border-l-4 ${
+              view === "settings" 
+                ? "border-[#0f62fe] bg-[var(--cds-layer-02)] text-[var(--cds-text-primary)] font-semibold" 
+                : "border-transparent text-[var(--cds-text-secondary)] hover:bg-[var(--cds-layer-02)] hover:text-[var(--cds-text-primary)]"
+            }`}
           >
-            <Settings size={20} />
+            <SettingsIcon size={18} />
             <span>Einstellungen</span>
           </button>
         </nav>
-      </div>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30">
-        {/* Floating Action Button above footer */}
-        {view === "library" && (
-          <div className="flex justify-center mb-4">
-            <button 
-              onClick={() => setIsUploadModalOpen(true)}
-              className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-xl shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2 active:scale-95 transition-transform border border-indigo-500 min-h-[44px]"
-            >
-              <Plus size={24} />
-              <span className="text-sm">Neues Paket</span>
-            </button>
+        {/* SideNav Footer / System Info */}
+        <div className="p-4 border-t border-[var(--cds-border-subtle-01)] bg-[var(--cds-layer-02)]">
+          <div className="flex items-center justify-between text-xs text-[var(--cds-text-secondary)]">
+            <span className="font-mono text-[11px]">v2.0</span>
+            <span className="cds--tag cds--tag--blue text-[10px]">Aktiv</span>
           </div>
-        )}
-
-        {/* Footer Navigation */}
-        <div className="glass-heavy border-t border-gray-200/50 dark:border-gray-800/50 px-6 py-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] transition-all">
-          <button 
-            onClick={() => setView("library")}
-            className={`flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] ${view === "library" ? "text-indigo-600 dark:text-indigo-400" : "text-gray-400"}`}
-          >
-            <LibraryIcon size={24} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Bibliothek</span>
-          </button>
-          <button 
-            onClick={() => setView("stats")}
-            className={`flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] ${view === "stats" ? "text-indigo-600 dark:text-indigo-400" : "text-gray-400"}`}
-          >
-            <BarChart3 size={24} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Stats</span>
-          </button>
-          <button 
-            onClick={() => setView("settings")}
-            className={`flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] ${view === "settings" ? "text-indigo-600 dark:text-indigo-400" : "text-gray-400"}`}
-          >
-            <Settings size={24} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Settings</span>
-          </button>
+          <p className="text-[11px] text-[var(--cds-text-helper)] mt-1.5 leading-tight">
+            Produktivitäts- & Lernplattform
+          </p>
         </div>
-      </div>
+      </aside>
 
-      {/* Mobile Top Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 glass-heavy border-b border-gray-100/50 dark:border-gray-800/50 px-6 py-4 pt-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-between z-30 transition-all">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-indigo-100 dark:shadow-none">
-            <GraduationCap size={18} />
-          </div>
-          <h1 className="font-bold text-lg tracking-tight dark:text-white">LernGenie</h1>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <main className="lg:pl-64 min-h-screen pb-40 lg:pb-0 pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-0">
-        <div className="max-w-5xl mx-auto p-4 sm:p-8 pt-8 lg:pt-12">
+      {/* ==========================================================================
+          MAIN CONTENT WORKSPACE
+          Left offset: 256px on desktop (lg:pl-64), Bottom offset: 48px (pb-16)
+          ========================================================================== */}
+      <main className="lg:pl-64 pt-6 sm:pt-8 pb-16 min-h-screen">
+        <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
           <AnimatePresence mode="wait">
             {view === "library" && (
               <motion.div
                 key="library"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+                {/* Page Header */}
+                <div className="border-b border-[var(--cds-border-subtle-01)] pb-6 mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                   <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Deine Lernpakete</h2>
-                    <p className="text-gray-500 text-sm sm:text-base">Wähle ein Thema oder erstelle ein neues Lernpaket.</p>
+                    <div className="cds--breadcrumb">
+                      <span>LernGenie</span>
+                      <span className="cds--breadcrumb-separator">/</span>
+                      <span className="text-[var(--cds-text-primary)] font-medium">Bibliothek</span>
+                    </div>
+                    <h1 className="text-2xl sm:text-3xl font-light text-[var(--cds-text-primary)] tracking-tight">
+                      Deine Lernpakete
+                    </h1>
+                    <p className="text-sm text-[var(--cds-text-secondary)] mt-1">
+                      Wähle ein Thema aus oder erstelle mit KI ein neues Lernpaket aus deinen Dokumenten.
+                    </p>
                   </div>
+
                   <button 
+                    id="btn-create-package"
                     onClick={() => setIsUploadModalOpen(true)}
-                    className="hidden sm:flex bg-indigo-600 text-white px-6 py-3 rounded-2xl font-semibold items-center gap-2 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95"
+                    className="cds--btn cds--btn--primary"
                   >
-                    <Plus size={20} />
-                    Neues Paket
+                    <span>Neues Lernpaket</span>
+                    <Add size={18} className="ml-3" />
                   </button>
                 </div>
 
@@ -254,9 +381,10 @@ export default function App() {
             {view === "package-detail" && selectedPackage && (
               <motion.div
                 key="package-detail"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
               >
                 <PackageDetailView
                   pkg={selectedPackage}
@@ -275,13 +403,23 @@ export default function App() {
             {view === "stats" && (
               <motion.div
                 key="stats"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
               >
-                <div className="mb-8">
-                  <h2 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Deine Statistiken</h2>
-                  <p className="text-gray-500 text-sm sm:text-base">Verfolge deinen Lernfortschritt und deine Erfolge.</p>
+                <div className="border-b border-[var(--cds-border-subtle-01)] pb-6 mb-8">
+                  <div className="cds--breadcrumb">
+                    <span className="cursor-pointer hover:underline" onClick={() => setView("library")}>LernGenie</span>
+                    <span className="cds--breadcrumb-separator">/</span>
+                    <span className="text-[var(--cds-text-primary)] font-medium">Statistiken</span>
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-light text-[var(--cds-text-primary)] tracking-tight">
+                    Deine Statistiken
+                  </h1>
+                  <p className="text-sm text-[var(--cds-text-secondary)] mt-1">
+                    Verfolge deinen Lernfortschritt, deine Genauigkeit und deine Erfolge im Detail.
+                  </p>
                 </div>
                 <StatsView />
               </motion.div>
@@ -290,15 +428,28 @@ export default function App() {
             {view === "settings" && (
               <motion.div
                 key="settings"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
               >
-                <div className="mb-8">
-                  <h2 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Einstellungen</h2>
-                  <p className="text-gray-500 text-sm sm:text-base">Passe dein Lernerlebnis individuell an.</p>
+                <div className="border-b border-[var(--cds-border-subtle-01)] pb-6 mb-8">
+                  <div className="cds--breadcrumb">
+                    <span className="cursor-pointer hover:underline" onClick={() => setView("library")}>LernGenie</span>
+                    <span className="cds--breadcrumb-separator">/</span>
+                    <span className="text-[var(--cds-text-primary)] font-medium">Einstellungen</span>
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-light text-[var(--cds-text-primary)] tracking-tight">
+                    System-Einstellungen
+                  </h1>
+                  <p className="text-sm text-[var(--cds-text-secondary)] mt-1">
+                    Konfiguriere Design-Präferenzen, KI-Modelle und Benachrichtigungen.
+                  </p>
                 </div>
-                <SettingsView darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} />
+                <SettingsView 
+                  darkMode={darkMode} 
+                  onToggleDarkMode={toggleDarkMode}
+                />
               </motion.div>
             )}
 
@@ -339,7 +490,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* Upload Modal */}
+      {/* Carbon Upload Modal */}
       <UploadModal 
         isOpen={isUploadModalOpen} 
         onClose={() => setIsUploadModalOpen(false)}
@@ -349,18 +500,21 @@ export default function App() {
         }}
       />
 
-      {/* Loading Overlay */}
+      {/* Carbon Loading Overlay */}
       <AnimatePresence>
         {isLoading && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center px-safe py-safe transition-colors"
+            className="fixed inset-0 bg-[#161616]/70 backdrop-blur-xs z-50 flex flex-col items-center justify-center p-6"
           >
-            <div className="w-16 h-16 border-4 border-indigo-100 dark:border-indigo-900 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
-            <p className="text-xl font-bold text-gray-800 dark:text-white mb-2">{loadingMessage}</p>
-            <p className="text-gray-500 dark:text-gray-400">Das dauert nur einen Moment...</p>
+            <div className="bg-[var(--cds-layer-01)] border border-[var(--cds-border-subtle-01)] p-8 max-w-sm w-full flex flex-col items-center text-center">
+              {/* Loading Spinner */}
+              <div className="w-12 h-12 border-4 border-[var(--cds-border-subtle-01)] border-t-[#0f62fe] rounded-full animate-spin mb-4" />
+              <h3 className="text-base font-semibold text-[var(--cds-text-primary)] mb-1">{loadingMessage}</h3>
+              <p className="text-xs text-[var(--cds-text-secondary)]">KI-Verarbeitung läuft...</p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

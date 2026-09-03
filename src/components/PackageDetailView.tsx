@@ -1,9 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { 
-  ArrowLeft, BrainCircuit, Sparkles, FileText, Award, Target, 
-  HelpCircle, ChevronRight, BookOpen, Clock, Calendar, CheckCircle2,
-  X, Copy
-} from "lucide-react";
+  ArrowLeft, 
+  Play, 
+  Idea, 
+  Document, 
+  Trophy, 
+  ChartLine, 
+  Time, 
+  ChevronRight, 
+  Notebook, 
+  Close, 
+  Copy, 
+  Checkmark,
+  Calendar,
+  Catalog
+} from "@carbon/icons-react";
 import { StudyPackage, QuizResult, Material } from "../types";
 import { authFetch } from "../services/auth";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -44,7 +55,6 @@ export default function PackageDetailView({
         
         if (resultsRes.ok) {
           const resultsData = await resultsRes.json();
-          // The API returns results ordered DESC, we reverse it for the progress chart if we want chronological order
           setResults(resultsData);
         }
         
@@ -61,7 +71,6 @@ export default function PackageDetailView({
     loadData();
   }, [pkg.id]);
 
-  // Calculations
   const totalQuizzes = results.length;
   const avgAccuracy = totalQuizzes > 0 
     ? Math.round(results.reduce((sum, r) => sum + r.accuracy, 0) / totalQuizzes)
@@ -72,9 +81,8 @@ export default function PackageDetailView({
   const totalCorrect = results.reduce((sum, r) => sum + r.score, 0);
   const totalAsked = results.reduce((sum, r) => sum + r.total, 0);
 
-  // Prepare line chart data (chronological)
   const chartData = [...results].reverse().map((r, i) => ({
-    name: `Quiz ${i + 1}`,
+    name: `Q${i + 1}`,
     accuracy: Math.round(r.accuracy),
     date: r.created_at ? new Date(r.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) : ""
   }));
@@ -82,191 +90,243 @@ export default function PackageDetailView({
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4" />
-        <p className="text-gray-500 dark:text-gray-400 font-medium">Lade Paket-Details...</p>
+        <div className="w-10 h-10 border-4 border-[var(--cds-border-subtle-01)] border-t-[#0f62fe] rounded-full animate-spin mb-4" />
+        <p className="text-sm text-[var(--cds-text-secondary)] font-mono">Paket-Details werden geladen...</p>
       </div>
     );
   }
 
   return (
-    <div className="pb-20 max-w-5xl mx-auto space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div>
+    <div className="pb-16 max-w-6xl mx-auto space-y-6">
+      
+      {/* Carbon Breadcrumb & Back Navigation */}
+      <div>
+        <div className="cds--breadcrumb">
           <button 
-            onClick={onBack}
-            className="group flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-4"
+            onClick={onBack} 
+            className="hover:underline text-[var(--cds-text-secondary)] hover:text-[var(--cds-text-primary)]"
           >
-            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-            Zurück zur Bibliothek
+            Bibliothek
           </button>
+          <span className="cds--breadcrumb-separator">/</span>
+          <span className="text-[var(--cds-text-primary)] font-medium truncate max-w-xs">{pkg.name}</span>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--cds-border-subtle-01)]">
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight dark:text-white">{pkg.name}</h2>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide">
+            <h1 className="text-2xl sm:text-3xl font-light text-[var(--cds-text-primary)] tracking-tight">
+              {pkg.name}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className="cds--tag cds--tag--blue text-xs font-mono">
                 Klasse {pkg.grade}
               </span>
-              <span className="text-gray-400 dark:text-gray-500 text-xs">
-                Erstellt am {pkg.created_at ? new Date(pkg.created_at).toLocaleDateString("de-DE") : ""}
+              <span className="cds--tag cds--tag--gray text-xs flex items-center gap-1.5 font-mono">
+                <Calendar size={12} />
+                {pkg.created_at ? new Date(pkg.created_at).toLocaleDateString("de-DE") : ""}
+              </span>
+              <span className="cds--tag cds--tag--gray text-xs font-mono">
+                {materials.length} {materials.length === 1 ? "Dokument" : "Dokumente"}
               </span>
             </div>
           </div>
+
+          <button 
+            onClick={onBack}
+            className="cds--btn cds--btn--tertiary self-start sm:self-auto"
+          >
+            <ArrowLeft size={16} className="mr-2" />
+            <span>Zurück</span>
+          </button>
         </div>
       </div>
 
-      {/* Grid: Study Actions & Materials */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Main Grid: Left Study Controls, Right Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Left Column: Quick Study Options */}
+        {/* Left Column: Learning Actions & Document Materials */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="glass-standard rounded-[32px] p-6 shadow-sm space-y-4">
-            <h3 className="font-bold text-gray-800 dark:text-white text-lg">Lern-Modus</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4">
-              Übe mit den bereits gespeicherten Quizfragen oder generiere neue Materialien mit KI.
+          {/* Study Actions Card */}
+          <div className="cds--tile space-y-4">
+            <h2 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-secondary)] border-b border-[var(--cds-border-subtle-01)] pb-2">
+              Lern-Aktionen
+            </h2>
+
+            <p className="text-xs text-[var(--cds-text-secondary)] leading-relaxed">
+              Wähle einen Lernmodus: Starte das gespeicherte Quiz, lasse neue Fragen generieren oder nutze Karteikarten und Zusammenfassungen.
             </p>
 
-            <button 
-              onClick={() => onStartQuiz(pkg, false)}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2.5 shadow-md shadow-indigo-100 dark:shadow-none transition-all hover:scale-[1.01] active:scale-[0.99] min-h-[48px]"
-            >
-              <BrainCircuit size={18} />
-              Quiz starten (gespeichert)
-            </button>
-
-            <button 
-              onClick={() => onStartQuiz(pkg, true)}
-              className="w-full bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2.5 border border-indigo-100 dark:border-indigo-900/55 transition-all hover:scale-[1.01] active:scale-[0.99] min-h-[48px]"
-            >
-              <Sparkles size={18} />
-              Weitere Fragen generieren
-            </button>
-
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="space-y-2 pt-1">
               <button 
-                onClick={onShowFlashcards}
-                className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold py-3 px-3 rounded-2xl flex flex-col items-center justify-center gap-2 border border-gray-100 dark:border-gray-700 transition-all min-h-[72px]"
+                id="btn-start-saved-quiz"
+                onClick={() => onStartQuiz(pkg, false)}
+                className="cds--btn cds--btn--primary w-full justify-between"
               >
-                <BookOpen size={18} className="text-emerald-500" />
-                <span className="text-xs">Flashcards</span>
+                <span>Quiz starten (gespeichert)</span>
+                <Play size={18} />
+              </button>
+
+              <button 
+                id="btn-generate-more-questions"
+                onClick={() => onStartQuiz(pkg, true)}
+                className="cds--btn cds--btn--secondary w-full justify-between"
+              >
+                <span>Neue Fragen generieren</span>
+                <Idea size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--cds-border-subtle-01)]">
+              <button 
+                id="btn-flashcards"
+                onClick={onShowFlashcards}
+                className="cds--btn cds--btn--tertiary w-full justify-center text-xs py-3"
+              >
+                <Notebook size={16} className="mr-1.5" />
+                <span>Flashcards</span>
               </button>
               <button 
+                id="btn-study-guide"
                 onClick={onShowStudyGuide}
-                className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold py-3 px-3 rounded-2xl flex flex-col items-center justify-center gap-2 border border-gray-100 dark:border-gray-700 transition-all min-h-[72px]"
+                className="cds--btn cds--btn--tertiary w-full justify-center text-xs py-3"
               >
-                <FileText size={18} className="text-amber-500" />
-                <span className="text-xs">Lernzusammenfass.</span>
+                <Document size={16} className="mr-1.5" />
+                <span>Guide</span>
               </button>
             </div>
           </div>
 
-          {/* Materials Section */}
-          <div className="glass-standard rounded-[32px] p-6 shadow-sm">
-            <h3 className="font-bold text-gray-800 dark:text-white text-lg mb-4 flex items-center gap-2">
-              <BookOpen size={18} className="text-indigo-500" />
-              Lernmaterialien
-            </h3>
+          {/* Uploaded Materials Structured List */}
+          <div className="cds--tile">
+            <h2 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-secondary)] border-b border-[var(--cds-border-subtle-01)] pb-2 mb-3">
+              Quellmaterialien ({materials.length})
+            </h2>
+
             {materials.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500">Keine Dokumente oder Materialien in diesem Paket.</p>
+              <p className="text-xs text-[var(--cds-text-secondary)] py-4 text-center">
+                Keine Quelltexte im Paket hinterlegt.
+              </p>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y divide-[var(--cds-border-subtle-01)]">
                 {materials.map((m) => (
-                  <button 
-                    key={m.id} 
+                  <div 
+                    key={m.id}
                     onClick={() => {
                       setSelectedMaterial(m);
                       setCopied(false);
                     }}
-                    className="w-full text-left flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-gray-800/30 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 rounded-xl border border-gray-100/80 dark:border-gray-800/50 hover:border-indigo-100 dark:hover:border-indigo-900/40 transition-all cursor-pointer group active:scale-[0.99] min-h-[56px]"
+                    className="py-3 px-2 flex items-center justify-between hover:bg-[var(--cds-layer-02)] cursor-pointer group transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950/40 flex items-center justify-center shrink-0 transition-colors">
-                      <FileText size={16} />
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className="w-8 h-8 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] flex items-center justify-center text-[var(--cds-text-secondary)] group-hover:text-[#0f62fe] shrink-0">
+                        <Document size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-[var(--cds-text-primary)] truncate group-hover:text-[#0f62fe]">
+                          {m.name}
+                        </p>
+                        <p className="text-[11px] font-mono text-[var(--cds-text-helper)]">
+                          {m.content_text ? `${Math.round(m.content_text.length / 100) / 10} KB` : "0 KB"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{m.name}</p>
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-                        {m.content_text ? `${Math.round(m.content_text.length / 100) / 10} KB` : "0 KB"} • Vorschau anzeigen
-                      </p>
-                    </div>
-                    <ChevronRight size={14} className="text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all shrink-0" />
-                  </button>
+                    <ChevronRight size={16} className="text-[var(--cds-text-helper)] group-hover:text-[#0f62fe] shrink-0" />
+                  </div>
                 ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Statistics & History */}
+        {/* Right Column: Key Metrics & Progress */}
         <div className="lg:col-span-8 space-y-6">
-          {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="glass-light p-4 rounded-2xl shadow-sm text-center">
-              <Award size={18} className="text-indigo-500 mx-auto mb-2" />
-              <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Ø Genauigkeit</p>
-              <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{avgAccuracy}%</p>
-            </div>
-            
-            <div className="glass-light p-4 rounded-2xl shadow-sm text-center">
-              <Target size={18} className="text-emerald-500 mx-auto mb-2" />
-              <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Beste Punkte</p>
-              <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{maxScore}</p>
+          
+          {/* Carbon 4-Tile Metric Dashboard */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="cds--tile p-4 border-l-4 border-l-[#0f62fe]">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+                Ø Genauigkeit
+              </span>
+              <span className="text-2xl font-mono font-semibold text-[var(--cds-text-primary)] mt-1 block">
+                {avgAccuracy}%
+              </span>
             </div>
 
-            <div className="glass-light p-4 rounded-2xl shadow-sm text-center">
-              <HelpCircle size={18} className="text-amber-500 mx-auto mb-2" />
-              <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Gelöste Fragen</p>
-              <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{totalCorrect}/{totalAsked}</p>
+            <div className="cds--tile p-4 border-l-4 border-l-[#24a148]">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+                Beste Punkte
+              </span>
+              <span className="text-2xl font-mono font-semibold text-[var(--cds-text-primary)] mt-1 block">
+                {maxScore}
+              </span>
             </div>
 
-            <div className="glass-light p-4 rounded-2xl shadow-sm text-center">
-              <Clock size={18} className="text-purple-500 mx-auto mb-2" />
-              <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Versuche</p>
-              <p className="text-2xl font-black text-gray-800 dark:text-white mt-1">{totalQuizzes}</p>
+            <div className="cds--tile p-4 border-l-4 border-l-[#f1c21b]">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+                Richtig gelöst
+              </span>
+              <span className="text-2xl font-mono font-semibold text-[var(--cds-text-primary)] mt-1 block">
+                {totalCorrect}/{totalAsked}
+              </span>
+            </div>
+
+            <div className="cds--tile p-4 border-l-4 border-l-[#8a3ffc]">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+                Versuche
+              </span>
+              <span className="text-2xl font-mono font-semibold text-[var(--cds-text-primary)] mt-1 block">
+                {totalQuizzes}
+              </span>
             </div>
           </div>
 
-          {/* Performance chart */}
+          {/* Performance Trend Chart */}
           {totalQuizzes > 0 && (
-            <div className="glass-standard p-6 sm:p-8 rounded-[32px] shadow-sm">
-              <h3 className="font-bold text-gray-850 dark:text-white text-lg mb-6 flex items-center gap-2">
-                <Target size={18} className="text-indigo-500" />
-                Lernkurve (Verlauf)
-              </h3>
-              <div className="h-[220px] w-full">
+            <div className="cds--tile p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-4 border-b border-[var(--cds-border-subtle-01)] pb-3">
+                <h3 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-primary)]">
+                  Lernkurve (Verlauf über {totalQuizzes} {totalQuizzes === 1 ? "Quiz" : "Quizzes"})
+                </h3>
+                <span className="text-xs font-mono text-[var(--cds-text-helper)]">
+                  Genauigkeit in %
+                </span>
+              </div>
+              <div className="h-[200px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" className="dark:stroke-gray-800" />
+                    <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="#e0e0e0" className="dark:stroke-[#393939]" />
                     <XAxis 
                       dataKey="name" 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{ fontSize: 10, fill: '#9CA3AF' }}
-                      dy={8}
+                      tick={{ fontSize: 11, fill: '#8d8d8d', fontFamily: 'monospace' }}
+                      dy={6}
                     />
                     <YAxis 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{ fontSize: 10, fill: '#9CA3AF' }}
+                      tick={{ fontSize: 11, fill: '#8d8d8d', fontFamily: 'monospace' }}
                       domain={[0, 100]}
                     />
                     <Tooltip 
                       contentStyle={{ 
-                        borderRadius: '12px', 
-                        border: 'none', 
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-                        padding: '8px 12px',
-                        backgroundColor: '#1F2937',
-                        color: '#FFFFFF'
+                        borderRadius: '0px', 
+                        border: '1px solid #393939', 
+                        boxShadow: 'none',
+                        padding: '6px 12px',
+                        backgroundColor: '#161616',
+                        color: '#f4f4f4',
+                        fontFamily: 'monospace',
+                        fontSize: '12px'
                       }}
                     />
                     <Line 
                       type="monotone" 
                       dataKey="accuracy" 
-                      stroke="#4F46E5" 
-                      strokeWidth={3} 
-                      dot={{ r: 4, fill: '#4F46E5', strokeWidth: 1.5, stroke: '#fff' }}
-                      activeDot={{ r: 6, strokeWidth: 0 }}
+                      stroke="#0f62fe" 
+                      strokeWidth={2} 
+                      dot={{ r: 3, fill: '#0f62fe', strokeWidth: 1, stroke: '#ffffff' }}
+                      activeDot={{ r: 5, strokeWidth: 0 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -274,54 +334,63 @@ export default function PackageDetailView({
             </div>
           )}
 
-          {/* Previous Attempts List */}
-          <div className="glass-standard p-6 sm:p-8 rounded-[32px] shadow-sm">
-            <h3 className="font-bold text-gray-850 dark:text-white text-lg mb-4 flex items-center gap-2">
-              <CheckCircle2 size={18} className="text-emerald-500" />
-              Bisherige Versuche und Auswertungen
-            </h3>
+          {/* Previous Attempts (Structured Table) */}
+          <div className="cds--tile p-0 overflow-hidden">
+            <div className="p-4 border-b border-[var(--cds-border-subtle-01)] bg-[var(--cds-layer-02)] flex items-center justify-between">
+              <h3 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-primary)]">
+                Bisherige Versuche und Detailberichte
+              </h3>
+              <span className="text-xs font-mono text-[var(--cds-text-secondary)]">
+                {results.length} Einträge
+              </span>
+            </div>
+
             {results.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-gray-400 dark:text-gray-500">Noch keine Quizzes absolviert.</p>
+              <div className="p-8 text-center">
+                <p className="text-sm text-[var(--cds-text-secondary)] mb-4">
+                  Für dieses Lernpaket wurde noch kein Quiz abgeschlossen.
+                </p>
                 <button 
                   onClick={() => onStartQuiz(pkg, false)}
-                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-sm font-semibold rounded-xl hover:bg-indigo-100/80 transition-colors"
+                  className="cds--btn cds--btn--primary"
                 >
-                  Erstes Quiz starten
-                  <ChevronRight size={14} />
+                  <span>Erstes Quiz starten</span>
+                  <Play size={16} className="ml-2" />
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[300px] overflow-y-auto no-scrollbar">
+              <div className="divide-y divide-[var(--cds-border-subtle-01)]">
                 {results.map((r, index) => (
                   <div 
                     key={r.id} 
                     onClick={() => onViewResultDetails(r)}
-                    className="flex items-center justify-between py-4 pr-1 hover:bg-gray-50/70 dark:hover:bg-gray-800/40 rounded-xl transition-all cursor-pointer group"
+                    className="p-4 flex items-center justify-between hover:bg-[var(--cds-layer-02)] cursor-pointer group transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-xs font-black">#{totalQuizzes - index}</span>
+                    <div className="flex items-center gap-4">
+                      <div className="w-9 h-9 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] text-xs font-mono font-semibold flex items-center justify-center text-[var(--cds-text-primary)]">
+                        #{totalQuizzes - index}
                       </div>
+
                       <div>
-                        <p className="text-xs font-bold text-gray-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                          {r.score} von {r.total} richtig ({Math.round(r.accuracy)}%)
+                        <p className="text-xs font-medium text-[var(--cds-text-primary)] group-hover:text-[#0f62fe]">
+                          {r.score} von {r.total} korrekt ({Math.round(r.accuracy)}%)
                         </p>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5">
-                          <Calendar size={10} />
-                          {r.created_at ? new Date(r.created_at).toLocaleString("de-DE", { 
-                            day: "2-digit", 
-                            month: "2-digit", 
-                            year: "numeric", 
-                            hour: "2-digit", 
-                            minute: "2-digit" 
+                        <p className="text-[11px] font-mono text-[var(--cds-text-helper)] mt-0.5 flex items-center gap-1.5">
+                          <Calendar size={12} />
+                          {r.created_at ? new Date(r.created_at).toLocaleString("de-DE", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit"
                           }) : ""}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span>Auswertung</span>
-                      <ChevronRight size={14} />
+
+                    <div className="flex items-center gap-2 text-xs font-medium text-[#0f62fe]">
+                      <span className="hidden sm:inline">Auswertung</span>
+                      <ChevronRight size={16} className="transform group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 ))}
@@ -332,43 +401,30 @@ export default function PackageDetailView({
 
       </div>
 
-      {/* Material Preview Modal */}
+      {/* Carbon Material Preview Modal */}
       <AnimatePresence>
         {selectedMaterial && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            {/* Scrim / Backdrop */}
+            <div 
               onClick={() => setSelectedMaterial(null)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-[#161616]/70"
             />
 
-            {/* Modal Container */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
-              className="relative glass-heavy rounded-[32px] shadow-2xl w-full max-w-3xl overflow-hidden z-10 flex flex-col max-h-[85vh]"
-            >
+            {/* Dialog */}
+            <div className="relative bg-[var(--cds-layer-01)] border border-[var(--cds-border-subtle-01)] w-full max-w-3xl z-10 flex flex-col max-h-[85vh]">
               {/* Header */}
-              <div className="p-6 border-b border-gray-200/40 dark:border-gray-700/40 flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                    <FileText size={20} />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-extrabold text-gray-800 dark:text-white text-base truncate pr-2">
-                      {selectedMaterial.name}
-                    </h3>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-wider mt-0.5">
-                      {selectedMaterial.mime_type || "Dokument"} • {selectedMaterial.content_text ? `${Math.round(selectedMaterial.content_text.length / 100) / 10} KB` : "0 KB"}
-                    </p>
-                  </div>
+              <div className="h-14 px-6 border-b border-[var(--cds-border-subtle-01)] flex items-center justify-between bg-[var(--cds-layer-02)]">
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+                    Dokumentvorschau
+                  </span>
+                  <h3 className="text-sm font-semibold text-[var(--cds-text-primary)] truncate max-w-md">
+                    {selectedMaterial.name}
+                  </h3>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+
+                <div className="flex items-center">
                   <button 
                     onClick={() => {
                       if (selectedMaterial.content_text) {
@@ -377,49 +433,57 @@ export default function PackageDetailView({
                         setTimeout(() => setCopied(false), 2000);
                       }
                     }}
-                    className={`p-2.5 rounded-xl transition-all flex items-center gap-1.5 text-xs font-semibold ${
-                      copied 
-                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400" 
-                        : "text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
-                    title="Inhalt kopieren"
+                    title="In die Zwischenablage kopieren"
+                    className="w-10 h-10 flex items-center justify-center text-[var(--cds-text-secondary)] hover:text-[var(--cds-text-primary)] hover:bg-[var(--cds-layer-01)] transition-colors"
                   >
-                    <Copy size={16} />
-                    {copied && <span>Kopiert!</span>}
+                    {copied ? <Checkmark size={18} className="text-[#24a148]" /> : <Copy size={18} />}
                   </button>
+
                   <button 
                     onClick={() => setSelectedMaterial(null)}
-                    className="p-2.5 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all cursor-pointer"
                     title="Schließen"
+                    className="w-10 h-10 flex items-center justify-center text-[var(--cds-text-secondary)] hover:text-[#da1e28] hover:bg-[var(--cds-layer-01)] transition-colors"
                   >
-                    <X size={18} />
+                    <Close size={18} />
                   </button>
                 </div>
               </div>
 
-              {/* Scrollable Body */}
-              <div className="p-6 sm:p-8 overflow-y-auto max-h-[calc(85vh-140px)] prose prose-indigo dark:prose-invert max-w-none">
-                <div className="markdown-body text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+              {/* Body */}
+              <div className="p-6 overflow-y-auto max-h-[calc(85vh-120px)] bg-[var(--cds-layer-01)]">
+                <div className="markdown-body">
                   {selectedMaterial.content_text ? (
                     <Markdown>{selectedMaterial.content_text}</Markdown>
                   ) : (
-                    <p className="text-gray-400 dark:text-gray-500 italic text-center py-12">
-                      Dieses Dokument enthält keine extrahierten Textinhalte.
+                    <p className="text-sm text-[var(--cds-text-secondary)] italic text-center py-8">
+                      Kein Textinhalt verfügbar.
                     </p>
                   )}
                 </div>
               </div>
-              
-              {/* Footer */}
-              <div className="p-4 border-t border-gray-200/40 dark:border-gray-700/40 flex justify-end gap-3 shrink-0">
+
+              {/* Carbon 50/50 Footer */}
+              <div className="grid grid-cols-2 border-t border-[var(--cds-border-subtle-01)]">
                 <button 
                   onClick={() => setSelectedMaterial(null)}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer min-h-[38px] flex items-center justify-center"
+                  className="cds--btn cds--btn--secondary justify-center text-xs h-12"
                 >
                   Schließen
                 </button>
+                <button 
+                  onClick={() => {
+                    if (selectedMaterial.content_text) {
+                      navigator.clipboard.writeText(selectedMaterial.content_text);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }
+                  }}
+                  className="cds--btn cds--btn--primary justify-center text-xs h-12"
+                >
+                  {copied ? "Kopiert!" : "Inhalt kopieren"}
+                </button>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
       </AnimatePresence>

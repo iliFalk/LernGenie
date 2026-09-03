@@ -1,5 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { X, CheckCircle2, AlertCircle, ArrowRight, Lightbulb, Info, HelpCircle } from "lucide-react";
+import React, { useState } from "react";
+import { 
+  Close, 
+  Checkmark, 
+  ArrowRight, 
+  Idea, 
+  WarningAlt,
+  CheckmarkFilled,
+  WarningFilled
+} from "@carbon/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Question } from "../types";
 
@@ -53,57 +61,90 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Header / Progress */}
-      <div className="flex items-center justify-between mb-8">
-        <button onClick={onCancel} className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors text-gray-500 dark:text-gray-400">
-          <X size={24} />
-        </button>
-        <div className="flex-1 mx-8">
-          <div className="flex justify-between text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">
-            <span>Frage {currentIndex + 1} von {questions.length}</span>
-            <div className="flex gap-4">
-              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 size={14} /> {correctCount}
-              </span>
-              <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                <AlertCircle size={14} /> {incorrectCount}
-              </span>
-            </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      
+      {/* Carbon Quiz Header & Progress Bar */}
+      <div className="cds--tile p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={onCancel} 
+              title="Quiz abbrechen"
+              className="w-8 h-8 flex items-center justify-center text-[var(--cds-text-secondary)] hover:text-[#da1e28] hover:bg-[var(--cds-layer-02)] transition-colors"
+            >
+              <Close size={18} />
+            </button>
+            <span className="text-xs font-mono font-medium text-[var(--cds-text-primary)]">
+              Frage {currentIndex + 1} von {questions.length}
+            </span>
           </div>
-          <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              className="h-full bg-indigo-600 rounded-full"
-            />
+
+          <div className="flex items-center gap-2">
+            <span className="cds--tag cds--tag--green text-xs font-mono">
+              <Checkmark size={12} className="mr-1" />
+              {correctCount} Richtig
+            </span>
+            <span className="cds--tag cds--tag--red text-xs font-mono">
+              {incorrectCount} Falsch
+            </span>
           </div>
+        </div>
+
+        {/* Carbon Progress Track */}
+        <div className="h-1.5 w-full bg-[var(--cds-layer-02)] overflow-hidden">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.2 }}
+            className="h-full bg-[#0f62fe]"
+          />
         </div>
       </div>
 
-      {/* Question Card */}
+      {/* Carbon Question Tile */}
       <motion.div 
         key={currentIndex}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="bg-white dark:bg-gray-800 p-6 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] shadow-xl shadow-indigo-100/20 dark:shadow-none border border-gray-100 dark:border-gray-700 transition-colors"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        className="cds--tile p-6 sm:p-8 space-y-6"
       >
-        <div className="mb-6 sm:mb-8">
-          <span className="inline-block px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3 sm:mb-4">
-            {currentQuestion.topic}
+        {/* Topic Tag & Question */}
+        <div>
+          <span className="cds--tag cds--tag--blue text-xs font-mono mb-3">
+            {currentQuestion.topic || "Thema"}
           </span>
-          <h3 className="text-xl sm:text-2xl font-bold leading-tight text-gray-900 dark:text-white">{currentQuestion.text}</h3>
+          <h2 className="text-lg sm:text-xl font-normal leading-snug text-[var(--cds-text-primary)] mt-2">
+            {currentQuestion.text}
+          </h2>
         </div>
 
-        <div className="space-y-2 sm:space-y-3">
+        {/* Options List */}
+        <div className="space-y-2">
           {currentQuestion.options.map((option, i) => {
-            let state = "default";
+            let borderClass = "border-[var(--cds-border-subtle-01)]";
+            let bgClass = "bg-[var(--cds-layer-01)] hover:bg-[var(--cds-layer-02)]";
+            let textClass = "text-[var(--cds-text-primary)]";
+            let indicatorBg = "bg-[var(--cds-layer-02)] text-[var(--cds-text-secondary)]";
+
             if (isAnswered) {
-              if (i === currentQuestion.correctIndex) state = "correct";
-              else if (i === selectedOption) state = "incorrect";
-              else state = "dimmed";
+              if (i === currentQuestion.correctIndex) {
+                borderClass = "border-l-4 border-l-[#24a148] border-[#24a148]";
+                bgClass = "bg-[var(--cds-layer-02)]";
+                textClass = "text-[var(--cds-text-primary)] font-medium";
+                indicatorBg = "bg-[#24a148] text-white";
+              } else if (i === selectedOption) {
+                borderClass = "border-l-4 border-l-[#da1e28] border-[#da1e28]";
+                bgClass = "bg-[var(--cds-layer-02)]";
+                textClass = "text-[var(--cds-text-primary)]";
+                indicatorBg = "bg-[#da1e28] text-white";
+              } else {
+                bgClass = "opacity-40 bg-[var(--cds-layer-01)]";
+              }
             } else if (selectedOption === i) {
-              state = "selected";
+              borderClass = "border-l-4 border-l-[#0f62fe] border-[#0f62fe]";
+              bgClass = "bg-[var(--cds-layer-02)]";
+              indicatorBg = "bg-[#0f62fe] text-white";
             }
 
             return (
@@ -111,100 +152,88 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
                 key={i}
                 onClick={() => handleOptionSelect(i)}
                 disabled={isAnswered}
-                className={`w-full p-4 sm:p-5 rounded-xl sm:rounded-2xl text-left text-base font-medium transition-all flex items-center justify-between border-2 ${
-                  state === "default" ? "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20 text-gray-900 dark:text-white" :
-                  state === "selected" ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-600 dark:border-indigo-500 text-indigo-700 dark:text-indigo-300" :
-                  state === "correct" ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300" :
-                  state === "incorrect" ? "bg-rose-50 dark:bg-rose-900/30 border-rose-500 dark:border-rose-400 text-rose-700 dark:text-rose-300" :
-                  "bg-white dark:bg-gray-900 border-gray-50 dark:border-gray-800 text-gray-400 dark:text-gray-600 opacity-50"
-                }`}
+                className={`w-full p-4 text-left text-sm transition-colors flex items-center justify-between border ${borderClass} ${bgClass} ${textClass} min-h-[48px]`}
               >
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm font-bold ${
-                    state === "selected" ? "bg-indigo-600 text-white" :
-                    state === "correct" ? "bg-emerald-500 text-white" :
-                    state === "incorrect" ? "bg-rose-500 text-white" :
-                    "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-                  }`}>
+                <div className="flex items-center gap-3">
+                  <span className={`w-6 h-6 text-xs font-mono font-bold flex items-center justify-center ${indicatorBg}`}>
                     {String.fromCharCode(65 + i)}
                   </span>
                   <span className="flex-1">{option}</span>
                 </div>
-                {state === "correct" && <CheckCircle2 size={18} className="shrink-0" />}
-                {state === "incorrect" && <AlertCircle size={18} className="shrink-0" />}
+
+                {isAnswered && i === currentQuestion.correctIndex && (
+                  <Checkmark size={18} className="text-[#24a148] shrink-0 ml-2" />
+                )}
+                {isAnswered && i === selectedOption && i !== currentQuestion.correctIndex && (
+                  <Close size={18} className="text-[#da1e28] shrink-0 ml-2" />
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* Feedback Area */}
-        <div className="mt-6 sm:mt-8 space-y-4">
-          <AnimatePresence>
-            {!isAnswered && !showHint && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                onClick={() => setShowHint(true)}
-                className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-sm hover:underline min-h-[44px]"
-              >
-                <Lightbulb size={16} />
-                Brauchst du einen Hinweis?
-              </motion.button>
-            )}
+        {/* Hint / Explanation Area */}
+        <div className="space-y-3 pt-2">
+          {!isAnswered && !showHint && (
+            <button
+              onClick={() => setShowHint(true)}
+              className="inline-flex items-center gap-2 text-xs font-mono text-[#0f62fe] hover:underline"
+            >
+              <Idea size={16} />
+              <span>Hinweis anzeigen</span>
+            </button>
+          )}
 
-            {showHint && !isAnswered && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/50 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex gap-3"
-              >
-                <Lightbulb className="text-amber-500 dark:text-amber-400 shrink-0" size={18} />
-                <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200 italic">{currentQuestion.hint}</p>
-              </motion.div>
-            )}
+          {showHint && !isAnswered && (
+            <div className="cds--inline-notification cds--inline-notification--warning flex items-start gap-3 text-xs">
+              <Idea size={18} className="text-[#f1c21b] shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block mb-0.5">Hinweis:</span>
+                <p className="text-[var(--cds-text-secondary)]">{currentQuestion.hint}</p>
+              </div>
+            </div>
+          )}
 
-            {isAnswered && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl ${selectedOption === currentQuestion.correctIndex ? "bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/50" : "bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50"}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  {selectedOption === currentQuestion.correctIndex ? (
-                    <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1 uppercase text-[10px] tracking-widest">
-                      <CheckCircle2 size={12} /> Richtig!
-                    </span>
-                  ) : (
-                    <span className="text-rose-700 dark:text-rose-400 font-bold flex items-center gap-1 uppercase text-[10px] tracking-widest">
-                      <AlertCircle size={12} /> Nicht ganz
-                    </span>
-                  )}
-                </div>
-                <p className="text-gray-800 dark:text-gray-200 text-xs sm:text-sm leading-relaxed">
-                  <span className="font-bold">Erklärung:</span> {currentQuestion.explanation}
+          {isAnswered && (
+            <div className={`cds--inline-notification ${
+              selectedOption === currentQuestion.correctIndex 
+                ? "cds--inline-notification--success" 
+                : "cds--inline-notification--error"
+            } flex items-start gap-3 text-xs`}>
+              {selectedOption === currentQuestion.correctIndex ? (
+                <Checkmark size={18} className="text-[#24a148] shrink-0 mt-0.5" />
+              ) : (
+                <Close size={18} className="text-[#da1e28] shrink-0 mt-0.5" />
+              )}
+              <div>
+                <span className="font-semibold block mb-1">
+                  {selectedOption === currentQuestion.correctIndex ? "Korrekt beantwortet" : "Leider inkorrekt"}
+                </span>
+                <p className="text-[var(--cds-text-secondary)] leading-relaxed">
+                  <strong className="text-[var(--cds-text-primary)]">Erklärung:</strong> {currentQuestion.explanation}
                 </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Button */}
-        <div className="mt-8 sm:mt-10">
+        <div className="pt-4 border-t border-[var(--cds-border-subtle-01)]">
           {!isAnswered ? (
             <button
               disabled={selectedOption === null}
               onClick={handleConfirmAnswer}
-              className="w-full bg-indigo-600 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="cds--btn cds--btn--primary w-full justify-center disabled:opacity-40"
             >
-              Antwort bestätigen
+              <span>Antwort bestätigen</span>
             </button>
           ) : (
             <button
               onClick={handleNext}
-              className="w-full bg-indigo-600 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+              className="cds--btn cds--btn--primary w-full justify-between"
             >
-              {currentIndex < questions.length - 1 ? "Nächste Frage" : "Ergebnisse ansehen"}
-              <ArrowRight size={20} />
+              <span>{currentIndex < questions.length - 1 ? "Nächste Frage" : "Ergebnisse anzeigen"}</span>
+              <ArrowRight size={18} />
             </button>
           )}
         </div>

@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, FileText, Download, Share2, Sparkles, AlertTriangle, RefreshCw } from "lucide-react";
-import { StudyPackage, Material } from "../types";
+import { 
+  ArrowLeft, 
+  Download, 
+  Renew, 
+  Document, 
+  Copy, 
+  Checkmark,
+  WarningAlt
+} from "@carbon/icons-react";
+import { StudyPackage } from "../types";
 import { getCachedStudyGuide } from "../services/gemini";
-import { authFetch } from "../services/auth";
 import Markdown from "react-markdown";
 
 interface StudyGuideViewProps {
@@ -13,6 +20,7 @@ interface StudyGuideViewProps {
 export default function StudyGuideView({ package: pkg, onBack }: StudyGuideViewProps) {
   const [guide, setGuide] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     loadGuide();
@@ -24,7 +32,7 @@ export default function StudyGuideView({ package: pkg, onBack }: StudyGuideViewP
       const generated = await getCachedStudyGuide(pkg.id, regenerate);
       setGuide(generated);
     } catch (error) {
-      console.error(error);
+      console.error("Error loading study guide:", error);
     } finally {
       setIsLoading(false);
     }
@@ -32,38 +40,46 @@ export default function StudyGuideView({ package: pkg, onBack }: StudyGuideViewP
 
   const handleDownload = () => {
     const element = document.createElement("a");
-    const file = new Blob([guide], { type: 'text/plain' });
+    const file = new Blob([guide], { type: 'text/markdown;charset=utf-8' });
     element.href = URL.createObjectURL(file);
-    element.download = `Study_Guide_${pkg.name.replace(/\s+/g, '_')}.txt`;
+    element.download = `Study_Guide_${pkg.name.replace(/\s+/g, '_')}.md`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
   };
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(guide);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-40">
-        <div className="w-12 h-12 border-4 border-indigo-100 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-500 dark:text-gray-400 font-medium">Erstelle Study Guide...</p>
+      <div className="flex flex-col items-center justify-center py-32">
+        <div className="w-10 h-10 border-4 border-[var(--cds-border-subtle-01)] border-t-[#0f62fe] rounded-full animate-spin mb-4" />
+        <p className="text-sm font-mono text-[var(--cds-text-secondary)]">Study Guide wird generiert...</p>
       </div>
     );
   }
 
   if (!guide) {
     return (
-      <div className="max-w-2xl mx-auto py-20 text-center">
-        <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/30 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <AlertTriangle size={32} />
+      <div className="max-w-xl mx-auto py-16 text-center cds--tile p-8 space-y-4">
+        <div className="w-12 h-12 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] flex items-center justify-center text-[#da1e28] mx-auto">
+          <WarningAlt size={24} />
         </div>
-        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Fehler beim Erstellen des Study Guides</h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
-          Der KI-Service konnte keinen Study Guide generieren. Bitte überprüfe deine Internetverbindung oder deinen API-Key in den Einstellungen.
+        <h3 className="text-lg font-semibold text-[var(--cds-text-primary)]">
+          Study Guide konnte nicht erstellt werden
+        </h3>
+        <p className="text-xs text-[var(--cds-text-secondary)] max-w-sm mx-auto">
+          Der KI-Service konnte keinen Leitfaden generieren. Bitte versuche es erneut oder prüfe die Quelltexte.
         </p>
-        <div className="flex justify-center gap-4">
-          <button onClick={onBack} className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors min-h-[44px]">
+        <div className="flex justify-center gap-3 pt-2">
+          <button onClick={onBack} className="cds--btn cds--btn--secondary text-xs">
             Zurück
           </button>
-          <button onClick={() => loadGuide(false)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors min-h-[44px]">
+          <button onClick={() => loadGuide(false)} className="cds--btn cds--btn--primary text-xs">
             Erneut versuchen
           </button>
         </div>
@@ -72,51 +88,89 @@ export default function StudyGuideView({ package: pkg, onBack }: StudyGuideViewP
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex items-center justify-between mb-10">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 dark:text-gray-400 font-bold hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors min-h-[44px] min-w-[44px]">
-          <ChevronLeft size={24} />
-          Zurück
-        </button>
-        <div className="flex gap-3">
-          <button 
-            onClick={() => loadGuide(true)}
-            className="p-3 bg-white dark:bg-gray-800 rounded-2xl text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 border border-gray-100 dark:border-gray-700 shadow-sm transition-all min-h-[44px] min-w-[44px]"
-            title="Neu generieren"
-          >
-            <RefreshCw size={20} />
-          </button>
-          <button 
-            onClick={handleDownload}
-            className="p-3 bg-white dark:bg-gray-800 rounded-2xl text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 border border-gray-100 dark:border-gray-700 shadow-sm transition-all min-h-[44px] min-w-[44px]"
-            title="Herunterladen"
-          >
-            <Download size={20} />
-          </button>
-          <button className="p-3 bg-white dark:bg-gray-800 rounded-2xl text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 border border-gray-100 dark:border-gray-700 shadow-sm transition-all min-h-[44px] min-w-[44px]">
-            <Share2 size={20} />
-          </button>
+    <div className="max-w-4xl mx-auto pb-16 space-y-6">
+      
+      {/* Carbon Breadcrumb & Actions Header */}
+      <div>
+        <div className="cds--breadcrumb">
+          <button onClick={onBack} className="hover:underline text-[var(--cds-text-secondary)]">Lernpakete</button>
+          <span className="cds--breadcrumb-separator">/</span>
+          <button onClick={onBack} className="hover:underline text-[var(--cds-text-secondary)] truncate max-w-xs">{pkg.name}</button>
+          <span className="cds--breadcrumb-separator">/</span>
+          <span className="text-[var(--cds-text-primary)] font-medium">Study Guide</span>
+        </div>
+
+        <div className="border-b border-[var(--cds-border-subtle-01)] pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="cds--tag cds--tag--blue text-xs font-mono">
+                Klasse {pkg.grade}
+              </span>
+              <span className="text-xs font-mono text-[var(--cds-text-helper)]">
+                Lernleitfaden & Skript
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-light text-[var(--cds-text-primary)] tracking-tight">
+              {pkg.name}
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => loadGuide(true)}
+              title="Neu generieren"
+              className="cds--btn cds--btn--ghost text-xs h-10 px-3"
+            >
+              <Renew size={16} className="mr-1.5" />
+              <span>Neu generieren</span>
+            </button>
+
+            <button 
+              onClick={handleCopy}
+              title="Kopieren"
+              className="cds--btn cds--btn--secondary text-xs h-10 px-3"
+            >
+              {copied ? <Checkmark size={16} className="mr-1.5 text-[#24a148]" /> : <Copy size={16} className="mr-1.5" />}
+              <span>{copied ? "Kopiert" : "Kopieren"}</span>
+            </button>
+
+            <button 
+              onClick={handleDownload}
+              title="Herunterladen"
+              className="cds--btn cds--btn--primary text-xs h-10 px-3"
+            >
+              <Download size={16} className="mr-1.5" />
+              <span>Exportieren</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-[2rem] sm:rounded-[3rem] shadow-2xl shadow-indigo-100/20 dark:shadow-none border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
-        <div className="bg-indigo-600 dark:bg-indigo-700 p-8 sm:p-12 text-white relative overflow-hidden transition-colors">
-          <Sparkles className="absolute top-6 sm:top-10 right-6 sm:right-10 text-indigo-400 dark:text-indigo-300 opacity-50" size={60} />
-          <div className="relative z-10">
-            <span className="inline-block px-3 py-1 bg-white/20 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-3 sm:mb-4">
-              Zusammenfassung
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black mb-2">{pkg.name}</h2>
-            <p className="text-indigo-100 dark:text-indigo-200 text-base sm:text-lg">Dein persönlicher Study Guide für Klasse {pkg.grade}</p>
-          </div>
-        </div>
-        
-        <div className="p-6 sm:p-12 prose prose-indigo dark:prose-invert max-w-none">
-          <div className="markdown-body text-base dark:text-gray-300">
-            <Markdown>{guide}</Markdown>
-          </div>
+      {/* Guide Content Tile */}
+      <div className="cds--tile p-6 sm:p-10">
+        <div className="markdown-body">
+          <Markdown>{guide}</Markdown>
         </div>
       </div>
+
+      {/* Footer Navigation */}
+      <div className="pt-4 flex justify-between items-center">
+        <button 
+          onClick={onBack}
+          className="cds--btn cds--btn--tertiary text-xs"
+        >
+          <ArrowLeft size={16} className="mr-2" />
+          <span>Zurück zur Paketübersicht</span>
+        </button>
+
+        <button 
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="cds--btn cds--btn--ghost text-xs"
+        >
+          <span>Nach oben scrollen</span>
+        </button>
+      </div>
+
     </div>
   );
 }

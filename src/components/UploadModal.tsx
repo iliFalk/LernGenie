@@ -1,6 +1,14 @@
 import React, { useState, useRef } from "react";
-import { X, Upload, Camera, FileText, CheckCircle2, AlertCircle, Loader2, Sparkles, Files } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { 
+  Close, 
+  Upload, 
+  Document, 
+  Checkmark, 
+  WarningAlt, 
+  Idea, 
+  Folder,
+  TrashCan
+} from "@carbon/icons-react";
 import { extractTextFromImage, generateTopicContent } from "../services/gemini";
 import { authFetch } from "../services/auth";
 
@@ -20,13 +28,14 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   const [processingMessage, setProcessingMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  if (!isOpen) return null;
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (!selectedFiles) return;
 
     setIsProcessing(true);
     
-    // Add all files to the list with pending status first
     const initialFiles = Array.from(selectedFiles).map(f => ({
       id: crypto.randomUUID(),
       name: f.name,
@@ -41,7 +50,6 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       const file = selectedFiles[i];
       const fileId = initialFiles[i].id;
       
-      // Update status to processing
       setFiles(prev => prev.map(f => f.id === fileId ? { ...f, status: 'processing' } : f));
       
       try {
@@ -51,15 +59,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
         if (file.type.startsWith("image/")) {
           extractedText = await extractTextFromImage(base64.split(",")[1], file.type);
         } else {
-          extractedText = "Beispieltext aus Dokument " + file.name;
+          extractedText = "Extrahierter Text aus Dokument " + file.name;
         }
 
-        // Update status to completed and add content
         setFiles(prev => prev.map(f => f.id === fileId ? { ...f, content: extractedText, status: 'completed' } : f));
       } catch (error: any) {
-        console.error(error);
-        // Update status to error
-        setFiles(prev => prev.map(f => f.id === fileId ? { ...f, status: 'error', errorMsg: error?.message || "Fehler bei der Textextraktion" } : f));
+        console.error("Extraction error:", error);
+        setFiles(prev => prev.map(f => f.id === fileId ? { ...f, status: 'error', errorMsg: error?.message || "Fehler bei der Extraktion" } : f));
       }
     }
 
@@ -108,12 +114,11 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     if (!name || files.length === 0) return;
 
     setIsProcessing(true);
-    setProcessingMessage("Speichere Lernpaket...");
+    setProcessingMessage("Lernpaket wird gespeichert...");
 
     try {
       const packageId = crypto.randomUUID();
       
-      // Create package
       const pkgResponse = await authFetch("/api/packages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -124,7 +129,6 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
         throw new Error("Lernpaket konnte nicht erstellt werden.");
       }
 
-      // Create materials (only completed ones)
       const completedFiles = files.filter(f => f.status === 'completed');
       for (const file of completedFiles) {
         const matResponse = await authFetch("/api/materials", {
@@ -144,201 +148,254 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       }
 
       onSuccess();
-      // Reset state
       setName("");
       setGrade(10);
       setFiles([]);
       setStep(1);
     } catch (error: any) {
       console.error("Fehler beim Speichern des Lernpakets:", error);
-      alert("Fehler beim Speichern des Lernpakets: " + (error?.message || "Verbindungsfehler"));
+      alert("Fehler beim Speichern: " + (error?.message || "Verbindungsfehler"));
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-heavy w-full max-w-2xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh] transition-all"
-      >
-        <div className="p-4 sm:p-6 border-b border-gray-200/40 dark:border-gray-700/40 flex items-center justify-between">
-          <h2 className="text-lg sm:text-xl font-bold dark:text-white">Neues Lernpaket</h2>
-          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500 dark:text-gray-400">
-            <X size={24} />
+    <div className="fixed inset-0 bg-[#161616]/70 z-50 flex items-center justify-center p-4">
+      {/* Carbon Modal Container */}
+      <div className="relative bg-[var(--cds-layer-01)] border border-[var(--cds-border-subtle-01)] w-full max-w-2xl flex flex-col max-h-[90vh]">
+        
+        {/* Carbon Modal Header */}
+        <div className="p-6 border-b border-[var(--cds-border-subtle-01)] flex items-start justify-between bg-[var(--cds-layer-02)]">
+          <div>
+            <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--cds-text-helper)] mb-1">
+              Schritt {step} von 2 • {step === 1 ? "Konfiguration" : "Inhalte & Materialien"}
+            </div>
+            <h2 className="text-xl font-light text-[var(--cds-text-primary)]">
+              Neues Lernpaket erstellen
+            </h2>
+          </div>
+
+          <button 
+            onClick={onClose}
+            title="Schließen"
+            className="w-8 h-8 flex items-center justify-center text-[var(--cds-text-secondary)] hover:text-[#da1e28] hover:bg-[var(--cds-layer-01)] transition-colors"
+          >
+            <Close size={20} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar p-5 sm:p-8">
+        {/* Modal Scrollable Body */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
           {step === 1 ? (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Name des Themas</label>
+                <label className="cds--label">Thema oder Fachgebiet</label>
                 <input 
                   type="text" 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="z.B. Photosynthese, Französische Revolution..."
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  placeholder="z.B. Genetik & Vererbung, Weimarer Republik..."
+                  className="cds--text-input"
+                  autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Wie möchtest du starten?</label>
+                <label className="cds--label">Erstellungsmethode</label>
                 <div className="grid grid-cols-2 gap-3">
-                  <button
+                  <div 
                     onClick={() => setCreationMode('upload')}
-                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${creationMode === 'upload' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-600'}`}
+                    className={`cds--tile cds--tile--clickable p-4 flex flex-col justify-between ${
+                      creationMode === 'upload' ? 'border-2 border-[#0f62fe]' : ''
+                    }`}
                   >
-                    <Files size={24} />
-                    <span className="text-xs font-bold">Eigene Dateien</span>
-                  </button>
-                  <button
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-[var(--cds-text-primary)]">Eigene Dokumente</span>
+                      <Upload size={18} className="text-[#0f62fe]" />
+                    </div>
+                    <p className="text-xs text-[var(--cds-text-secondary)]">
+                      Lade Skripte, Notizen oder Fotos hoch.
+                    </p>
+                  </div>
+
+                  <div 
                     onClick={() => setCreationMode('generate')}
-                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${creationMode === 'generate' ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-600'}`}
+                    className={`cds--tile cds--tile--clickable p-4 flex flex-col justify-between ${
+                      creationMode === 'generate' ? 'border-2 border-[#0f62fe]' : ''
+                    }`}
                   >
-                    <Sparkles size={24} />
-                    <span className="text-xs font-bold">KI Generieren</span>
-                  </button>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-[var(--cds-text-primary)]">KI Generierung</span>
+                      <Idea size={18} className="text-[#0f62fe]" />
+                    </div>
+                    <p className="text-xs text-[var(--cds-text-secondary)]">
+                      Lass Lerninhalte automatisch erstellen.
+                    </p>
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Klassenstufe (1-13)</label>
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                <label className="cds--label">Klassenstufe (1 - 13)</label>
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {[...Array(13)].map((_, i) => (
                     <button
                       key={i + 1}
+                      type="button"
                       onClick={() => setGrade(i + 1)}
-                      className={`h-11 rounded-lg font-medium transition-all ${grade === i + 1 ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none" : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                      className={`h-10 text-xs font-mono border transition-colors ${
+                        grade === i + 1 
+                          ? "bg-[#0f62fe] text-white border-[#0f62fe] font-bold" 
+                          : "bg-[var(--cds-layer-02)] text-[var(--cds-text-primary)] border-[var(--cds-border-subtle-01)] hover:bg-[var(--cds-layer-01)]"
+                      }`}
                     >
                       {i + 1}
                     </button>
                   ))}
                 </div>
               </div>
-
-              <div className="pt-4">
-                <button 
-                  disabled={!name}
-                  onClick={() => setStep(2)}
-                  className="w-full bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {creationMode === 'upload' ? 'Weiter zum Upload' : 'Weiter zur Generierung'}
-                </button>
-              </div>
             </div>
           ) : (
             <div className="space-y-6">
               {creationMode === 'upload' ? (
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-3xl p-6 sm:p-10 flex flex-col items-center justify-center hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20 transition-all cursor-pointer group"
-                >
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
-                    <Upload size={24} />
+                <div>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-[var(--cds-border-subtle-01)] p-8 text-center hover:border-[#0f62fe] hover:bg-[var(--cds-layer-02)] transition-colors cursor-pointer"
+                  >
+                    <Upload size={32} className="text-[#0f62fe] mx-auto mb-3" />
+                    <p className="text-sm font-semibold text-[var(--cds-text-primary)]">
+                      Dateien auswählen oder per Drag & Drop ablegen
+                    </p>
+                    <p className="text-xs font-mono text-[var(--cds-text-helper)] mt-1">
+                      PDF, DOCX, TXT, JPG, PNG (max. 10 MB)
+                    </p>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      multiple 
+                      className="hidden" 
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                    />
                   </div>
-                  <p className="font-bold text-gray-900 dark:text-white text-center">Dateien auswählen oder ablegen</p>
-                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">PDF, Word, JPG, PNG (max. 10MB)</p>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    multiple 
-                    className="hidden" 
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  />
                 </div>
               ) : (
-                <div className="bg-indigo-50/50 dark:bg-indigo-900/20 rounded-3xl p-8 border-2 border-indigo-100 dark:border-indigo-900 flex flex-col items-center text-center">
-                  <div className="w-16 h-16 bg-white dark:bg-gray-900 rounded-2xl shadow-sm flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4">
-                    <Sparkles size={32} />
+                <div className="cds--tile p-6 space-y-4 text-center">
+                  <div className="w-12 h-12 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] flex items-center justify-center text-[#0f62fe] mx-auto">
+                    <Idea size={24} />
                   </div>
-                  <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-2">KI-Inhalte für "{name}"</h3>
-                  <p className="text-sm text-indigo-700/70 dark:text-indigo-400/70 mb-6">
-                    Unsere KI erstellt einen umfassenden Lerntext basierend auf deinem Thema und der Klassenstufe {grade}.
-                  </p>
+                  <div>
+                    <h3 className="text-sm font-semibold text-[var(--cds-text-primary)]">
+                      KI-Synthese für "{name}"
+                    </h3>
+                    <p className="text-xs text-[var(--cds-text-secondary)] mt-1 max-w-sm mx-auto">
+                      Ein strukturiertes Lernskript wird passend für Klasse {grade} automatisch generiert.
+                    </p>
+                  </div>
                   <button
                     disabled={isProcessing || files.some(f => f.status === 'completed')}
                     onClick={handleGenerateAI}
-                    className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
+                    className="cds--btn cds--btn--primary justify-center text-xs mx-auto disabled:opacity-40"
                   >
-                    {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                    {files.some(f => f.status === 'completed') ? 'Inhalt generiert' : 'Jetzt generieren'}
+                    {isProcessing ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Generiere...</span>
+                      </div>
+                    ) : (
+                      <span>{files.some(f => f.status === 'completed') ? 'Inhalt generiert' : 'Inhalte jetzt generieren'}</span>
+                    )}
                   </button>
                 </div>
               )}
 
+              {/* Uploaded / Generated Materials List */}
               {files.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dateien ({files.length})</h4>
-                  <div className="space-y-2">
+                  <span className="text-xs font-mono uppercase tracking-wider text-[var(--cds-text-helper)] block">
+                    Materialien ({files.length})
+                  </span>
+                  <div className="divide-y divide-[var(--cds-border-subtle-01)] border border-[var(--cds-border-subtle-01)]">
                     {files.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700">
-                        <div className="flex items-center gap-3 overflow-hidden">
+                      <div key={file.id} className="p-3 bg-[var(--cds-layer-02)] flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
                           <div className="shrink-0">
                             {file.status === 'processing' ? (
-                              <Loader2 size={18} className="text-indigo-500 animate-spin" />
+                              <div className="w-4 h-4 border-2 border-[var(--cds-border-subtle-01)] border-t-[#0f62fe] rounded-full animate-spin" />
                             ) : file.status === 'completed' ? (
-                              <CheckCircle2 size={18} className="text-emerald-500" />
+                              <Checkmark size={16} className="text-[#24a148]" />
                             ) : file.status === 'error' ? (
-                              <AlertCircle size={18} className="text-red-500" />
+                              <WarningAlt size={16} className="text-[#da1e28]" />
                             ) : (
-                              <FileText size={18} className="text-gray-400" />
+                              <Document size={16} className="text-[var(--cds-text-secondary)]" />
                             )}
                           </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-medium dark:text-white truncate">{file.name}</span>
-                            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate max-w-[200px]">
-                              {file.status === 'processing' ? 'Wird verarbeitet...' : 
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-[var(--cds-text-primary)] truncate">{file.name}</p>
+                            <p className="text-[11px] font-mono text-[var(--cds-text-helper)]">
+                              {file.status === 'processing' ? 'Verarbeitung läuft...' : 
                                file.status === 'completed' ? 'Bereit' : 
-                               file.status === 'error' ? `Fehler: ${file.errorMsg || 'Fehler'}` : 'Warten...'}
-                            </span>
+                               file.status === 'error' ? `Fehler: ${file.errorMsg || 'Fehler'}` : 'Wartend'}
+                            </p>
                           </div>
                         </div>
+
                         <button 
                           onClick={() => setFiles(prev => prev.filter(f => f.id !== file.id))}
-                          className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 shrink-0 ml-2"
+                          className="w-8 h-8 flex items-center justify-center text-[var(--cds-text-helper)] hover:text-[#da1e28] transition-colors shrink-0"
+                          title="Entfernen"
                         >
-                          <X size={20} />
+                          <TrashCan size={16} />
                         </button>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <button 
-                  onClick={() => setStep(1)}
-                  className="order-2 sm:order-1 flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 sm:py-4 rounded-2xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-                >
-                  Zurück
-                </button>
-                <button 
-                  disabled={!files.some(f => f.status === 'completed') || files.some(f => f.status === 'processing' || f.status === 'pending') || isProcessing}
-                  onClick={handleSave}
-                  className="order-1 sm:order-2 flex-[2] bg-indigo-600 text-white py-3 sm:py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 size={20} className="animate-spin" />
-                      {processingMessage || "Verarbeite..."}
-                    </>
-                  ) : (
-                    "Paket erstellen"
-                  )}
-                </button>
-              </div>
             </div>
           )}
         </div>
-      </motion.div>
+
+        {/* Carbon Modal 50/50 Footer */}
+        <div className="grid grid-cols-2 border-t border-[var(--cds-border-subtle-01)]">
+          {step === 1 ? (
+            <>
+              <button 
+                onClick={onClose}
+                className="cds--btn cds--btn--secondary justify-center text-xs h-14"
+              >
+                Abbrechen
+              </button>
+              <button 
+                disabled={!name}
+                onClick={() => setStep(2)}
+                className="cds--btn cds--btn--primary justify-center text-xs h-14 disabled:opacity-40"
+              >
+                Weiter
+              </button>
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={() => setStep(1)}
+                className="cds--btn cds--btn--secondary justify-center text-xs h-14"
+              >
+                Zurück
+              </button>
+              <button 
+                disabled={!files.some(f => f.status === 'completed') || files.some(f => f.status === 'processing' || f.status === 'pending') || isProcessing}
+                onClick={handleSave}
+                className="cds--btn cds--btn--primary justify-center text-xs h-14 disabled:opacity-40"
+              >
+                {isProcessing ? (processingMessage || "Wird gespeichert...") : "Paket erstellen"}
+              </button>
+            </>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }
