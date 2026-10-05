@@ -1,9 +1,8 @@
 # Deployment — LernGenie auf falknest (LAN-only, on demand)
 
 Stand: 2026-10-05. Host: **falknest** = 192.168.178.100 (VM auf pve), SSH-Alias `falknest`, root.
-Der Host selbst schläft nachts (Boot ~04:11, Shutdown ~19:50) — die App soll das **nicht**
-mitmachen: sie startet **nicht** automatisch, sondern nur auf Anforderung, immer unter derselben
-Adresse.
+Der Host schläft nachts (Boot ~04:11, Shutdown ~19:50).
+Die App macht das nicht mit. Sie startet nur auf Anforderung — immer unter derselben Adresse.
 
 ## Adresse
 
@@ -42,8 +41,8 @@ Erreichbar nur aus dem Heimnetz (192.168.178.0/24) und nur, solange der Containe
       - falknest-net
 ```
 
-`docker compose -f apps.yml up -d lernquiz` warnt über „orphan containers" (caddy, cloudflared aus
-`infra.yml`, dasselbe Projekt) — harmlos, **kein** `--remove-orphans` verwenden.
+Die Compose-Datei gehört zum Projekt `falknest`, genau wie `infra.yml`. Compose warnt beim Start über
+„orphan containers" (caddy, cloudflared). Die Warnung ist harmlos. Benutze **kein** `--remove-orphans`.
 
 ## Env
 
@@ -58,8 +57,8 @@ NODE_ENV=production
 ```
 
 Das Modell ist der Tages-Pick der kostenlosen OpenRouter-Rangliste
-(`https://shir-man.com/api/free-llm/top-models`, `models[0].id`) — dieselbe Quelle, aus der die
-mvp-Lane ihre Fallback-Kette zieht. Rotiert der Pick: `AI_MODEL` anpassen und neu bauen.
+(`https://shir-man.com/api/free-llm/top-models`, `models[0].id`). Aus derselben Quelle zieht die
+mvp-Lane ihre Fallback-Kette. Rotiert der Pick: `AI_MODEL` anpassen und neu bauen.
 
 ## Betrieb
 
@@ -78,14 +77,14 @@ ssh falknest 'docker ps -a --filter name=lernquiz --format "{{.Names}} | {{.Stat
 ## Wie deployt wurde (2026-10-05)
 
 1. `git clone https://github.com/iliFalk/LernGenie.git /opt/falknest/lernquiz/app`
-2. Repo um Deployment-Teil ergänzt (dieses Verzeichnis): `Dockerfile`, `.dockerignore`, README,
-   `package-lock.json` neu erzeugt (der Repo-Lock war stale, `npm ci` brach ab), plus drei
-   Server-Änderungen für Env-Steuerung (`DB_PATH`, `AI_PROVIDER`/`AI_MODEL`,
-   `OPENROUTER_API_KEY`-Fallback) — ohne sie kannte der Server nur `GEMINI_API_KEY`.
-3. `docker compose -f /home/ilja/falknest/apps.yml build lernquiz && … up -d lernquiz`
-4. Verifiziert: `ss -tlnp | grep 3001` zeigt **nur** `192.168.178.100:3001` (Loopback antwortet
-   `000`), `GET /` → 200, `POST /api/ai/quiz` → valides Quiz-JSON über das freie Modell,
-   Paket anlegen/lesen/löschen ok.
+2. Repo um den Deployment-Teil ergänzt: `Dockerfile`, `.dockerignore`, README, `DEPLOY.md`.
+3. `package-lock.json` neu erzeugt. Der Lock war veraltet, `npm ci` brach ab.
+4. Drei Server-Änderungen für die Env-Steuerung eingebaut: `DB_PATH`, `AI_PROVIDER`/`AI_MODEL` und
+   der `OPENROUTER_API_KEY`-Fallback. Ohne sie kannte der Server nur `GEMINI_API_KEY`.
+5. `docker compose -f /home/ilja/falknest/apps.yml build lernquiz && … up -d lernquiz`
+6. Verifiziert: `ss -tlnp | grep 3001` zeigt **nur** `192.168.178.100:3001`. Loopback antwortet `000`.
+   `GET /` → 200. `POST /api/ai/quiz` → valides Quiz-JSON über das freie Modell. Paket anlegen,
+   lesen und löschen ok.
 
 ## Verifikation (jederzeit)
 
