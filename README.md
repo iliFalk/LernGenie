@@ -1,91 +1,91 @@
 # LernGenie (LernQuiz Genie)
 
-Automatische Quiz-Generierung aus eigenen Lernmaterialien: Fotos oder Texte hochladen, die KI
-erzeugt daraus Quizfragen, Karteikarten und einen Lernleitfaden — inklusive Auswertung nach Themen
-und Fach.
+Erstellt Quizfragen, Karteikarten und Lernleitfäden aus eigenen Lernmaterialien.
 
-Entstanden als Google-AI-Studio-App, weiterentwickelt zu einer selbst gehosteten Web-App.
-Läuft im Homelab auf **falknest** im Docker-Container, erreichbar **nur im Heimnetz** und
-**nur auf Anforderung** (siehe [DEPLOY.md](DEPLOY.md)).
+- **Was ist das:** eine Web-App aus React, Express und SQLite. Docker baut und startet sie.
+- **Worum geht es:** Du lädst Fotos oder Texte hoch. Die KI baut daraus Quizfragen, Karteikarten und
+  einen Lernleitfaden. Ergebnisse und Fehleranalyse bleiben pro Lernpaket gespeichert.
+- **Warum:** Das Material kommt aus dem echten Unterricht. Die Fragen richten sich nach diesem
+  Material. Alles läuft selbst gehostet, ohne Cloud-Konto.
+- **Wie benutzt man es:** Öffne im Heimnetz `http://192.168.178.100:3001` und lege ein Lernpaket an.
+  Start und Stop des Servers stehen in [DEPLOY.md](DEPLOY.md). Für Entwicklung lokal: siehe
+  „Lokal starten“.
 
 ## Funktionen
 
 | Bereich | Was es macht |
 |---|---|
-| **Bibliothek** | Lernpakete (Klasse, Fach, Name) anlegen, öffnen, löschen |
-| **Upload** | Material als Foto (OCR per Vision-Modell) oder als Text hinzufügen |
-| **Quiz** | Fragen aus dem Material erzeugen (Anzahl, Klassenstufe), Antworten prüfen, Ergebnis speichern |
-| **Karteikarten** | Karteikarten zum selben Material, ebenfalls gecacht |
-| **Lernleitfaden** | Zusammenfassender Leitfaden je Paket (Flash-Modell) |
-| **Auswertung** | Ergebnis-Historie je Paket, Fehleranalyse, Statistik nach Thema und Fach |
-| **Einstellungen** | Name/Klasse, Dark Mode, Benachrichtigungszeit, Dev Mode (eigener Provider/Key/Modell) |
+| Bibliothek | Lernpakete anlegen, öffnen und löschen. Ein Paket hat Klasse, Fach und Name. |
+| Upload | Material als Foto oder als Text hinzufügen. Fotos liest das Vision-Modell (OCR). |
+| Quiz | Fragen aus dem Material erzeugen. Du wählst Anzahl und Klassenstufe. |
+| Karteikarten | Karteikarten zum selben Material. Der Server speichert sie im Cache. |
+| Lernleitfaden | Kurze Zusammenfassung je Paket. Ein Flash-Modell schreibt sie. |
+| Auswertung | Ergebnis-Historie, Fehleranalyse und Statistik nach Thema und Fach. |
+| Einstellungen | Name, Klasse, Dark Mode, Benachrichtigungszeit und Dev Mode. |
 
-Die Fachzuordnung eines Pakets passiert automatisch: der Server klassifiziert sie per LLM und
-schreibt sie in die Datenbank zurück (deshalb dauert das erste `GET /api/packages` nach einem
-neuen Paket ein paar Sekunden).
+Der Server ordnet jedem Paket automatisch ein Fach zu. Er fragt dafür das LLM und schreibt das Fach
+in die Datenbank. Deshalb dauert das erste `GET /api/packages` nach einem neuen Paket ein paar Sekunden.
 
-## Stack
+## Technik
 
-- **Frontend:** React 19, Vite 6, Tailwind 4, Carbon Design Icons / Lucide, Motion, Recharts
-- **Backend:** Node 22, Express 4, TypeScript (`tsx`), better-sqlite3 (SQLite)
-- **KI:** Google Gemini (`@google/genai`) oder OpenRouter (OpenAI-kompatibel)
-- **Auslieferung:** `vite build` → `dist/`, ausgeliefert als Static SPA vom Express-Server
+- Frontend: React 19, Vite 6, Tailwind 4, Carbon Design Icons und Lucide, Motion, Recharts.
+- Backend: Node 22, Express 4, TypeScript (`tsx`), better-sqlite3.
+- KI: Google Gemini (`@google/genai`) oder OpenRouter.
+- Auslieferung: `vite build` erzeugt `dist/`. Der Express-Server liefert die SPA aus.
 
 ```
 index.html            Einstiegspunkt der SPA
-src/App.tsx           Router/Tabs, Hauptzustand
+src/App.tsx           Tabs und Hauptzustand
 src/components/       Library, UploadModal, QuizView, FlashcardsView, StudyGuideView,
                       ResultsView, StatsView, PackageDetailView, SettingsView
-src/services/         auth.ts (User-ID + AI-Header), gemini.ts (API-Aufrufe)
-src/prompts/          Prompt-Templates (Quiz, Analyse, Karteikarten, Leitfaden, OCR, Thema)
-server.ts             Express-API, SQLite-Schema, Vite-Middleware bzw. Static-Serving
-llm.ts                Provider-Schicht: Gemini / OpenRouter
+src/services/         auth.ts (User-ID und AI-Header), gemini.ts (API-Aufrufe)
+src/prompts/          Prompt-Templates
+server.ts             Express-API, SQLite-Schema, Static-Serving
+llm.ts                Provider-Schicht für Gemini und OpenRouter
 ```
 
 ## API
 
 | Endpunkt | Zweck |
 |---|---|
-| `POST /api/ai/ocr` | Text aus Bild lesen |
+| `POST /api/ai/ocr` | Text aus einem Bild lesen |
 | `POST /api/ai/quiz` | Quizfragen erzeugen |
 | `POST /api/ai/flashcards` | Karteikarten erzeugen |
 | `POST /api/ai/study-guide` | Lernleitfaden erzeugen |
-| `POST /api/ai/analyze` | Ergebnis analysieren |
-| `POST /api/ai/topic` | Thema zu Material bestimmen |
-| `GET/POST/DELETE /api/packages[/:id]` | Lernpakete |
-| `GET/POST /api/materials` | Materialien zu einem Paket |
-| `GET /api/packages/:id/{quiz,flashcards,study-guide}` | Gecachte Inhalte je Paket (`?regenerate=true`) |
-| `GET/POST /api/results[/:packageId]` | Ergebnisse |
+| `POST /api/ai/analyze` | Ein Ergebnis analysieren |
+| `POST /api/ai/topic` | Das Thema zu Material bestimmen |
+| `GET/POST/DELETE /api/packages[/:id]` | Lernpakete lesen, anlegen und löschen |
+| `GET/POST /api/materials` | Materialien zu einem Paket lesen und anlegen |
+| `GET /api/packages/:id/{quiz,flashcards,study-guide}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie) |
+| `GET/POST /api/results[/:packageId]` | Ergebnisse lesen und schreiben |
 
-Nutzerkontext kommt über den Header `x-user-id` (im Telegram-Mini-App-Kontext automatisch die
-Telegram-ID, im Browser eine in `localStorage` erzeugte ID).
+Der Nutzerkontext kommt über den Header `x-user-id`. In Telegram liefert die Mini-App die
+Telegram-ID. Im Browser erzeugt die App eine ID im `localStorage`.
 
-## KI konfigurieren
+## KI einstellen
 
-Priorität: **Per-Request-Header schlagen Umgebungsvariablen.** Die App sendet im Dev Mode
-`x-ai-key` / `x-ai-provider` / `x-ai-model` (Einstellungen → Developer Options, gespeichert in
-`localStorage`); ohne Dev Mode greifen die Server-Defaults.
+Reihenfolge: Header schlagen Umgebungsvariablen. Die App sendet im Dev Mode `x-ai-key`,
+`x-ai-provider` und `x-ai-model` (Einstellungen → Developer Options, gespeichert in `localStorage`).
+Ohne Dev Mode gelten die Server-Defaults.
 
 | Variable | Bedeutung |
 |---|---|
 | `AI_PROVIDER` | `gemini` (Default) oder `openrouter` |
-| `AI_MODEL` | Modell-ID; leer = Provider-Default (`gemini-3.1-pro-preview`, für kurze Aufgaben `gemini-3-flash-preview`, OpenRouter: `google/gemini-2.0-flash-exp:free`) |
+| `AI_MODEL` | Modell-ID. Leer heißt Provider-Default: `gemini-3.1-pro-preview`, für kurze Aufgaben `gemini-3-flash-preview`, bei OpenRouter `google/gemini-2.0-flash-exp:free` |
 | `GEMINI_API_KEY` | Key für `provider = gemini` |
-| `OPENROUTER_API_KEY` | Key für `provider = openrouter` (kostenlose Modelle, z. B. `dots-studio/dots-3-note-preview:free`) |
-| `DB_PATH` | Pfad zur SQLite-Datei; relativ = gegen das Arbeitsverzeichnis des Prozesses |
-| `APP_URL` | Von AI Studio injizierte eigene URL |
+| `OPENROUTER_API_KEY` | Key für `provider = openrouter` (kostenlose Modelle, zum Beispiel `dots-studio/dots-3-note-preview:free`) |
+| `DB_PATH` | Pfad zur SQLite-Datei. Ein relativer Pfad gilt gegen das Arbeitsverzeichnis des Prozesses |
+| `APP_URL` | Eigene URL, von AI Studio injiziert |
 
 Alle Variablen stehen erklärt in [.env.example](.env.example).
 
 ## Lokal starten
 
-```bash
-npm install
-cp .env.example .env          # GEMINI_API_KEY oder OPENROUTER_API_KEY + AI_PROVIDER setzen
-npm run dev                   # tsx server.ts, Vite im Middleware-Modus, http://localhost:3000
-```
+1. `npm install`
+2. `cp .env.example .env` und den Key setzen. Setze dazu `AI_PROVIDER` auf `gemini` oder `openrouter`.
+3. `npm run dev` startet den Server auf http://localhost:3000.
 
-`npm run build` erzeugt `dist/`; mit `NODE_ENV=production` liefert der Server `dist/` aus.
+`npm run build` erzeugt `dist/`. Mit `NODE_ENV=production` liefert der Server `dist/` aus.
 
 ## Deployment
 
@@ -98,21 +98,20 @@ docker run --rm -p 127.0.0.1:3001:3000 -v "$PWD/data:/data" \
   -e OPENROUTER_API_KEY=... -e AI_MODEL=dots-studio/dots-3-note-preview:free lernquiz
 ```
 
-Produktiv läuft die App auf **falknest** (Homelab-Server, 192.168.178.100), gebunden an das
-LAN-Interface, ohne Reverse-Proxy-Eintrag und ohne Cloudflare-Tunnel-Hostname. Sie ist damit
-**von außen nicht erreichbar** und startet **nicht** automatisch mit dem Host, sondern nur auf
-Anforderung. Vollständiger Ablauf, Compose-Block, Start/Stop und Rollback: **[DEPLOY.md](DEPLOY.md)**.
+Produktiv läuft die App auf falknest (Homelab-Server, 192.168.178.100). Der Port ist an das
+LAN-Interface gebunden. Es gibt keinen Reverse-Proxy-Eintrag und keinen Cloudflare-Tunnel-Hostnamen.
+Deshalb ist die App von außen nicht erreichbar. Sie startet nicht automatisch mit dem Host, sondern
+nur auf Anforderung. Details, Start, Stop und Rollback: [DEPLOY.md](DEPLOY.md).
 
 ## Daten
 
-Alles liegt in einer SQLite-Datei (`study_quiz.db`, per `DB_PATH` verschiebbar): `packages`,
-`materials`, `quiz_results`, `package_cache`. Der Cache (`package_cache`) hält je Paket Quiz,
-Karteikarten und Leitfaden, damit dasselbe Material nicht erneut durchs Modell muss.
-Sicherung = Datei kopieren.
+Alle Daten liegen in einer SQLite-Datei. `DB_PATH` verschiebt sie. Die Tabellen heißen `packages`,
+`materials`, `quiz_results` und `package_cache`. Der Cache hält je Paket Quiz, Karteikarten und
+Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopiere die Datei.
 
 ## Bekannte Punkte
 
-- Kostenlose OpenRouter-Modelle haben Rate-Limits und lehnen gelegentlich `response_format:
-  json_object` ab; die App zeigt dann die Provider-Meldung im UI.
-- `package-lock.json` wird mit `npm` gepflegt — nach Änderungen an `package.json` neu erzeugen,
-  sonst bricht `npm ci` im Docker-Build ab.
+- Kostenlose OpenRouter-Modelle haben Rate-Limits. Sie lehnen manchmal `response_format: json_object`
+  ab. Die App zeigt dann die Provider-Meldung im UI.
+- Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
+  (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
