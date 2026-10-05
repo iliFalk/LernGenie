@@ -13,7 +13,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const db = new Database("study_quiz.db");
+const db = new Database(process.env.DB_PATH || "study_quiz.db");
 db.pragma("foreign_keys = ON");
 
 // Initialize database
@@ -79,13 +79,13 @@ async function startServer() {
     if (key === "undefined" || key === "null" || key === "") {
       key = undefined;
     }
-    let provider = (req.headers["x-ai-provider"] as string) || "gemini";
+    let provider = (req.headers["x-ai-provider"] as string) || process.env.AI_PROVIDER || "gemini";
     if (provider === "undefined" || provider === "null" || provider === "") {
-      provider = "gemini";
+      provider = process.env.AI_PROVIDER || "gemini";
     }
     let model = req.headers["x-ai-model"] as string;
     if (model === "undefined" || model === "null" || model === "") {
-      model = undefined;
+      model = process.env.AI_MODEL;
     }
     return {
       provider,

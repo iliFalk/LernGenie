@@ -26,8 +26,8 @@ export async function callLLM(params: {
   const { provider, apiKey, model, prompt, isJson, systemPrompt, imageData, useFlashModel } = params;
 
   if (provider === "openrouter") {
-    const cleanOpenRouterKey = sanitizeApiKey(apiKey);
-    return callOpenRouter(cleanOpenRouterKey, model || "google/gemini-2.0-flash-exp:free", prompt, isJson, systemPrompt, imageData);
+    const cleanOpenRouterKey = sanitizeApiKey(apiKey) || sanitizeApiKey(process.env.OPENROUTER_API_KEY);
+    return callOpenRouter(cleanOpenRouterKey, model || process.env.AI_MODEL || "google/gemini-2.0-flash-exp:free", prompt, isJson, systemPrompt, imageData);
   }
 
   // Fallback to Gemini

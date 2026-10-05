@@ -1,8 +1,14 @@
 node_modules/
 build/
 dist/
+dist-server/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
+lernquiz.env
+data/
+*.db-journal
+*.db-wal
+*.db-shm
