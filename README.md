@@ -114,6 +114,11 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
 
 - Kostenlose OpenRouter-Modelle haben Rate-Limits. Sie lehnen manchmal `response_format: json_object`
   ab. Die App zeigt dann die Provider-Meldung im UI.
+- Kostenlose Modelle liefern JSON in eigener Schreibweise: PascalCase (`Quiz`, `CorrectAnswer`),
+  deutsche Wörter oder andere Schlüssel. Die Prompts nennen seit 2026-10-06 die erwartete Form,
+  und `normalise.ts` bildet jede Antwort auf die Schlüssel ab, die das UI liest
+  (`text`, `options`, `correctIndex`, `hint`, `explanation`, `topic`). Fehlt `correct_answer`,
+  steht `correctIndex` auf `-1`.
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
 - Die App läuft im Heimnetz über einfaches HTTP. Das ist **kein** sicherer Kontext. Die Browser-APIs

@@ -21,6 +21,10 @@ WICHTIGE REGELN:
    - Eine detaillierte Erklärung (Explanation), die nicht nur sagt "Das ist richtig", sondern den Kontext im Material erläutert (Warum ist das so? Wie hängt es zusammen?).
    - Ein Thema (Topic), zu dem die Frage gehört.
 
+AUSGABE: Antworte ausschließlich mit JSON in genau dieser Form.
+{"quiz":[{"question":"…","options":["A) …","B) …","C) …","D) …"],"correct_answer":"B","hint":"…","explanation":"…","topic":"…"}]}
+Benutze genau diese Schlüsselnamen, in Kleinbuchstaben.
+
 Material:
 ${content}
 `;
@@ -36,12 +40,20 @@ Gib eine Analyse zurück, die:
 1. Konkrete Stärken (Strengths) benennt.
 2. Spezifische Lernbereiche (Growth Areas) aufzeigt, wo Konzepte missverstanden wurden.
 3. Eine statistische Auswertung pro Thema liefert.
+
+AUSGABE: Antworte ausschließlich mit JSON in genau dieser Form.
+{"strengths":["…"],"growthAreas":["…"],"topicPerformance":[{"topic":"…","score":0,"total":0}]}
+Benutze genau diese Schlüsselnamen, in Kleinbuchstaben.
 `;
 
 export const FLASHCARDS_PROMPT = (content: string) => `
 Erstelle 10 hochwertige Karteikarten (Flashcards) aus dem folgenden Material. 
 Folge dem Prinzip des "Active Recall". Die Vorderseite sollte eine gezielte Frage oder ein Konzept sein, 
 die Rückseite eine prägnante, erklärende Antwort im Stil eines Experten-Tutors.
+
+AUSGABE: Antworte ausschließlich mit JSON in genau dieser Form.
+{"flashcards":[{"front":"…","back":"…"}]}
+Benutze genau diese Schlüsselnamen, in Kleinbuchstaben.
 
 Material:
 ${content}

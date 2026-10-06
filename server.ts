@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { callLLM } from "./llm";
+import { normaliseQuiz, normaliseFlashcards, normaliseAnalysis } from "./normalise";
 import * as Prompts from "./src/prompts/index";
 
 // Load environment variables
@@ -272,7 +273,7 @@ Ausgabe: Englisch`;
         prompt: promptText,
         isJson: true,
       });
-      res.json(JSON.parse(response));
+      res.json(normaliseQuiz(JSON.parse(response)));
     } catch (error: any) {
       res.status(500).json({ error: parseAIError(error) });
     }
@@ -291,7 +292,7 @@ Ausgabe: Englisch`;
         isJson: true,
         useFlashModel: true
       });
-      res.json(JSON.parse(response));
+      res.json(normaliseAnalysis(JSON.parse(response)));
     } catch (error: any) {
       res.status(500).json({ error: parseAIError(error) });
     }
@@ -310,7 +311,7 @@ Ausgabe: Englisch`;
         isJson: true,
         useFlashModel: true
       });
-      res.json(JSON.parse(response));
+      res.json(normaliseFlashcards(JSON.parse(response)));
     } catch (error: any) {
       res.status(500).json({ error: parseAIError(error) });
     }
@@ -410,7 +411,7 @@ Ausgabe: Englisch`;
         const cached = db.prepare("SELECT quiz_questions FROM package_cache WHERE package_id = ?").get(req.params.id) as { quiz_questions?: string } | undefined;
         if (cached && cached.quiz_questions) {
           try {
-            return res.json(JSON.parse(cached.quiz_questions));
+            return res.json(normaliseQuiz(JSON.parse(cached.quiz_questions)));
           } catch (e) {
             console.error("Failed to parse cached quiz questions:", e);
           }
@@ -434,12 +435,11 @@ Ausgabe: Englisch`;
         isJson: true,
       });
 
-      // Simple validation to ensure valid JSON array
-      const questions = JSON.parse(response);
+      // Normalise the model answer to the shape the UI reads, then cache that shape.
+      const questions = normaliseQuiz(JSON.parse(response));
 
-      // Cache it
       db.prepare("INSERT OR IGNORE INTO package_cache (package_id) VALUES (?)").run(req.params.id);
-      db.prepare("UPDATE package_cache SET quiz_questions = ? WHERE package_id = ?").run(response, req.params.id);
+      db.prepare("UPDATE package_cache SET quiz_questions = ? WHERE package_id = ?").run(JSON.stringify(questions), req.params.id);
 
       res.json(questions);
     } catch (error: any) {
@@ -459,7 +459,7 @@ Ausgabe: Englisch`;
         const cached = db.prepare("SELECT flashcards FROM package_cache WHERE package_id = ?").get(req.params.id) as { flashcards?: string } | undefined;
         if (cached && cached.flashcards) {
           try {
-            return res.json(JSON.parse(cached.flashcards));
+            return res.json(normaliseFlashcards(JSON.parse(cached.flashcards)));
           } catch (e) {
             console.error("Failed to parse cached flashcards:", e);
           }
@@ -484,11 +484,11 @@ Ausgabe: Englisch`;
         useFlashModel: true
       });
 
-      const cards = JSON.parse(response);
+      const cards = normaliseFlashcards(JSON.parse(response));
 
-      // Cache it
+      // Cache the normalised shape.
       db.prepare("INSERT OR IGNORE INTO package_cache (package_id) VALUES (?)").run(req.params.id);
-      db.prepare("UPDATE package_cache SET flashcards = ? WHERE package_id = ?").run(response, req.params.id);
+      db.prepare("UPDATE package_cache SET flashcards = ? WHERE package_id = ?").run(JSON.stringify(cards), req.params.id);
 
       res.json(cards);
     } catch (error: any) {
