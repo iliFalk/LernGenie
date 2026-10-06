@@ -52,6 +52,7 @@ Die Compose-Datei gehört zum Projekt `falknest`, genau wie `infra.yml`. Compose
 OPENROUTER_API_KEY=<OpenRouter-Key>
 AI_PROVIDER=openrouter
 AI_MODEL=dots-studio/dots-3-note-preview:free
+LLM_TIMEOUT_MS=180000
 DB_PATH=/data/study_quiz.db
 NODE_ENV=production
 ```
@@ -59,6 +60,16 @@ NODE_ENV=production
 Das Modell ist der Tages-Pick der kostenlosen OpenRouter-Rangliste
 (`https://shir-man.com/api/free-llm/top-models`, `models[0].id`). Aus derselben Quelle zieht die
 mvp-Lane ihre Fallback-Kette. Rotiert der Pick: `AI_MODEL` anpassen und neu bauen.
+
+`LLM_TIMEOUT_MS` begrenzt einen OpenRouter-Aufruf. Ohne das Limit wartet der Server unbegrenzt,
+und die Oberfläche dreht dauerhaft weiter.
+
+Der Server schreibt eine Zeile pro `/api`-Anfrage in das Container-Log. Damit ist sichtbar, ob eine
+Anfrage ankommt, welchen Status sie bekommt und wie lange sie dauert:
+
+```bash
+ssh falknest 'docker logs --tail 50 lernquiz'
+```
 
 ## Betrieb
 

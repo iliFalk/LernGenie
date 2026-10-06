@@ -69,6 +69,17 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
 
+  // Request log for the API surface: one line per request shows whether a client request
+  // arrived, which status it got and how long it took.
+  app.use((req, res, next) => {
+    if (!req.path.startsWith("/api/")) return next();
+    const started = Date.now();
+    res.on("finish", () => {
+      console.log(`[api] ${req.method} ${req.path} -> ${res.statusCode} ${Date.now() - started}ms`);
+    });
+    next();
+  });
+
   // Helper to handle user_id from headers
   const getUserId = (req: express.Request) => {
     return req.headers["x-user-id"] as string || "default_user";

@@ -68,19 +68,33 @@ async function callOpenRouter(apiKey?: string, model?: string, prompt?: string, 
 
   messages.push({ role: "user", content: userContent });
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://ai.studio/build",
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: messages,
-      response_format: isJson ? { type: "json_object" } : undefined,
-    })
-  });
+  const timeoutMs = Number(process.env.LLM_TIMEOUT_MS || 180000);
+  console.log(`[llm] openrouter model=${model || "?"} json=${!!isJson} timeout=${timeoutMs}ms`);
+
+  let response: Response;
+  try {
+    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://ai.studio/build",
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: messages,
+        response_format: isJson ? { type: "json_object" } : undefined,
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error: any) {
+    if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+      throw new Error(
+        `Zeitüberschreitung: Das Modell ${model || ""} hat nicht innerhalb von ${Math.round(timeoutMs / 1000)} s geantwortet. Bitte erneut versuchen oder im Developer Mode ein anderes Modell wählen.`
+      );
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     const errorBody = await response.text();

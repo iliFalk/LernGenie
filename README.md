@@ -74,6 +74,7 @@ Ohne Dev Mode gelten die Server-Defaults.
 | `AI_MODEL` | Modell-ID. Leer heißt Provider-Default: `gemini-3.1-pro-preview`, für kurze Aufgaben `gemini-3-flash-preview`, bei OpenRouter `google/gemini-2.0-flash-exp:free` |
 | `GEMINI_API_KEY` | Key für `provider = gemini` |
 | `OPENROUTER_API_KEY` | Key für `provider = openrouter` (kostenlose Modelle, zum Beispiel `dots-studio/dots-3-note-preview:free`) |
+| `LLM_TIMEOUT_MS` | Zeitlimit für einen OpenRouter-Aufruf in Millisekunden. Default `180000` (3 Minuten). Läuft das Limit ab, antwortet der Server mit einem Fehler statt zu hängen |
 | `DB_PATH` | Pfad zur SQLite-Datei. Ein relativer Pfad gilt gegen das Arbeitsverzeichnis des Prozesses |
 | `APP_URL` | Eigene URL, von AI Studio injiziert |
 
