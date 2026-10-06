@@ -116,3 +116,8 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   ab. Die App zeigt dann die Provider-Meldung im UI.
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
+- Die App läuft im Heimnetz über einfaches HTTP. Das ist **kein** sicherer Kontext. Die Browser-APIs
+  `crypto.randomUUID` und `navigator.clipboard` fehlen dort. `src/services/uuid.ts` und
+  `src/services/clipboard.ts` kapseln beide: native API, wenn vorhanden, sonst ein Ersatz
+  (`crypto.getRandomValues` für UUID v4, versteckte Textarea mit `document.execCommand("copy")`).
+  Neue Aufrufe dieser APIs immer über die Helfer, nie direkt.

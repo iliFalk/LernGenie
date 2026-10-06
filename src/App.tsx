@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { StudyPackage, Question, QuizResult } from "./types";
 import { getCachedQuiz, analyzePerformance } from "./services/gemini";
 import { authFetch } from "./services/auth";
+import { randomUUID } from "./services/uuid";
 
 // Components
 import Library from "./components/Library";
@@ -105,7 +106,7 @@ export default function App() {
       const analysis = await analyzePerformance(results);
       
       const result: QuizResult = {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         package_id: selectedPackage.id,
         score,
         total,
@@ -491,14 +492,16 @@ export default function App() {
       </main>
 
       {/* Carbon Upload Modal */}
-      <UploadModal 
-        isOpen={isUploadModalOpen} 
-        onClose={() => setIsUploadModalOpen(false)}
-        onSuccess={() => {
-          setIsUploadModalOpen(false);
-          fetchPackages();
-        }}
-      />
+      {isUploadModalOpen && (
+        <UploadModal 
+          isOpen={isUploadModalOpen} 
+          onClose={() => setIsUploadModalOpen(false)}
+          onSuccess={() => {
+            setIsUploadModalOpen(false);
+            fetchPackages();
+          }}
+        />
+      )}
 
       {/* Carbon Loading Overlay */}
       <AnimatePresence>

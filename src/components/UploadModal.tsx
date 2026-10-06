@@ -11,6 +11,7 @@ import {
 } from "@carbon/icons-react";
 import { extractTextFromImage, generateTopicContent } from "../services/gemini";
 import { authFetch } from "../services/auth";
+import { randomUUID } from "../services/uuid";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   const [files, setFiles] = useState<{ id: string; name: string; content: string; type: string; status: 'pending' | 'processing' | 'completed' | 'error'; errorMsg?: string }[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("");
+  const [hint, setHint] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -37,7 +39,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     setIsProcessing(true);
     
     const initialFiles = Array.from(selectedFiles).map(f => ({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       name: f.name,
       content: "",
       type: f.type,
@@ -73,12 +75,16 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   };
 
   const handleGenerateAI = async () => {
-    if (!name) return;
-    
+    if (!name) {
+      setHint("Bitte zuerst einen Namen für das Lernpaket eingeben.");
+      return;
+    }
+
+    setHint("");
     setIsProcessing(true);
     setProcessingMessage("KI generiert Lerninhalte...");
     
-    const fileId = crypto.randomUUID();
+    const fileId = randomUUID();
     const newFile = {
       id: fileId,
       name: `KI-Inhalt: ${name}`,
@@ -92,9 +98,11 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     try {
       const content = await generateTopicContent(name, grade);
       setFiles(prev => prev.map(f => f.id === fileId ? { ...f, content, status: 'completed' } : f));
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, status: 'error' } : f));
+      const message = error?.message || "KI-Generierung fehlgeschlagen";
+      setHint(message);
+      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, status: 'error', errorMsg: message } : f));
     } finally {
       setIsProcessing(false);
       setProcessingMessage("");
@@ -111,13 +119,21 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   };
 
   const handleSave = async () => {
-    if (!name || files.length === 0) return;
+    if (!name) {
+      setHint("Bitte zuerst einen Namen für das Lernpaket eingeben.");
+      return;
+    }
+    if (files.length === 0) {
+      setHint("Bitte zuerst Material hochladen oder Inhalte generieren.");
+      return;
+    }
 
+    setHint("");
     setIsProcessing(true);
     setProcessingMessage("Lernpaket wird gespeichert...");
 
     try {
-      const packageId = crypto.randomUUID();
+      const packageId = randomUUID();
       
       const pkgResponse = await authFetch("/api/packages", {
         method: "POST",
@@ -135,7 +151,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             package_id: packageId,
             name: file.name,
             content_text: file.content,
@@ -187,6 +203,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
         {/* Modal Scrollable Body */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
+          {hint && (
+            <div className="flex items-start gap-2 border border-[#da1e28] bg-[var(--cds-layer-02)] p-3">
+              <WarningAlt size={16} className="text-[#da1e28] shrink-0 mt-0.5" />
+              <p className="text-xs text-[var(--cds-text-primary)]">{hint}</p>
+            </div>
+          )}
           {step === 1 ? (
             <div className="space-y-6">
               <div>

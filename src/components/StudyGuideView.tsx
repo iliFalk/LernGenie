@@ -10,6 +10,7 @@ import {
 } from "@carbon/icons-react";
 import { StudyPackage } from "../types";
 import { getCachedStudyGuide } from "../services/gemini";
+import { copyText } from "../services/clipboard";
 import Markdown from "react-markdown";
 
 interface StudyGuideViewProps {
@@ -49,7 +50,7 @@ export default function StudyGuideView({ package: pkg, onBack }: StudyGuideViewP
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(guide);
+    copyText(guide);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

@@ -17,6 +17,7 @@ import {
 } from "@carbon/icons-react";
 import { StudyPackage, QuizResult, Material } from "../types";
 import { authFetch } from "../services/auth";
+import { copyText } from "../services/clipboard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
 import Markdown from "react-markdown";
@@ -428,7 +429,7 @@ export default function PackageDetailView({
                   <button 
                     onClick={() => {
                       if (selectedMaterial.content_text) {
-                        navigator.clipboard.writeText(selectedMaterial.content_text);
+                        copyText(selectedMaterial.content_text);
                         setCopied(true);
                         setTimeout(() => setCopied(false), 2000);
                       }
@@ -473,7 +474,7 @@ export default function PackageDetailView({
                 <button 
                   onClick={() => {
                     if (selectedMaterial.content_text) {
-                      navigator.clipboard.writeText(selectedMaterial.content_text);
+                      copyText(selectedMaterial.content_text);
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }
