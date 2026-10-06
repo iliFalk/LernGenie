@@ -8,7 +8,7 @@
  * valid JSON is never rewritten.
  */
 
-export type ExtractResult = { ok: true; value: unknown } | { ok: false; error: string };
+export type ExtractResult = { ok: true; value: unknown; error?: null } | { ok: false; value?: null; error: string };
 
 function findStart(text: string): number {
   for (let i = 0; i < text.length; i += 1) {

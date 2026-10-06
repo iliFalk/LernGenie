@@ -44,8 +44,8 @@ export interface GatewayError {
 }
 
 export type GatewayResult<T> =
-  | { ok: true; value: T; repaired: boolean }
-  | { ok: false; error: GatewayError };
+  | { ok: true; value: T; error?: null; repaired: boolean }
+  | { ok: false; value?: null; error: GatewayError; repaired?: false };
 
 interface ContractSpec<T> {
   structured: boolean;
@@ -84,13 +84,13 @@ function humanReadable(error: unknown): string {
 function toContract<T>(
   spec: ContractSpec<T>,
   raw: string,
-): { ok: true; value: T } | { ok: false; error: string } {
+): { ok: true; value: T; error?: null } | { ok: false; value?: null; error: string } {
   if (spec.structured) {
     const extracted = extractJson(raw);
     if (!extracted.ok) return { ok: false, error: extracted.error };
-    return spec.validate(spec.normalise(extracted.value)) as { ok: true; value: T } | { ok: false; error: string };
+    return spec.validate(spec.normalise(extracted.value));
   }
-  return spec.validate(spec.normalise(raw)) as { ok: true; value: T } | { ok: false; error: string };
+  return spec.validate(spec.normalise(raw));
 }
 
 const defaultDeps: GatewayDeps = {

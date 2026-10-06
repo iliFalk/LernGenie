@@ -10,8 +10,15 @@
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Result of a contract validator: the typed value or a readable reason. */
-export type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string };
+/**
+ * Result of a contract validator: the typed value or a readable reason.
+ *
+ * The optional field keeps the union narrowing-safe on this project's
+ * tsconfig, which runs without `strictNullChecks` (a boolean-literal
+ * discriminant does not narrow there). Both members declare both fields, so
+ * callers read `.value` / `.error` after an `.ok` check without a type guard.
+ */
+export type ValidationResult<T> = { ok: true; value: T; error?: null } | { ok: false; value?: null; error: string };
 
 const normaliseKey = (key: string): string =>
   key
