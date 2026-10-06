@@ -11,7 +11,7 @@
  * scores every answer wrong can never reach the client.
  */
 
-import { asStringArray, asText, pickKey } from "./util";
+import { asStringArray, asText, pickKey, type ValidationResult } from "./util";
 
 export interface QuizQuestion {
   id: string;
@@ -113,8 +113,6 @@ export function normaliseQuiz(raw: unknown): QuizQuestion[] {
     };
   });
 }
-
-export type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export function validateQuiz(value: unknown): ValidationResult<QuizQuestion[]> {
   if (!Array.isArray(value)) return { ok: false, error: "quiz: ein Array mit Fragen wurde erwartet." };

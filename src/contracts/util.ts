@@ -10,7 +10,17 @@
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const normaliseKey = (key: string): string => key.toLowerCase().replace(/[^a-z0-9]/g, "");
+/** Result of a contract validator: the typed value or a readable reason. */
+export type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string };
+
+const normaliseKey = (key: string): string =>
+  key
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]/g, "");
 
 /** Returns the value of the first key whose normalised form matches one of `names`. */
 export function pickKey(source: unknown, names: string[]): unknown {
