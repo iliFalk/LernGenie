@@ -122,3 +122,42 @@ export function buildPrompt(kind: ArtifactKind, input: Record<string, unknown>):
       return textPrompt(input);
   }
 }
+
+/**
+ * Prompt for the subject classifier used by `/api/packages` and `/api/results`.
+ * It is a helper, not one of the four artifacts — it returns a bare subject name,
+ * not a contract. It lives here so `server.ts` holds no prompt text.
+ */
+export const subjectClassificationPrompt = (name: string, materialsContext: string): string => `
+Du bist ein intelligenter Assistent für Schüler und Lehrer. Deine Aufgabe ist es, anhand des Namens eines Lernpakets (und eventuellen Inhalten der Dokumente) das passende schulische Hauptfach auf Deutsch zuzuordnen.
+Wähle ausschließlich eines der folgenden Standard-Schulfächer aus:
+- Mathematik
+- Deutsch
+- Englisch
+- Französisch
+- Spanisch
+- Latein
+- Biologie
+- Physik
+- Chemie
+- Geschichte
+- Geographie
+- Wirtschaft
+- Informatik
+- Politik & Sozialwissenschaften
+- Religion & Ethik
+- Musik
+- Kunst
+- Sport
+- Sonstiges (nur wenn absolut unklar)
+
+Gib NUR den genauen Namen dieses Fachs zurück, ohne zusätzliche Sätze, Zeichen, Erklärungen oder Formatierungen.
+Beispiel Name: "Matheklausur Terme"
+Ausgabe: Mathematik
+
+Beispiel Name: "Vocab Unit 3"
+Ausgabe: Englisch
+
+Eingabe Name: "${name}"
+Material-Kontext: "${materialsContext}"
+Ausgabe:`;

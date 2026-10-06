@@ -5,8 +5,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { callLLM } from "./llm";
-import { normaliseQuiz, normaliseFlashcards, normaliseAnalysis } from "./normalise";
-import * as Prompts from "./src/prompts/index";
+import { generateArtifact } from "./src/ai/gateway";
+import { subjectClassificationPrompt } from "./src/ai/prompts";
+import { ensureCacheSchema, readCachedArtifact, writeCachedArtifact } from "./src/ai/store";
+import type { QuizQuestion } from "./src/contracts/quiz";
+import type { TextArtifact } from "./src/contracts/text";
 
 // Load environment variables
 dotenv.config();
@@ -64,6 +67,9 @@ try {
   // Column already exists or error which can be ignored
 }
 
+// Add the per-artifact schema_version columns so a shape change invalidates old rows.
+ensureCacheSchema(db);
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -104,25 +110,6 @@ async function startServer() {
       apiKey: key,
       model,
     };
-  };
-
-  const parseAIError = (error: any): string => {
-    console.error("AI Service Error:", error);
-    let message = error?.message || String(error);
-    try {
-      // Clean up string representation if it has nested JSON
-      const startIdx = message.indexOf("{");
-      if (startIdx !== -1) {
-        const potentialJson = message.substring(startIdx);
-        const parsed = JSON.parse(potentialJson);
-        if (parsed.error && parsed.error.message) {
-          return parsed.error.message;
-        } else if (parsed.message) {
-          return parsed.message;
-        }
-      }
-    } catch (_) {}
-    return message;
   };
 
   const getOrClassifySubject = async (packageId: string, name: string, req: express.Request): Promise<string> => {
@@ -185,38 +172,9 @@ async function startServer() {
       const materialsContext = materials.map(m => `Material Name: ${m.name}\nInhalt: ${m.content_text?.substring(0, 400) || ""}`).join("\n\n");
 
       const config = getAIConfig(req);
-      const systemPrompt = `Du bist ein intelligenter Assistent für Schüler und Lehrer. Deine Aufgabe ist es, anhand des Namens eines Lernpakets (und eventuellen Inhalten der Dokumente) das passende schulische Hauptfach auf Deutsch zuzuordnen.
-Wähle ausschließlich eines der folgenden Standard-Schulfächer aus:
-- Mathematik
-- Deutsch
-- Englisch
-- Französisch
-- Spanisch
-- Latein
-- Biologie
-- Physik
-- Chemie
-- Geschichte
-- Geographie
-- Wirtschaft
-- Informatik
-- Politik & Sozialwissenschaften
-- Religion & Ethik
-- Musik
-- Kunst
-- Sport
-- Sonstiges (nur wenn absolut unklar)
-
-Gib NUR den genauen Namen dieses Fachs zurück, ohne zusätzliche Sätze, Zeichen, Erklärungen oder Formatierungen.
-Beispiel Name: "Matheklausur Terme"
-Ausgabe: Mathematik
-
-Beispiel Name: "Vocab Unit 3"
-Ausgabe: Englisch`;
-
       const response = await callLLM({
         ...config,
-        prompt: `${systemPrompt}\n\nEingabe Name: "${name}"\nMaterial-Kontext: "${materialsContext}"\nAusgabe:`,
+        prompt: subjectClassificationPrompt(name, materialsContext),
         useFlashModel: true
       });
 
@@ -240,115 +198,76 @@ Ausgabe: Englisch`;
     }
   };
 
-  // AI Proxy Routes
+  // AI Proxy Routes.
+  // Each route is thin: it calls the gateway, which owns prompt, extraction,
+  // validation and the one repair retry, and returns the contract only.
+  // Every failure uses one error shape: { error, code }.
+  const aiFailure = (res: express.Response, result: { error?: { code: string; message: string } | null }) =>
+    res.status(500).json({ error: result.error?.message, code: result.error?.code });
+
   app.post("/api/ai/ocr", async (req, res) => {
     try {
       const { base64Data, mimeType } = req.body;
-      const config = getAIConfig(req);
-      
-      const response = await callLLM({
-        ...config,
-        prompt: Prompts.OCR_PROMPT,
-        imageData: { data: base64Data, mimeType },
-        useFlashModel: true
-      });
-      
-      res.json({ text: response });
+      const result = await generateArtifact<TextArtifact>("text", { variant: "ocr", image: { data: base64Data, mimeType } }, getAIConfig(req));
+      if (!result.ok) return aiFailure(res, result);
+      res.json(result.value);
     } catch (error: any) {
-      res.status(500).json({ error: parseAIError(error) });
+      res.status(500).json({ error: error?.message || String(error), code: "AI_INTERNAL" });
     }
   });
 
   app.post("/api/ai/quiz", async (req, res) => {
     try {
       const { content, grade, count } = req.body;
-      const config = getAIConfig(req);
-      const promptData = Prompts.QUIZ_PROMPT(count || 10, grade || 5, content);
-      
-      // Extract prompt text from Prompts.QUIZ_PROMPT which returns an array of contents for Gemini
-      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
-
-      const response = await callLLM({
-        ...config,
-        prompt: promptText,
-        isJson: true,
-      });
-      res.json(normaliseQuiz(JSON.parse(response)));
+      const result = await generateArtifact<QuizQuestion[]>("quiz", { content, grade, count }, getAIConfig(req));
+      if (!result.ok) return aiFailure(res, result);
+      res.json(result.value);
     } catch (error: any) {
-      res.status(500).json({ error: parseAIError(error) });
+      res.status(500).json({ error: error?.message || String(error), code: "AI_INTERNAL" });
     }
   });
 
   app.post("/api/ai/analyze", async (req, res) => {
     try {
       const { history } = req.body;
-      const config = getAIConfig(req);
-      const promptData = Prompts.PERFORMANCE_ANALYSIS_PROMPT(JSON.stringify(history));
-      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
-
-      const response = await callLLM({
-        ...config,
-        prompt: promptText,
-        isJson: true,
-        useFlashModel: true
-      });
-      res.json(normaliseAnalysis(JSON.parse(response)));
+      const result = await generateArtifact("analysis", { history }, getAIConfig(req));
+      if (!result.ok) return aiFailure(res, result);
+      res.json(result.value);
     } catch (error: any) {
-      res.status(500).json({ error: parseAIError(error) });
+      res.status(500).json({ error: error?.message || String(error), code: "AI_INTERNAL" });
     }
   });
 
   app.post("/api/ai/flashcards", async (req, res) => {
     try {
       const { content } = req.body;
-      const config = getAIConfig(req);
-      const promptData = Prompts.FLASHCARDS_PROMPT(content);
-      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
-
-      const response = await callLLM({
-        ...config,
-        prompt: promptText,
-        isJson: true,
-        useFlashModel: true
-      });
-      res.json(normaliseFlashcards(JSON.parse(response)));
+      const result = await generateArtifact("flashcards", { content }, getAIConfig(req));
+      if (!result.ok) return aiFailure(res, result);
+      res.json(result.value);
     } catch (error: any) {
-      res.status(500).json({ error: parseAIError(error) });
+      res.status(500).json({ error: error?.message || String(error), code: "AI_INTERNAL" });
     }
   });
 
   app.post("/api/ai/study-guide", async (req, res) => {
     try {
       const { content } = req.body;
-      const config = getAIConfig(req);
-      const promptData = Prompts.STUDY_GUIDE_PROMPT(content);
-      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
-
-      const response = await callLLM({
-        ...config,
-        prompt: promptText,
-        useFlashModel: true
-      });
-      res.json({ text: response });
+      const result = await generateArtifact<TextArtifact>("text", { variant: "study-guide", content }, getAIConfig(req));
+      if (!result.ok) return aiFailure(res, result);
+      res.json(result.value);
     } catch (error: any) {
-      res.status(500).json({ error: parseAIError(error) });
+      res.status(500).json({ error: error?.message || String(error), code: "AI_INTERNAL" });
     }
   });
 
   app.post("/api/ai/topic", async (req, res) => {
     try {
       const { topic, grade } = req.body;
-      const config = getAIConfig(req);
-      const promptData = Prompts.TOPIC_GENERATION_PROMPT(topic, grade);
-      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
-
-      const response = await callLLM({
-        ...config,
-        prompt: promptText,
-      });
-      res.json({ text: response });
+      const result = await generateArtifact<TextArtifact>("text", { variant: "topic", topic, grade }, getAIConfig(req));
+      if (!result.ok) return aiFailure(res, result);
+      res.json(result.value);
     } catch (error: any) {
-      res.status(500).json({ error: parseAIError(error) });
+      res.status(500).json({ error: error?.message || String(error), code: "AI_INTERNAL" });
     }
   });
 
@@ -404,46 +323,29 @@ Ausgabe: Englisch`;
       const userId = getUserId(req);
       // Verify ownership
       const pkg = db.prepare("SELECT * FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId) as { grade: number } | undefined;
-      if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert" });
+      if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert", code: "FORBIDDEN" });
 
       const regenerate = req.query.regenerate === "true";
       if (!regenerate) {
-        const cached = db.prepare("SELECT quiz_questions FROM package_cache WHERE package_id = ?").get(req.params.id) as { quiz_questions?: string } | undefined;
-        if (cached && cached.quiz_questions) {
-          try {
-            return res.json(normaliseQuiz(JSON.parse(cached.quiz_questions)));
-          } catch (e) {
-            console.error("Failed to parse cached quiz questions:", e);
-          }
-        }
+        // A cached row with an older schema_version is not served: it is regenerated.
+        const cached = readCachedArtifact(db, req.params.id, "quiz");
+        if (cached) return res.json(cached);
       }
 
-      // Generate since not cached or force regenerate
+      // Generate since not cached (or a stale version) or force regenerate
       const materials = db.prepare("SELECT content_text FROM materials WHERE package_id = ?").all(req.params.id) as { content_text: string }[];
       const content = materials.map(m => m.content_text).join("\n\n");
       if (!content.trim()) {
-        return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien." });
+        return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien.", code: "NO_MATERIALS" });
       }
 
-      const config = getAIConfig(req);
-      const promptData = Prompts.QUIZ_PROMPT(10, pkg.grade || 10, content);
-      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
+      const result = await generateArtifact<QuizQuestion[]>("quiz", { content, grade: pkg.grade || 10, count: 10 }, getAIConfig(req));
+      if (!result.ok) return aiFailure(res, result);
 
-      const response = await callLLM({
-        ...config,
-        prompt: promptText,
-        isJson: true,
-      });
-
-      // Normalise the model answer to the shape the UI reads, then cache that shape.
-      const questions = normaliseQuiz(JSON.parse(response));
-
-      db.prepare("INSERT OR IGNORE INTO package_cache (package_id) VALUES (?)").run(req.params.id);
-      db.prepare("UPDATE package_cache SET quiz_questions = ? WHERE package_id = ?").run(JSON.stringify(questions), req.params.id);
-
-      res.json(questions);
+      writeCachedArtifact(db, req.params.id, "quiz", result.value);
+      res.json(result.value);
     } catch (error: any) {
-      res.status(500).json({ error: parseAIError(error) });
+      res.status(500).json({ error: error?.message || String(error), code: "INTERNAL" });
     }
   });
 
@@ -451,48 +353,29 @@ Ausgabe: Englisch`;
     try {
       const userId = getUserId(req);
       // Verify ownership
-      const pkg = db.prepare("SELECT * FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId);
-      if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert" });
+      const pkg = db.prepare("SELECT id FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId);
+      if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert", code: "FORBIDDEN" });
 
       const regenerate = req.query.regenerate === "true";
       if (!regenerate) {
-        const cached = db.prepare("SELECT flashcards FROM package_cache WHERE package_id = ?").get(req.params.id) as { flashcards?: string } | undefined;
-        if (cached && cached.flashcards) {
-          try {
-            return res.json(normaliseFlashcards(JSON.parse(cached.flashcards)));
-          } catch (e) {
-            console.error("Failed to parse cached flashcards:", e);
-          }
-        }
+        const cached = readCachedArtifact(db, req.params.id, "flashcards");
+        if (cached) return res.json(cached);
       }
 
-      // Generate since not cached or force regenerate
+      // Generate since not cached (or a stale version) or force regenerate
       const materials = db.prepare("SELECT content_text FROM materials WHERE package_id = ?").all(req.params.id) as { content_text: string }[];
       const content = materials.map(m => m.content_text).join("\n\n");
       if (!content.trim()) {
-        return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien." });
+        return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien.", code: "NO_MATERIALS" });
       }
 
-      const config = getAIConfig(req);
-      const promptData = Prompts.FLASHCARDS_PROMPT(content);
-      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
+      const result = await generateArtifact("flashcards", { content }, getAIConfig(req));
+      if (!result.ok) return aiFailure(res, result);
 
-      const response = await callLLM({
-        ...config,
-        prompt: promptText,
-        isJson: true,
-        useFlashModel: true
-      });
-
-      const cards = normaliseFlashcards(JSON.parse(response));
-
-      // Cache the normalised shape.
-      db.prepare("INSERT OR IGNORE INTO package_cache (package_id) VALUES (?)").run(req.params.id);
-      db.prepare("UPDATE package_cache SET flashcards = ? WHERE package_id = ?").run(JSON.stringify(cards), req.params.id);
-
-      res.json(cards);
+      writeCachedArtifact(db, req.params.id, "flashcards", result.value);
+      res.json(result.value);
     } catch (error: any) {
-      res.status(500).json({ error: parseAIError(error) });
+      res.status(500).json({ error: error?.message || String(error), code: "INTERNAL" });
     }
   });
 
@@ -500,41 +383,29 @@ Ausgabe: Englisch`;
     try {
       const userId = getUserId(req);
       // Verify ownership
-      const pkg = db.prepare("SELECT * FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId);
-      if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert" });
+      const pkg = db.prepare("SELECT id FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId);
+      if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert", code: "FORBIDDEN" });
 
       const regenerate = req.query.regenerate === "true";
       if (!regenerate) {
-        const cached = db.prepare("SELECT study_guide FROM package_cache WHERE package_id = ?").get(req.params.id) as { study_guide?: string } | undefined;
-        if (cached && cached.study_guide) {
-          return res.json({ text: cached.study_guide });
-        }
+        const cached = readCachedArtifact(db, req.params.id, "study-guide");
+        if (cached) return res.json(cached);
       }
 
-      // Generate since not cached or force regenerate
+      // Generate since not cached (or a stale version) or force regenerate
       const materials = db.prepare("SELECT content_text FROM materials WHERE package_id = ?").all(req.params.id) as { content_text: string }[];
       const content = materials.map(m => m.content_text).join("\n\n");
       if (!content.trim()) {
-        return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien." });
+        return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien.", code: "NO_MATERIALS" });
       }
 
-      const config = getAIConfig(req);
-      const promptData = Prompts.STUDY_GUIDE_PROMPT(content);
-      const promptText = Array.isArray(promptData) ? promptData[0].parts[0].text : JSON.stringify(promptData);
+      const result = await generateArtifact<TextArtifact>("text", { variant: "study-guide", content }, getAIConfig(req));
+      if (!result.ok) return aiFailure(res, result);
 
-      const response = await callLLM({
-        ...config,
-        prompt: promptText,
-        useFlashModel: true
-      });
-
-      // Cache it
-      db.prepare("INSERT OR IGNORE INTO package_cache (package_id) VALUES (?)").run(req.params.id);
-      db.prepare("UPDATE package_cache SET study_guide = ? WHERE package_id = ?").run(response, req.params.id);
-
-      res.json({ text: response });
+      writeCachedArtifact(db, req.params.id, "study-guide", result.value);
+      res.json(result.value);
     } catch (error: any) {
-      res.status(500).json({ error: parseAIError(error) });
+      res.status(500).json({ error: error?.message || String(error), code: "INTERNAL" });
     }
   });
 
