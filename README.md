@@ -115,10 +115,15 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
 - Kostenlose OpenRouter-Modelle haben Rate-Limits. Sie lehnen manchmal `response_format: json_object`
   ab. Die App zeigt dann die Provider-Meldung im UI.
 - Kostenlose Modelle liefern JSON in eigener Schreibweise: PascalCase (`Quiz`, `CorrectAnswer`),
-  deutsche Wörter oder andere Schlüssel. Die Prompts nennen seit 2026-10-06 die erwartete Form,
-  und `normalise.ts` bildet jede Antwort auf die Schlüssel ab, die das UI liest
-  (`text`, `options`, `correctIndex`, `hint`, `explanation`, `topic`). Fehlt `correct_answer`,
-  steht `correctIndex` auf `-1`.
+  deutsche Wörter oder andere Schlüssel. Seit dem Umbau gehört die Struktur dem Wrapper, nicht dem
+  Modell. `src/contracts/*` normalisiert jede Antwort auf die Schlüssel, die das UI liest
+  (`text`, `options`, `correctIndex`, `hint`, `explanation`, `topic`), und validiert sie.
+  `src/ai/gateway.ts` baut den Prompt, zieht JSON aus der Antwort, validiert und wiederholt genau
+  einmal. Eine Antwort, die danach noch ungültig ist, wird zu `{error, code}` mit HTTP 500, nie zu
+  einem 200 mit falscher Form.
+- `package_cache` trägt je Artefakt eine `schema_version` (`quiz_version`, `flashcards_version`,
+  `study_guide_version`). Eine Zeile mit älterer Version gilt als leer und wird neu erzeugt.
+  Das repariert alte Pakete beim Lesen.
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
 - Die App läuft im Heimnetz über einfaches HTTP. Das ist **kein** sicherer Kontext. Die Browser-APIs
