@@ -38,6 +38,7 @@ export async function callLLM(params: {
       label: "openrouter",
       apiKey: cleanOpenRouterKey,
       model: model || process.env.AI_MODEL || DEFAULT_OPENROUTER_MODEL,
+      supportsJsonMode: true,
       prompt, isJson, systemPrompt, imageData,
     });
   }
@@ -50,6 +51,10 @@ export async function callLLM(params: {
       label: "commandcode",
       apiKey: cleanCommandCodeKey,
       model: model || process.env.AI_MODEL || DEFAULT_COMMANDCODE_MODEL,
+      // CommandCode rejects `response_format: json_object` with 400 "invalid request
+      // error" as soon as the prompt grows. The wrapper reads the JSON out of the
+      // answer and validates it, so the field is not needed here.
+      supportsJsonMode: false,
       prompt, isJson, systemPrompt, imageData,
     });
   }
@@ -77,12 +82,13 @@ async function callChatCompletions(params: {
   label: string;
   apiKey?: string;
   model?: string;
+  supportsJsonMode: boolean;
   prompt: string;
   isJson?: boolean;
   systemPrompt?: string;
   imageData?: { data: string; mimeType: string };
 }) {
-  const { url, label, apiKey, model, prompt, isJson, systemPrompt, imageData } = params;
+  const { url, label, apiKey, model, supportsJsonMode, prompt, isJson, systemPrompt, imageData } = params;
 
   if (!apiKey) throw new Error(`${label} API Key is required`);
 
@@ -128,7 +134,7 @@ async function callChatCompletions(params: {
         // window of the model (up to 131072 tokens) and rejects the call with HTTP 402
         // when the key limit is smaller. The limit also caps cost and latency.
         max_tokens: maxTokens,
-        response_format: isJson ? { type: "json_object" } : undefined,
+        response_format: isJson && supportsJsonMode ? { type: "json_object" } : undefined,
       }),
       signal: AbortSignal.timeout(timeoutMs),
     });

@@ -115,6 +115,9 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
 
 ## Bekannte Punkte
 
+- CommandCode lehnt `response_format: json_object` mit HTTP 400 (`invalid request error`) ab,
+  sobald der Prompt länger wird. Der Server sendet das Feld daher nur an OpenRouter. Die Form der
+  Antwort sichern `src/contracts/*` und `src/ai/extract.ts`, nicht der Provider.
 - Ein bezahltes Modell braucht beim Anbieter ein Kredit-Polster. Ohne `max_tokens` reserviert
   OpenRouter das volle Ausgabefenster des Modells (bis 131072 Token) und lehnt den Aufruf mit
   HTTP 402 ab (`This request requires more credits, or fewer max_tokens`). Jeder Aufruf trägt

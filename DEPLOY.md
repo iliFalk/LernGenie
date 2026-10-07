@@ -61,7 +61,8 @@ NODE_ENV=production
 Der Provider ist CommandCode (`https://api.commandcode.ai/provider/v1`, OpenAI-kompatibel). Das
 Abo deckt die Aufrufe ab, deshalb gibt es kein Guthaben pro Aufruf. Die Modell-ID trägt das
 Organisations-Präfix (`deepseek/deepseek-v4.1-flash`) und gehört zu den Modellen, die der Plan
-freigibt.
+freigibt. Der Server sendet an CommandCode kein `response_format`: der Anbieter antwortet darauf
+mit HTTP 400, sobald der Prompt länger wird.
 
 Alternativ läuft der Dienst mit `AI_PROVIDER=openrouter` und einem Key. Das Modell ist dann der
 Tages-Pick der kostenlosen OpenRouter-Rangliste (`https://shir-man.com/api/free-llm/top-models`,
