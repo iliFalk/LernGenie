@@ -70,11 +70,14 @@ Ohne Dev Mode gelten die Server-Defaults.
 
 | Variable | Bedeutung |
 |---|---|
-| `AI_PROVIDER` | `gemini` (Default) oder `openrouter` |
-| `AI_MODEL` | Modell-ID. Leer heißt Provider-Default: `gemini-3.1-pro-preview`, für kurze Aufgaben `gemini-3-flash-preview`, bei OpenRouter `google/gemini-2.0-flash-exp:free` |
+| `AI_PROVIDER` | `gemini` (Default), `openrouter` oder `commandcode` |
+| `AI_MODEL` | Modell-ID. Leer heißt Provider-Default: `gemini-3.1-pro-preview`, für kurze Aufgaben `gemini-3-flash-preview`, bei OpenRouter `google/gemini-2.0-flash-exp:free`, bei CommandCode `deepseek/deepseek-v4.1-flash` |
 | `GEMINI_API_KEY` | Key für `provider = gemini` |
 | `OPENROUTER_API_KEY` | Key für `provider = openrouter` (kostenlose Modelle, zum Beispiel `dots-studio/dots-3-note-preview:free`) |
-| `LLM_TIMEOUT_MS` | Zeitlimit für einen OpenRouter-Aufruf in Millisekunden. Default `180000` (3 Minuten). Läuft das Limit ab, antwortet der Server mit einem Fehler statt zu hängen |
+| `COMMANDCODE_API_KEY` | Key für `provider = commandcode` (Abo-Provider, OpenAI-kompatibel; Modell-IDs mit Organisations-Präfix, zum Beispiel `deepseek/deepseek-v4.1-flash`) |
+| `COMMANDCODE_BASE_URL` | Basis-URL für `provider = commandcode`. Default `https://api.commandcode.ai/provider/v1` |
+| `LLM_TIMEOUT_MS` | Zeitlimit für einen OpenRouter- oder CommandCode-Aufruf in Millisekunden. Default `180000` (3 Minuten). Läuft das Limit ab, antwortet der Server mit einem Fehler statt zu hängen |
+| `LLM_MAX_TOKENS` | Obergrenze für die Antwort in Token. Default `8192`. Ohne diese Grenze reserviert OpenRouter das volle Ausgabefenster des Modells und lehnt den Aufruf mit HTTP 402 ab, wenn das Key-Limit kleiner ist. Die Denk-Token des Modells zählen mit, deshalb nicht zu klein wählen |
 | `DB_PATH` | Pfad zur SQLite-Datei. Ein relativer Pfad gilt gegen das Arbeitsverzeichnis des Prozesses |
 | `APP_URL` | Eigene URL, von AI Studio injiziert |
 
@@ -112,6 +115,10 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
 
 ## Bekannte Punkte
 
+- Ein bezahltes Modell braucht beim Anbieter ein Kredit-Polster. Ohne `max_tokens` reserviert
+  OpenRouter das volle Ausgabefenster des Modells (bis 131072 Token) und lehnt den Aufruf mit
+  HTTP 402 ab (`This request requires more credits, or fewer max_tokens`). Jeder Aufruf trägt
+  deshalb `LLM_MAX_TOKENS`.
 - Kostenlose OpenRouter-Modelle haben Rate-Limits. Sie lehnen manchmal `response_format: json_object`
   ab. Die App zeigt dann die Provider-Meldung im UI.
 - Kostenlose Modelle liefern JSON in eigener Schreibweise: PascalCase (`Quiz`, `CorrectAnswer`),

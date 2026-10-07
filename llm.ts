@@ -3,6 +3,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 const DEFAULT_GEMINI_MODEL = "gemini-3.1-pro-preview";
 const DEFAULT_FLASH_MODEL = "gemini-3-flash-preview";
 
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_OPENROUTER_MODEL = "google/gemini-2.0-flash-exp:free";
+
+// CommandCode (https://api.commandcode.ai/provider/v1) speaks the OpenAI chat protocol.
+const DEFAULT_COMMANDCODE_MODEL = "deepseek/deepseek-v4.1-flash";
+
 export function sanitizeApiKey(key: string | undefined): string {
   if (!key) return "";
   let clean = key.trim();
@@ -27,7 +33,25 @@ export async function callLLM(params: {
 
   if (provider === "openrouter") {
     const cleanOpenRouterKey = sanitizeApiKey(apiKey) || sanitizeApiKey(process.env.OPENROUTER_API_KEY);
-    return callOpenRouter(cleanOpenRouterKey, model || process.env.AI_MODEL || "google/gemini-2.0-flash-exp:free", prompt, isJson, systemPrompt, imageData);
+    return callChatCompletions({
+      url: OPENROUTER_URL,
+      label: "openrouter",
+      apiKey: cleanOpenRouterKey,
+      model: model || process.env.AI_MODEL || DEFAULT_OPENROUTER_MODEL,
+      prompt, isJson, systemPrompt, imageData,
+    });
+  }
+
+  if (provider === "commandcode") {
+    const cleanCommandCodeKey = sanitizeApiKey(apiKey) || sanitizeApiKey(process.env.COMMANDCODE_API_KEY);
+    const baseUrl = (process.env.COMMANDCODE_BASE_URL || "https://api.commandcode.ai/provider/v1").replace(/\/+$/, "");
+    return callChatCompletions({
+      url: `${baseUrl}/chat/completions`,
+      label: "commandcode",
+      apiKey: cleanCommandCodeKey,
+      model: model || process.env.AI_MODEL || DEFAULT_COMMANDCODE_MODEL,
+      prompt, isJson, systemPrompt, imageData,
+    });
   }
 
   // Fallback to Gemini
@@ -48,8 +72,19 @@ export async function callLLM(params: {
   return callGemini(resolvedKey, model || fallbackModel, prompt, isJson, systemPrompt, imageData);
 }
 
-async function callOpenRouter(apiKey?: string, model?: string, prompt?: string, isJson?: boolean, systemPrompt?: string, imageData?: { data: string; mimeType: string }) {
-  if (!apiKey) throw new Error("OpenRouter API Key is required");
+async function callChatCompletions(params: {
+  url: string;
+  label: string;
+  apiKey?: string;
+  model?: string;
+  prompt: string;
+  isJson?: boolean;
+  systemPrompt?: string;
+  imageData?: { data: string; mimeType: string };
+}) {
+  const { url, label, apiKey, model, prompt, isJson, systemPrompt, imageData } = params;
+
+  if (!apiKey) throw new Error(`${label} API Key is required`);
 
   const messages: any[] = [];
   if (systemPrompt) {
@@ -69,20 +104,30 @@ async function callOpenRouter(apiKey?: string, model?: string, prompt?: string, 
   messages.push({ role: "user", content: userContent });
 
   const timeoutMs = Number(process.env.LLM_TIMEOUT_MS || 180000);
-  console.log(`[llm] openrouter model=${model || "?"} json=${!!isJson} timeout=${timeoutMs}ms`);
+  const maxTokens = Number(process.env.LLM_MAX_TOKENS || 8192);
+  console.log(`[llm] ${label} model=${model || "?"} json=${!!isJson} timeout=${timeoutMs}ms max_tokens=${maxTokens}`);
+
+  const headers: Record<string, string> = {
+    "Authorization": `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+  if (label === "openrouter") {
+    // Only OpenRouter wants the referring app in the header.
+    headers["HTTP-Referer"] = "https://ai.studio/build";
+  }
 
   let response: Response;
   try {
-    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://ai.studio/build",
-      },
+      headers: headers,
       body: JSON.stringify({
         model: model,
         messages: messages,
+        // Bound the answer. Without this limit OpenRouter reserves the full output
+        // window of the model (up to 131072 tokens) and rejects the call with HTTP 402
+        // when the key limit is smaller. The limit also caps cost and latency.
+        max_tokens: maxTokens,
         response_format: isJson ? { type: "json_object" } : undefined,
       }),
       signal: AbortSignal.timeout(timeoutMs),
@@ -98,7 +143,7 @@ async function callOpenRouter(apiKey?: string, model?: string, prompt?: string, 
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`OpenRouter error: ${response.status} ${errorBody}`);
+    throw new Error(`${label} error: ${response.status} ${errorBody}`);
   }
 
   const data = await response.json();

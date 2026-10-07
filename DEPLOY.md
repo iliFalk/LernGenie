@@ -49,20 +49,31 @@ Die Compose-Datei gehört zum Projekt `falknest`, genau wie `infra.yml`. Compose
 `/opt/falknest/lernquiz/lernquiz.env`:
 
 ```
-OPENROUTER_API_KEY=<OpenRouter-Key>
-AI_PROVIDER=openrouter
-AI_MODEL=dots-studio/dots-3-note-preview:free
+COMMANDCODE_API_KEY=<CommandCode-Key>
+AI_PROVIDER=commandcode
+AI_MODEL=deepseek/deepseek-v4.1-flash
 LLM_TIMEOUT_MS=180000
+LLM_MAX_TOKENS=8192
 DB_PATH=/data/study_quiz.db
 NODE_ENV=production
 ```
 
-Das Modell ist der Tages-Pick der kostenlosen OpenRouter-Rangliste
-(`https://shir-man.com/api/free-llm/top-models`, `models[0].id`). Aus derselben Quelle zieht die
-mvp-Lane ihre Fallback-Kette. Rotiert der Pick: `AI_MODEL` anpassen und neu bauen.
+Der Provider ist CommandCode (`https://api.commandcode.ai/provider/v1`, OpenAI-kompatibel). Das
+Abo deckt die Aufrufe ab, deshalb gibt es kein Guthaben pro Aufruf. Die Modell-ID trägt das
+Organisations-Präfix (`deepseek/deepseek-v4.1-flash`) und gehört zu den Modellen, die der Plan
+freigibt.
 
-`LLM_TIMEOUT_MS` begrenzt einen OpenRouter-Aufruf. Ohne das Limit wartet der Server unbegrenzt,
+Alternativ läuft der Dienst mit `AI_PROVIDER=openrouter` und einem Key. Das Modell ist dann der
+Tages-Pick der kostenlosen OpenRouter-Rangliste (`https://shir-man.com/api/free-llm/top-models`,
+`models[0].id`). Aus derselben Quelle zieht die mvp-Lane ihre Fallback-Kette. Rotiert der Pick:
+`AI_MODEL` anpassen und neu bauen.
+
+`LLM_TIMEOUT_MS` begrenzt einen Aufruf. Ohne das Limit wartet der Server unbegrenzt,
 und die Oberfläche dreht dauerhaft weiter.
+
+`LLM_MAX_TOKENS` begrenzt die Antwortlänge (Default 8192). Ohne diese Grenze reserviert OpenRouter
+das volle Ausgabefenster des Modells und lehnt den Aufruf mit HTTP 402 ab, wenn das Key-Limit
+kleiner ist. Die Denk-Token zählen mit: ein zu kleines Limit liefert eine leere Antwort.
 
 Der Server schreibt eine Zeile pro `/api`-Anfrage in das Container-Log. Damit ist sichtbar, ob eine
 Anfrage ankommt, welchen Status sie bekommt und wie lange sie dauert:
