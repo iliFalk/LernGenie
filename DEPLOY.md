@@ -201,6 +201,27 @@ Gemessen am 2026-10-08 mit echten Paketen (CommandCode, DeepSeek V4.1 Flash, ohn
 | Stems mit Was/Wo/Wer | 2 von 10 (vorher 18 von 25) |
 | Karteikarten, Lernleitfaden, KI-Synthese | 27–30 s, 61 s, 83 s gemessen |
 
+## Messung 2026-10-08: Promptlänge gegen Fragequalität (nicht fortgesetzt)
+
+Der Quiz-Prompt wurde gekürzt (Prosa → Listen), um die Laufzeit zu senken. Ergebnis auf dem
+Live-Marsch (Pakt Ethik, zehn Fragen, je ein Lauf) — bewusst als offene Frage notiert:
+
+| Prompt | Generierung | Stems mit Was/Wo/Wer |
+|---|---|---|
+| ausführlich (acht Regeln als Prosa) | 204 / 317 / 337 s (zweimal mit Reparatur) | 1–2 von 10 |
+| knapp | 158,8 s | 7 von 10 |
+| knapp + Streuungsregel | 138 s | 6 von 10 |
+
+Gedeutet: das Kürzen spart rund 30 % Laufzeit und kostet die Denkoperationen — die Fragen fallen
+auf Abfragen zurück, also genau auf den Fehler, der zur Überarbeitung geführt hat. Die Streuungsregel
+als eine Zeile hat das nicht behoben. Je ein Lauf pro Variante, und derselbe Prompt lieferte in
+anderen Läufen 204 bis 337 s, deshalb ist der Unterschied im Verhalten belastbarer als der in
+Sekunden.
+
+Offen für die nächste Sitzung: den knappen Satzbau behalten und die Qualitätsregeln vollständig
+zurückholen (Streuung, "keine zwei Fragen prüfen dasselbe", Modulziele), dann je drei Läufe pro
+Variante, um Effekt von Streuung zu trennen.
+
 ## Rollback
 
 ```bash
