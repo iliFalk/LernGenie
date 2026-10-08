@@ -27,7 +27,7 @@ export const questionSurplus = (target: number): number => Math.max(3, Math.ceil
 
 /** The exact JSON (or prose) shape each artifact must have. Reused in the repair retry. */
 export const OUTPUT_CONTRACT: Record<ArtifactKind, string> = {
-  quiz: '{"quiz":[{"type":"<Aufgabentyp>","question":"...","options":[{"text":"...","isCorrect":true,"rationale":"..."},{"text":"...","isCorrect":false,"rationale":"..."}],"hint":"...","explanation":"...","topic":"..."}]}',
+  quiz: '{"quiz":[{"type":"<Aufgabentyp>","question":"...","options":[{"text":"...","isCorrect":true,"rationale":"≤8 Wörter"},{"text":"...","isCorrect":false,"rationale":"≤8 Wörter"}],"hint":"≤8 Wörter","explanation":"≤15 Wörter","topic":"Stichwort"}]}',
   flashcards: '{"flashcards":[{"front":"...","back":"..."}]}',
   analysis: '{"strengths":["..."],"growthAreas":["..."],"topicPerformance":[{"topic":"...","score":0,"total":0}]}',
   text: "Reiner Text in Markdown, kein JSON.",
@@ -96,12 +96,12 @@ REGELN:
    vorkommt, ist verboten.
 6. Die richtige Option ist nicht länger als jede falsche. Die richtige Antwort steht nicht gehäuft
    an derselben Position.
-7. Jede Option trägt ihre eigene Begründung: "rationale" nennt in HÖCHSTENS 15 Wörtern die Regel
-   (Oberbegriff, Satz vom Widerspruch, hinreichende Bedingung, notwendige Bedingung) — keine
-   Behauptung, kein Satz aus dem Material.
-8. hint lenkt in höchstens 12 Wörtern auf die logische Struktur und verrät die Lösung nicht.
-   explanation sagt in höchstens 25 Wörtern, warum die richtige Option zwingend stimmt. topic ist
-   ein Stichwort aus dem Material.
+7. KÜRZE IST PFLICHT. Jede Option trägt ihre eigene Begründung: "rationale" nennt in HÖCHSTENS
+   8 Wörtern die Regel (Oberbegriff, Satz vom Widerspruch, hinreichende Bedingung) — kein Satz, kein
+   Materialzitat, keine Wiederholung der Option.
+8. hint lenkt in höchstens 8 Wörtern auf die logische Struktur und verrät die Lösung nicht.
+   explanation sagt in höchstens 15 Wörtern, warum die richtige Option zwingend stimmt. topic ist
+   ein Stichwort aus dem Material (höchstens 4 Wörter).
 ${previousBlock(previous)}
 Ausgabe-Vertrag — halte ihn exakt ein:
 ${OUTPUT_CONTRACT.quiz}
@@ -129,7 +129,8 @@ genau vier Optionen, grammatisch parallel, ähnliche Länge (unter 30 % Abweichu
 beginnt mit "ohne", "nicht", "kein" oder "niemals", jede falsche Option stammt aus derselben
 Textstelle und unterscheidet sich in EINEM Merkmal, keine Option, die im Material nicht vorkommt,
 die richtige Option ist nicht länger als jede falsche, jede Option trägt ihre eigene rationale in
-höchstens 15 Wörtern. Typ und topic der ersetzten Frage bleiben erhalten.
+höchstens 8 Wörtern, hint höchstens 8, explanation höchstens 15 Wörter. Typ und topic der
+ersetzten Frage bleiben erhalten.
 
 QUIZ (JSON):
 ${JSON.stringify(quiz)}

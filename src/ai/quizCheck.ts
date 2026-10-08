@@ -119,6 +119,11 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
     if (expectRationales && optionRationales.length === list.length) {
       const missing = optionRationales.filter((text) => !text.trim()).length;
       if (missing > 0) soft.push(`${missing} Option(en) ohne Begründung`);
+      // The prompt caps a rationale at 8 words. This only measures whether it complied:
+      // the display and the runtime depend on it, so the log should show the drift.
+      const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+      const tooLong = optionRationales.filter((text) => text.trim() && words(text) > 12).length;
+      if (tooLong > 0) soft.push(`${tooLong} Begründung(en) länger als 12 Wörter`);
     }
 
     const found = [...hard, ...soft];
