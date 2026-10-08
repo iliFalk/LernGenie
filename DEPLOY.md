@@ -140,24 +140,43 @@ Drei Beschwerden aus dem Betrieb waren die Ursache:
 Der Umbau: `?count=N` an `GET /api/packages/:id/quiz` (Grenzen 5 bis 25, `clampQuestionCount`),
 Ausschlussliste der bisherigen Fragen im Prompt, Überschuss-Anforderung plus Trimmen in
 `selectQuestions`, Mischen der Optionen in `normaliseQuiz`, `quiz_version` 1 → 2, Anzahl-Wähler
-(10/15/20/25) in `PackageDetailView`.
+(10/15/20/25) in `PackageDetailView`, Ladeoverlay mit verstrichener Zeit, Schätzdauer und
+Fortschrittsbalken (`src/components/LoadingOverlay.tsx`).
 
-Die Obergrenze 25 ist gemessen, nicht geschätzt. Der Prompt forderte zuerst einen Überschuss an
-(Ziel + 30 %), auch bei der ersten Erzeugung. Dadurch lief die Antwort über `LLM_MAX_TOKENS`
-(8192): 30 Fragen in einem Lauf endeten nach 100 s mit `AI_INVALID` („keine JSON-Struktur
-gefunden"), 50 Fragen nach 96 s ebenso. Der Überschuss gilt deshalb nur noch beim Erneuern, wenn
-eine Ausschlussliste existiert, und ist auf `MAX_QUESTIONS` gedeckelt. Eine höhere Grenze als 25
-braucht zuerst ein höheres `LLM_MAX_TOKENS`.
+Kein `max_tokens` mehr: `resolveMaxTokens` in `llm.ts` lässt das Feld weg, solange
+`LLM_MAX_TOKENS` leer ist, und der Default des Modells gilt. Grund war die Messung: mit 8192
+verbrauchte eine Anfrage über 25 Fragen das ganze Budget im Reasoning (`finish_reason=length`,
+`content` leer) und die Route antwortete mit `AI_INVALID`. Kein Limit, nur noch eine
+Zeitbegrenzung über `LLM_TIMEOUT_MS`.
+
+Die Obergrenze 25 kommt aus der Laufzeit, nicht aus dem Budget. Messungen am 2026-10-08 mit dem
+Material eines echten Pakets (3 Dokumente, 3203 Zeichen) direkt gegen CommandCode:
+
+| Anfrage | Dauer | Ergebnis |
+|---|---|---|
+| 2 Fragen, kleines Material | 10 s | 200 |
+| 10 Fragen, echtes Paket | 94 s | 200 |
+| 25 Fragen, echtes Paket | 107–119 s | 200, `finish_reason=stop`, 18 539 Ausgabe-Token |
+| 25 Fragen mit `max_tokens=8192` | 53 s | `finish_reason=length`, `content` leer → `AI_INVALID` |
+
+Das Reasoning des Modells verbraucht den größten Teil der Ausgabe (29 884 Zeichen bei 8192 Token,
+55 546 Zeichen ohne Limit). Deshalb: kein Token-Limit im Aufruf, `LLM_TIMEOUT_MS` als Begrenzung,
+Überschuss-Anforderung nur beim Erneuern (wenn eine Ausschlussliste existiert) und auf
+`MAX_QUESTIONS` gedeckelt.
 
 Prüfung nach dem Deploy am 2026-10-08:
 
 | Prüfung | Ergebnis |
 |---|---|
-| `npm test` | 76 Tests, pass |
+| `npm test` | 80 Tests, pass |
 | `npx tsc --noEmit`, `npm run build` | sauber |
-| `GET /api/packages/:id/quiz?count=20` | 20 Fragen |
-| `correctIndex` über drei Pakete | nicht mehr konstant 0 |
-| Zwei Läufe `?regenerate=true` | kein wortgleicher Fragetext doppelt |
+| `?regenerate=true&count=25` | 200, 25 Fragen, 107 s |
+| `?count=25` danach | aus dem Cache, ohne Modellaufruf |
+| `?count=50` | auf 25 geklemmt |
+| `correctIndex` über 25 Fragen | Positionen 0/1/2 belegt (10/4/11) |
+| Aufruf ohne `max_tokens` | `finish_reason=stop`, 25 Fragen, 114,5 s |
+| zwei Läufe `?regenerate=true&count=10` | kein wortgleicher Fragetext doppelt |
+| Ladeoverlay | neue Bundle-Datei enthält die Schätzanzeige |
 
 ## Rollback
 

@@ -21,6 +21,7 @@ Erstellt Quizfragen, Karteikarten und Lernleitfäden aus eigenen Lernmaterialien
 | Karteikarten | Karteikarten zum selben Material. Der Server speichert sie im Cache. |
 | Lernleitfaden | Kurze Zusammenfassung je Paket. Ein Flash-Modell schreibt sie. |
 | Auswertung | Ergebnis-Historie, Fehleranalyse und Statistik nach Thema und Fach. |
+| Wartezeit | Während einer KI-Anfrage zeigt ein Overlay die verstrichene Zeit, eine geschätzte Dauer und einen Fortschrittsbalken. Der Balken läuft bis 96 % und endet erst mit der Antwort — er zeigt eine Schätzung, keinen echten Fortschritt. |
 | Einstellungen | Name, Klasse, Dark Mode, Benachrichtigungszeit und Dev Mode. |
 
 Der Server ordnet jedem Paket automatisch ein Fach zu. Er fragt dafür das LLM und schreibt das Fach
@@ -156,6 +157,12 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   Fragen verbrauchte das komplette Budget im Reasoning (`finish_reason=length`, `content` leer)
   und die Route antwortete `AI_INVALID`. Nur bei `openrouter` gilt ohne Wert weiter 8192 (siehe
   Umgebungstabelle).
+- Die Schätzdauer im Ladeoverlay (`src/components/LoadingOverlay.tsx`) ist eine Formel, keine
+  Messung pro Anfrage: `85 s + 1,2 s je Frage`, dazu je eine feste Schätzung für die Analyse.
+  Grundlage sind die Messungen oben (10 Fragen 94 s, 25 Fragen 107–119 s, kleines Material mit
+  2 Fragen 10 s). Der Grundaufwand des Modells dominiert, deshalb steigt die Schätzung nur
+  schwach mit der Anzahl. Der Balken ist damit eine Orientierung; die Anzeige nennt die
+  verstrichene Zeit daneben immer exakt.
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
 - Die App läuft im Heimnetz über einfaches HTTP. Das ist **kein** sicherer Kontext. Die Browser-APIs

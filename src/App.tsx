@@ -36,6 +36,7 @@ import StudyGuideView from "./components/StudyGuideView";
 import StatsView from "./components/StatsView";
 import SettingsView from "./components/SettingsView";
 import PackageDetailView from "./components/PackageDetailView";
+import LoadingOverlay, { ANALYSIS_ESTIMATE_MS, quizEstimateMs } from "./components/LoadingOverlay";
 
 type ViewState = "library" | "quiz" | "results" | "flashcards" | "study-guide" | "stats" | "settings" | "package-detail";
 
@@ -48,6 +49,7 @@ export default function App() {
   const [quizResults, setQuizResults] = useState<QuizResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const [loadingEstimateMs, setLoadingEstimateMs] = useState(0);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("dark_mode") === "true");
   const [isSideNavOpen, setIsSideNavOpen] = useState(false);
   const [questionCount, setQuestionCount] = useState(() => {
@@ -86,6 +88,7 @@ export default function App() {
 
   const handleStartQuiz = async (pkg: StudyPackage, regenerate: boolean = false) => {
     setIsLoading(true);
+    setLoadingEstimateMs(quizEstimateMs(questionCount));
     setLoadingMessage(regenerate ? `Generiere ${questionCount} neue Quizfragen...` : "Lade Quiz...");
     try {
       const questions = await getCachedQuiz(pkg.id, regenerate, questionCount);
@@ -104,6 +107,7 @@ export default function App() {
     if (!selectedPackage) return;
     
     setIsLoading(true);
+    setLoadingEstimateMs(ANALYSIS_ESTIMATE_MS);
     setLoadingMessage("Analysiere deine Performance...");
     
     try {
@@ -522,12 +526,7 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-[#161616]/70 backdrop-blur-xs z-50 flex flex-col items-center justify-center p-6"
           >
-            <div className="bg-[var(--cds-layer-01)] border border-[var(--cds-border-subtle-01)] p-8 max-w-sm w-full flex flex-col items-center text-center">
-              {/* Loading Spinner */}
-              <div className="w-12 h-12 border-4 border-[var(--cds-border-subtle-01)] border-t-[#0f62fe] rounded-full animate-spin mb-4" />
-              <h3 className="text-base font-semibold text-[var(--cds-text-primary)] mb-1">{loadingMessage}</h3>
-              <p className="text-xs text-[var(--cds-text-secondary)]">KI-Verarbeitung läuft...</p>
-            </div>
+            <LoadingOverlay message={loadingMessage} estimateMs={loadingEstimateMs} />
           </motion.div>
         )}
       </AnimatePresence>
