@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { StudyPackage } from "../types";
 import { getCachedFlashcards } from "../services/gemini";
+import LoadingOverlay, { FLASHCARDS_ESTIMATE_MS } from "./LoadingOverlay";
 
 interface FlashcardsViewProps {
   package: StudyPackage;
@@ -57,9 +58,8 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-32">
-        <div className="w-10 h-10 border-4 border-[var(--cds-border-subtle-01)] border-t-[#0f62fe] rounded-full animate-spin mb-4" />
-        <p className="text-sm font-mono text-[var(--cds-text-secondary)]">Flashcards werden generiert...</p>
+      <div className="flex flex-col items-center justify-center py-24 max-w-sm mx-auto">
+        <LoadingOverlay message="Flashcards werden generiert..." estimateMs={FLASHCARDS_ESTIMATE_MS} variant="plain" />
       </div>
     );
   }

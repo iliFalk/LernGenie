@@ -10,6 +10,7 @@ import {
 } from "@carbon/icons-react";
 import { StudyPackage } from "../types";
 import { getCachedStudyGuide } from "../services/gemini";
+import LoadingOverlay, { STUDY_GUIDE_ESTIMATE_MS } from "./LoadingOverlay";
 import { copyText } from "../services/clipboard";
 import Markdown from "react-markdown";
 
@@ -57,9 +58,8 @@ export default function StudyGuideView({ package: pkg, onBack }: StudyGuideViewP
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-32">
-        <div className="w-10 h-10 border-4 border-[var(--cds-border-subtle-01)] border-t-[#0f62fe] rounded-full animate-spin mb-4" />
-        <p className="text-sm font-mono text-[var(--cds-text-secondary)]">Study Guide wird generiert...</p>
+      <div className="flex flex-col items-center justify-center py-24 max-w-sm mx-auto">
+        <LoadingOverlay message="Study Guide wird generiert..." estimateMs={STUDY_GUIDE_ESTIMATE_MS} variant="plain" />
       </div>
     );
   }

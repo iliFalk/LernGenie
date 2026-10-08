@@ -12,6 +12,7 @@ import {
 import { extractTextFromImage, generateTopicContent } from "../services/gemini";
 import { authFetch } from "../services/auth";
 import { randomUUID } from "../services/uuid";
+import LoadingOverlay, { TOPIC_ESTIMATE_MS } from "./LoadingOverlay";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   const [files, setFiles] = useState<{ id: string; name: string; content: string; type: string; status: 'pending' | 'processing' | 'completed' | 'error'; errorMsg?: string }[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("");
+  const [processingEstimateMs, setProcessingEstimateMs] = useState(0);
   const [hint, setHint] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +85,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     setHint("");
     setIsProcessing(true);
     setProcessingMessage("KI generiert Lerninhalte...");
+    setProcessingEstimateMs(TOPIC_ESTIMATE_MS);
     
     const fileId = randomUUID();
     const newFile = {
@@ -131,6 +134,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     setHint("");
     setIsProcessing(true);
     setProcessingMessage("Lernpaket wird gespeichert...");
+    // Saving is a handful of small writes, not a model call.
+    setProcessingEstimateMs(3_000);
 
     try {
       const packageId = randomUUID();
@@ -209,6 +214,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
               <p className="text-xs text-[var(--cds-text-primary)]">{hint}</p>
             </div>
           )}
+          {isProcessing && processingMessage && (
+            <div className="border border-[var(--cds-border-subtle-01)] bg-[var(--cds-layer-02)] p-4">
+              <LoadingOverlay message={processingMessage} estimateMs={processingEstimateMs} variant="plain" />
+            </div>
+          )}
+
           {step === 1 ? (
             <div className="space-y-6">
               <div>

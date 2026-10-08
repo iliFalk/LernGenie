@@ -21,7 +21,7 @@ Erstellt Quizfragen, Karteikarten und Lernleitfäden aus eigenen Lernmaterialien
 | Karteikarten | Karteikarten zum selben Material. Der Server speichert sie im Cache. |
 | Lernleitfaden | Kurze Zusammenfassung je Paket. Ein Flash-Modell schreibt sie. |
 | Auswertung | Ergebnis-Historie, Fehleranalyse und Statistik nach Thema und Fach. |
-| Wartezeit | Während einer KI-Anfrage zeigt ein Overlay die verstrichene Zeit, eine geschätzte Dauer und einen Fortschrittsbalken. Der Balken läuft bis 96 % und endet erst mit der Antwort — er zeigt eine Schätzung, keinen echten Fortschritt. |
+| Wartezeit | Während einer KI-Anfrage zeigt die App die verstrichene Zeit, eine geschätzte Dauer und einen Fortschrittsbalken. Das gilt für Quiz, Auswertung, Karteikarten, Lernleitfaden und die KI-Synthese im Upload-Fenster. Der Balken läuft bis 96 % und endet erst mit der Antwort — er zeigt eine Schätzung, keinen echten Fortschritt. |
 | Einstellungen | Name, Klasse, Dark Mode, Benachrichtigungszeit und Dev Mode. |
 
 Der Server ordnet jedem Paket automatisch ein Fach zu. Er fragt dafür das LLM und schreibt das Fach
@@ -158,10 +158,11 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   und die Route antwortete `AI_INVALID`. Nur bei `openrouter` gilt ohne Wert weiter 8192 (siehe
   Umgebungstabelle).
 - Die Schätzdauer im Ladeoverlay (`src/components/LoadingOverlay.tsx`) ist eine Formel, keine
-  Messung pro Anfrage: `100 s + 2,5 s je Frage`, dazu je eine feste Schätzung für die Analyse.
+  Messung pro Anfrage: für das Quiz `100 s + 2,5 s je Frage`, sonst ein fester Wert je Artefakt
+  (Karteikarten 45 s, Lernleitfaden 80 s, KI-Synthese 100 s, Auswertung 45 s, Speichern 3 s).
   Grundlage sind die Messungen oben (10 Fragen 116 s, 25 Fragen 162 s, kleines Material mit
-  2 Fragen 10 s). Der Grundaufwand des Modells dominiert, deshalb steigt die Schätzung nur
-  schwach mit der Anzahl. Die Schätzung liegt bewusst etwas hoch: lieber „rechnet noch" als ein
+  2 Fragen 10 s; Karteikarten 27–30 s, Lernleitfaden 61 s, KI-Synthese 83 s). Der Grundaufwand
+  des Modells dominiert, deshalb steigt die Schätzung nur schwach mit der Anzahl. Die Schätzung liegt bewusst etwas hoch: lieber „rechnet noch" als ein
   Ende zu versprechen, das schon vorbei ist. Die verstrichene Zeit daneben ist immer exakt.
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.

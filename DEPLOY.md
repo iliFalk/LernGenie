@@ -141,7 +141,8 @@ Der Umbau: `?count=N` an `GET /api/packages/:id/quiz` (Grenzen 5 bis 25, `clampQ
 Ausschlussliste der bisherigen Fragen im Prompt, Überschuss-Anforderung plus Trimmen in
 `selectQuestions`, Mischen der Optionen in `normaliseQuiz`, `quiz_version` 1 → 2, Anzahl-Wähler
 (10/15/20/25) in `PackageDetailView`, Ladeoverlay mit verstrichener Zeit, Schätzdauer und
-Fortschrittsbalken (`src/components/LoadingOverlay.tsx`).
+Fortschrittsbalken (`src/components/LoadingOverlay.tsx`) — genutzt vom Quiz, der Auswertung, den
+Karteikarten, dem Lernleitfaden und der KI-Synthese im Upload-Fenster.
 
 Kein `max_tokens` mehr: `resolveMaxTokens` in `llm.ts` lässt das Feld weg, solange
 `LLM_MAX_TOKENS` leer ist, und der Default des Modells gilt. Grund war die Messung: mit 8192
@@ -177,6 +178,7 @@ Prüfung nach dem Deploy am 2026-10-08:
 | Aufruf ohne `max_tokens` | `finish_reason=stop`, 25 Fragen, 114,5 s |
 | zwei Läufe `?regenerate=true&count=10` | kein wortgleicher Fragetext doppelt |
 | Ladeoverlay | neue Bundle-Datei enthält die Schätzanzeige |
+| Karteikarten, Lernleitfaden, KI-Synthese | 27–30 s, 61 s, 83 s gemessen |
 
 ## Rollback
 
