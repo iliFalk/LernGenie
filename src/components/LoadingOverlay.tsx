@@ -7,13 +7,12 @@ import React, { useEffect, useState } from "react";
  * report — only an estimate. The bar therefore walks towards a cap and completes
  * when the answer arrives.
  *
- * Measured on the live deployment (2026-10-08, CommandCode, DeepSeek V4.1 Flash, no
- * token limit): the reasoning prompt needs 128-158 s and 21 000-27 000 output tokens
- * for ten questions, and the quality pass adds roughly the same again when it fires.
- * The estimate therefore runs a little high on purpose: the display then reads
- * "still working" instead of promising an end that has already passed.
+ * Measured on the live deployment (2026-10-08, build 91460db): ten questions took
+ * 337 s including the quality pass, which fired for 3 of 10 questions and roughly
+ * doubles the wait. The estimate therefore runs a little high on purpose: the
+ * display then reads "still working" instead of promising an end that has passed.
  */
-export const quizEstimateMs = (count: number): number => (150 + count * 13) * 1000;
+export const quizEstimateMs = (count: number): number => (160 + count * 18) * 1000;
 
 /** Estimate for the performance analysis after a quiz (measured ~10-20 s, generous margin). */
 export const ANALYSIS_ESTIMATE_MS = 45_000;

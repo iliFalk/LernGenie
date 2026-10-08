@@ -193,7 +193,8 @@ Gemessen am 2026-10-08 mit echten Paketen (CommandCode, DeepSeek V4.1 Flash, ohn
 
 | Prüfung | Ergebnis |
 |---|---|
-| zehn Fragen erzeugen | 128–158 s, 21 000–27 000 Ausgabe-Token |
+| zehn Fragen erzeugen | 128–158 s, 21 000–27 000 Ausgabe-Token (ohne Prüfung) |
+| zehn Fragen über die API, mit Prüfung | 337 s; Prüfung: 3 von 10 beanstandet, danach 0 |
 | Qualitätsprüfung, Ethik | 1 von 10 beanstandet, nach der Reparatur 0 |
 | Qualitätsprüfung, Englisch | 4 von 10 beanstandet (Optionen außerhalb des Materials) |
 | Aufgabentypen | 6 Typen über zehn Fragen, Positionen 3/3/2/2 |
