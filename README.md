@@ -76,8 +76,8 @@ Ohne Dev Mode gelten die Server-Defaults.
 | `OPENROUTER_API_KEY` | Key für `provider = openrouter` (kostenlose Modelle, zum Beispiel `dots-studio/dots-3-note-preview:free`) |
 | `COMMANDCODE_API_KEY` | Key für `provider = commandcode` (Abo-Provider, OpenAI-kompatibel; Modell-IDs mit Organisations-Präfix, zum Beispiel `deepseek/deepseek-v4.1-flash`) |
 | `COMMANDCODE_BASE_URL` | Basis-URL für `provider = commandcode`. Default `https://api.commandcode.ai/provider/v1` |
-| `LLM_TIMEOUT_MS` | Zeitlimit für einen OpenRouter- oder CommandCode-Aufruf in Millisekunden. Default `180000` (3 Minuten). Läuft das Limit ab, antwortet der Server mit einem Fehler statt zu hängen |
-| `LLM_MAX_TOKENS` | Obergrenze für die Antwort in Token. Default `8192`. Ohne diese Grenze reserviert OpenRouter das volle Ausgabefenster des Modells und lehnt den Aufruf mit HTTP 402 ab, wenn das Key-Limit kleiner ist. Die Denk-Token des Modells zählen mit, deshalb nicht zu klein wählen |
+| `LLM_TIMEOUT_MS` | Zeitlimit für einen OpenRouter- oder CommandCode-Aufruf in Millisekunden. Default `180000` (3 Minuten), produktiv **300000**. 25 Fragen brauchen rund 120 s |
+| `LLM_MAX_TOKENS` | Grenze für die Antwort in Token. Leer = der Aufruf trägt **kein** `max_tokens`, es gilt der Default des Modells. Eine Zahl setzt die Grenze für alle Provider. Ausnahme: bei `openrouter` gilt ohne Wert 8192, weil OpenRouter sonst das volle Ausgabefenster des Modells reserviert (bis 131072 Token) und den Aufruf mit HTTP 402 ablehnt, wenn das Key-Limit kleiner ist |
 | `DB_PATH` | Pfad zur SQLite-Datei. Ein relativer Pfad gilt gegen das Arbeitsverzeichnis des Prozesses |
 | `APP_URL` | Eigene URL, von AI Studio injiziert |
 
@@ -146,12 +146,16 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   Ein Modellaufruf bleibt es. Reicht die Anzahl danach nicht, füllt der Rest auf: ein kurzes Quiz
   ist besser als eine wiederholte Frage. Der Text-Vergleich sieht nur die Schreibweise
   (`questionKey`); ein inhaltlich gleiches, umformuliertes Frage-Paar erkennt er nicht.
-- Die Quiz-Länge ist auf 25 Fragen begrenzt (`MAX_QUESTIONS`). Die Grenze kommt aus dem
-  Ausgabebudget, nicht aus der Fachlichkeit: eine Frage kostet etwa 130 Ausgabe-Token,
-  `LLM_MAX_TOKENS` ist 8192 und das Modell verbraucht vorher einige Tausend Denk-Token.
-  Gemessen: 30 Fragen in einer Antwort laufen über das Limit, das JSON wird abgeschnitten und
-  der Aufruf endet mit `AI_INVALID` („keine JSON-Struktur gefunden", 100 s). Eine höhere Grenze
-  braucht zuerst ein höheres `LLM_MAX_TOKENS` beim Provider.
+- Die Quiz-Länge ist auf 25 Fragen begrenzt (`MAX_QUESTIONS`). Die Grenze kommt aus der Laufzeit,
+  nicht aus der Fachlichkeit: 25 Fragen brauchen rund 120 s (gemessen 107 s über die API, 119 s
+  im Direktaufruf), weil das Modell einen großen Teil seines Ausgabebudgets zum Denken nutzt.
+  Eine höhere Grenze braucht zuerst eine Messung der Laufzeit. Das Modell selbst erlaubt
+  384 000 Ausgabe-Token.
+- Der Aufruf trägt kein `max_tokens`, solange `LLM_MAX_TOKENS` leer ist — dann gilt der Default des
+  Modells. Das ist der Produktivzustand. Gemessen mit `max_tokens=8192`: eine Anfrage über 25
+  Fragen verbrauchte das komplette Budget im Reasoning (`finish_reason=length`, `content` leer)
+  und die Route antwortete `AI_INVALID`. Nur bei `openrouter` gilt ohne Wert weiter 8192 (siehe
+  Umgebungstabelle).
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
 - Die App läuft im Heimnetz über einfaches HTTP. Das ist **kein** sicherer Kontext. Die Browser-APIs

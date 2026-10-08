@@ -52,11 +52,13 @@ Die Compose-Datei gehört zum Projekt `falknest`, genau wie `infra.yml`. Compose
 COMMANDCODE_API_KEY=<CommandCode-Key>
 AI_PROVIDER=commandcode
 AI_MODEL=deepseek/deepseek-v4.1-flash
-LLM_TIMEOUT_MS=180000
-LLM_MAX_TOKENS=8192
+LLM_TIMEOUT_MS=300000
 DB_PATH=/data/study_quiz.db
 NODE_ENV=production
 ```
+
+`LLM_MAX_TOKENS` steht nicht in der Datei. Dann trägt der Aufruf kein `max_tokens` und der
+Default des Modells gilt. Das ist gewollt: mit einer Grenze verbrauchte das Reasoning das Budget.
 
 Der Provider ist CommandCode (`https://api.commandcode.ai/provider/v1`, OpenAI-kompatibel). Das
 Abo deckt die Aufrufe ab, deshalb gibt es kein Guthaben pro Aufruf. Die Modell-ID trägt das
@@ -72,9 +74,14 @@ Tages-Pick der kostenlosen OpenRouter-Rangliste (`https://shir-man.com/api/free-
 `LLM_TIMEOUT_MS` begrenzt einen Aufruf. Ohne das Limit wartet der Server unbegrenzt,
 und die Oberfläche dreht dauerhaft weiter.
 
-`LLM_MAX_TOKENS` begrenzt die Antwortlänge (Default 8192). Ohne diese Grenze reserviert OpenRouter
-das volle Ausgabefenster des Modells und lehnt den Aufruf mit HTTP 402 ab, wenn das Key-Limit
-kleiner ist. Die Denk-Token zählen mit: ein zu kleines Limit liefert eine leere Antwort.
+`LLM_MAX_TOKENS` bleibt leer. Dann trägt der Aufruf **kein** `max_tokens` und es gilt der Default
+des Modells. Eine Zahl setzt die Grenze für alle Provider. Ausnahme: bei `openrouter` gilt ohne
+Wert 8192, weil OpenRouter sonst das volle Ausgabefenster des Modells reserviert und den Aufruf
+mit HTTP 402 ablehnt, wenn das Key-Limit kleiner ist.
+
+Mit `max_tokens=8192` verbrauchte eine Anfrage über 25 Fragen das komplette Budget im Reasoning
+(`finish_reason=length`, `content` leer) und der Server antwortete mit `AI_INVALID`. Ohne Grenze
+endet dieselbe Anfrage mit `finish_reason=stop` in rund 120 s.
 
 Der Server schreibt eine Zeile pro `/api`-Anfrage in das Container-Log. Damit ist sichtbar, ob eine
 Anfrage ankommt, welchen Status sie bekommt und wie lange sie dauert:

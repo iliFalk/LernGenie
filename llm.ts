@@ -9,6 +9,10 @@ const DEFAULT_OPENROUTER_MODEL = "google/gemini-2.0-flash-exp:free";
 // CommandCode (https://api.commandcode.ai/provider/v1) speaks the OpenAI chat protocol.
 const DEFAULT_COMMANDCODE_MODEL = "deepseek/deepseek-v4.1-flash";
 
+/** OpenRouter reserves the whole output window when a call carries no `max_tokens`,
+ *  and then rejects it with HTTP 402 on a small key limit. This is its bound. */
+const DEFAULT_OPENROUTER_MAX_TOKENS = 8192;
+
 export function sanitizeApiKey(key: string | undefined): string {
   if (!key) return "";
   let clean = key.trim();
@@ -17,6 +21,21 @@ export function sanitizeApiKey(key: string | undefined): string {
     clean = clean.substring(1, clean.length - 1).trim();
   }
   return clean;
+}
+
+/**
+ * Output budget for one model call.
+ *
+ * `LLM_MAX_TOKENS` wins when it holds a positive number. Without it the call carries
+ * no `max_tokens` at all and the provider applies its own default — except on
+ * OpenRouter, which reserves the model's full output window (up to 131072 tokens) and
+ * rejects the call with HTTP 402 when the key limit is smaller. That path therefore
+ * keeps a bounded default.
+ */
+export function resolveMaxTokens(provider: string, raw: string | undefined = process.env.LLM_MAX_TOKENS): number | undefined {
+  const parsed = Number(raw);
+  if (raw !== undefined && raw !== "" && Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
+  return provider === "openrouter" ? DEFAULT_OPENROUTER_MAX_TOKENS : undefined;
 }
 
 export async function callLLM(params: {
@@ -110,8 +129,10 @@ async function callChatCompletions(params: {
   messages.push({ role: "user", content: userContent });
 
   const timeoutMs = Number(process.env.LLM_TIMEOUT_MS || 180000);
-  const maxTokens = Number(process.env.LLM_MAX_TOKENS || 8192);
-  console.log(`[llm] ${label} model=${model || "?"} json=${!!isJson} timeout=${timeoutMs}ms max_tokens=${maxTokens}`);
+  const maxTokens = resolveMaxTokens(label);
+  console.log(
+    `[llm] ${label} model=${model || "?"} json=${!!isJson} timeout=${timeoutMs}ms max_tokens=${maxTokens ?? "model default"}`,
+  );
 
   const headers: Record<string, string> = {
     "Authorization": `Bearer ${apiKey}`,
@@ -130,9 +151,8 @@ async function callChatCompletions(params: {
       body: JSON.stringify({
         model: model,
         messages: messages,
-        // Bound the answer. Without this limit OpenRouter reserves the full output
-        // window of the model (up to 131072 tokens) and rejects the call with HTTP 402
-        // when the key limit is smaller. The limit also caps cost and latency.
+        // A bounded answer keeps latency and cost predictable. The value is absent
+        // when no limit is configured and the provider's default applies.
         max_tokens: maxTokens,
         response_format: isJson && supportsJsonMode ? { type: "json_object" } : undefined,
       }),
