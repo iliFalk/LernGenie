@@ -158,11 +158,11 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   und die Route antwortete `AI_INVALID`. Nur bei `openrouter` gilt ohne Wert weiter 8192 (siehe
   Umgebungstabelle).
 - Die Schätzdauer im Ladeoverlay (`src/components/LoadingOverlay.tsx`) ist eine Formel, keine
-  Messung pro Anfrage: `85 s + 1,2 s je Frage`, dazu je eine feste Schätzung für die Analyse.
-  Grundlage sind die Messungen oben (10 Fragen 94 s, 25 Fragen 107–119 s, kleines Material mit
+  Messung pro Anfrage: `100 s + 2,5 s je Frage`, dazu je eine feste Schätzung für die Analyse.
+  Grundlage sind die Messungen oben (10 Fragen 116 s, 25 Fragen 162 s, kleines Material mit
   2 Fragen 10 s). Der Grundaufwand des Modells dominiert, deshalb steigt die Schätzung nur
-  schwach mit der Anzahl. Der Balken ist damit eine Orientierung; die Anzeige nennt die
-  verstrichene Zeit daneben immer exakt.
+  schwach mit der Anzahl. Die Schätzung liegt bewusst etwas hoch: lieber „rechnet noch" als ein
+  Ende zu versprechen, das schon vorbei ist. Die verstrichene Zeit daneben ist immer exakt.
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
 - Die App läuft im Heimnetz über einfaches HTTP. Das ist **kein** sicherer Kontext. Die Browser-APIs

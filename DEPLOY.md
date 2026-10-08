@@ -170,10 +170,10 @@ Prüfung nach dem Deploy am 2026-10-08:
 |---|---|
 | `npm test` | 80 Tests, pass |
 | `npx tsc --noEmit`, `npm run build` | sauber |
-| `?regenerate=true&count=25` | 200, 25 Fragen, 107 s |
+| `?regenerate=true&count=25` | 200, 25 Fragen, 161,5 s (ohne Token-Limit) |
 | `?count=25` danach | aus dem Cache, ohne Modellaufruf |
 | `?count=50` | auf 25 geklemmt |
-| `correctIndex` über 25 Fragen | Positionen 0/1/2 belegt (10/4/11) |
+| `correctIndex` über 25 Fragen | Positionen 0/1/2/3 belegt (7/8/6/4) |
 | Aufruf ohne `max_tokens` | `finish_reason=stop`, 25 Fragen, 114,5 s |
 | zwei Läufe `?regenerate=true&count=10` | kein wortgleicher Fragetext doppelt |
 | Ladeoverlay | neue Bundle-Datei enthält die Schätzanzeige |

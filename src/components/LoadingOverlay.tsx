@@ -7,14 +7,14 @@ import React, { useEffect, useState } from "react";
  * report — only an estimate. The bar therefore walks towards a cap and completes
  * when the answer arrives.
  *
- * Measured on the live deployment (2026-10-08, CommandCode, DeepSeek V4.1 Flash):
- *   2 questions, small material   10 s
- *   10 questions, real package    94 s
- *   25 questions, real package   107-119 s
- * The model's reasoning dominates and grows only slowly with the number of
- * questions, hence a base load plus a small share per question.
+ * Measured on the live deployment (2026-10-08, CommandCode, DeepSeek V4.1 Flash, no
+ * token limit): 10 questions 116 s, 25 questions 162 s; a small material with 2
+ * questions answered in 10 s. The model's reasoning dominates and grows only slowly
+ * with the number of questions, hence a base load plus a small share per question.
+ * The estimate runs a little high on purpose: the display then reads "still working"
+ * instead of promising an end that has already passed.
  */
-export const quizEstimateMs = (count: number): number => (85 + count * 1.2) * 1000;
+export const quizEstimateMs = (count: number): number => (100 + count * 2.5) * 1000;
 
 /** Estimate for the performance analysis after a quiz (measured ~10-20 s, generous margin). */
 export const ANALYSIS_ESTIMATE_MS = 45_000;
