@@ -60,54 +60,39 @@ ${previous.map((text) => `- ${text}`).join("\n")}
 
 const quizPrompt = (count: number, grade: number, content: string, previous: string[] = []): string => {
   const modules = quizModules(count);
+  // A compact instruction matters for the runtime, not for style: measured with the same
+  // model, material and question count, a terse prompt answered in 72 s where the verbose
+  // one (long module prose plus eight prose rules) needed 204 s, and its own rationales
+  // came out shorter (median 9 words against 14).
   return `
-Du bist Fachdidaktiker für die Klassenstufe ${grade} und arbeitest nach der Methode der klassischen
-Logik (Begriff, Urteil, Schluss). Die Fragen prüfen Denkoperationen, nicht das Ablesen von Sätzen.
+Du bist Fachdidaktiker für Klasse ${grade}. Die Fragen prüfen Denkoperationen nach der klassischen
+Logik (Begriff, Urteil, Schluss); sie fragen keine Sätze ab.
 
-Erstelle ${count} Multiple-Choice-Fragen zum folgenden Material, verteilt auf drei Module:
+${count} Multiple-Choice-Fragen, verteilt auf drei Module:
+1. BEGRIFFE (${modules.begriffe}, type BEZIEHUNG oder WIEDERGEBEN): Merkmale trennen, Ober-/Unterbegriff,
+   Definition prüfen.
+2. SCHLÜSSE (${modules.schluesse}, type FOLGERUNG oder AUSSCHLUSS): zwingend aus dem Material folgern.
+   Falle: unzulässige Umkehrung. Bei AUSSCHLUSS nennt der Stamm eine Materialaussage, die Optionen
+   sind einzelne Sätze; gesucht ist der Satz, der mit dem Stamm nicht zugleich wahr sein kann.
+3. FANGFRAGE (${modules.fangfragen}, type FEHLER oder GRUND/FOLGE): Denkfehler benennen —
+   Begriffsvertauschung, Zirkel, vorschnelle Verallgemeinerung, falsche Analogie, Widerspruch,
+   Umkehrung des Schlusses, "danach heißt deshalb", übersehene Bedingung.
 
-MODUL 1 — BEGRIFFE (${modules.begriffe} Fragen, type "BEZIEHUNG" oder "WIEDERGEBEN")
-Wesentliche von unwesentlichen Merkmalen trennen, eine Definition prüfen, Oberbegriff oder
-Unterbegriff bestimmen. Beziehungstypen: Oberbegriff/Unterbegriff, nebengeordnet, überschneidend,
-gegensätzlich, widersprechend.
-
-MODUL 2 — SCHLÜSSE (${modules.schluesse} Fragen, type "FOLGERUNG" oder "AUSSCHLUSS")
-Aus dem Material zwingend folgern. Ein Schluss folgt NUR aus den Aussagen des Materials: keine
-neue Prämisse, kein Alltagswissen. Baue die typische Falle ein — die unzulässige Umkehrung
-("Wenn A ein B ist, ist nicht jedes B ein A") und den Scheinschluss. Bei type "AUSSCHLUSS" nennt
-der Stamm EINE Aussage aus dem Material; die Optionen sind einzelne Sätze, und die richtige Option
-ist die, die gleichzeitig mit dem Stamm nicht wahr sein kann (Satz vom Widerspruch).
-
-MODUL 3 — FANGFRAGE (${modules.fangfragen} Fragen, type "FEHLER" oder "GRUND/FOLGE")
-Eine Aussage trägt einen Denkfehler oder eine Schein-Kausalität. Bei type "FEHLER" nennt der
-Stamm die Aussage, und die Optionen sind Fehlernamen: Begriffsvertauschung, Zirkel, vorschnelle
-Verallgemeinerung, falsche Analogie, Widerspruch, Umkehrung des Schlusses, "danach heißt deshalb",
-übersehene Bedingung. Bei "GRUND/FOLGE" wird eine bloße Abfolge als Ursache ausgegeben.
-
-REGELN:
-1. QUELLENTREUE: Nur Aussagen, die das Material deckt. Trägt das Material ein Modul nicht, nutze es
-   nicht und verteile die Fragen auf die übrigen — erfinde keine Tiefe.
-2. STEMM: genau eine Frage, klar und eindeutig, kein Hinweis auf die Lösung, keine doppelte
-   Fragestellung. Bei "AUSSCHLUSS" und "FEHLER" steht die Aussage fest im Stamm.
-3. OPTIONEN: genau vier, grammatisch parallel, ähnliche Länge (Abweichung unter 30 % Zeichen).
-4. Keine Option beginnt mit "ohne", "nicht", "kein", "niemals". Keine Dubletten.
-5. Jede falsche Option stammt aus derselben Textstelle wie die richtige und unterscheidet sich in
-   EINEM Merkmal (Zeit, Ort, Reihenfolge, Träger, Ursache). Eine Option, die im Material gar nicht
-   vorkommt, ist verboten.
-6. Die richtige Option ist nicht länger als jede falsche. Die richtige Antwort steht nicht gehäuft
-   an derselben Position.
-7. KÜRZE IST PFLICHT. Jede Option trägt ihre eigene Begründung: "rationale" nennt in HÖCHSTENS
-   8 Wörtern die Regel (Oberbegriff, Satz vom Widerspruch, hinreichende Bedingung) — kein Satz, kein
-   Materialzitat, keine Wiederholung der Option.
-8. hint lenkt in höchstens 8 Wörtern auf die logische Struktur und verrät die Lösung nicht.
-   explanation sagt in höchstens 15 Wörtern, warum die richtige Option zwingend stimmt. topic ist
-   ein Stichwort aus dem Material (höchstens 4 Wörter).
+REGELN
+- Nur Aussagen des Materials. Trägt es ein Modul nicht, verteile die Fragen um. Keine neue Prämisse.
+- Stamm: eine Frage, kein Lösungshinweis. Bei FEHLER und AUSSCHLUSS steht die Aussage im Stamm.
+- Genau 4 Optionen, grammatisch parallel, ähnliche Länge. Keine Option beginnt mit ohne/nicht/kein/niemals.
+- Jede falsche Option ist ein typischer Denkfehler aus derselben Textstelle, unterschieden in EINEM
+  Merkmal. Keine Option, die im Material nicht vorkommt.
+- Die richtige Option ist nicht die längste; die richtige Position wechselt.
+- rationale: die Regel in höchstens 8 Wörtern, ohne Wiederholung der Option. hint ≤8 Wörter ohne
+  Lösung. explanation ≤15 Wörter. topic: Stichwort.
 ${previousBlock(previous)}
-Ausgabe-Vertrag — halte ihn exakt ein:
+AUSGABE — nur JSON:
 ${OUTPUT_CONTRACT.quiz}
-Genau eine Option trägt "isCorrect": true. Die Optionstexte sind reine Antworttexte ohne Präfix wie "A)".
+Genau eine Option trägt "isCorrect": true.
 
-Material (${content.length} Zeichen) für Klassenstufe ${grade}:
+MATERIAL (${content.length} Zeichen), Klasse ${grade}:
 ${content}
 `;
 };
