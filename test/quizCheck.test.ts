@@ -64,6 +64,12 @@ test("a missing justification is reported", () => {
   assert.match(result.items[1].join(" | "), /ohne Begründung/);
 });
 
+test("a stem with two question marks is a soft signal", () => {
+  const result = checkQuiz([question({ text: "Was ist Ethik? Und was ist Philosophie?" })], context);
+  assert.equal(result.flagged, 0);
+  assert.equal(result.soft, 1);
+});
+
 test("a quiz without types is reported on the set level", () => {
   const quiz = [question({ type: "" }), question({ id: "q2", type: "" }), question({ id: "q3", type: "" })];
   const result = checkQuiz(quiz, context);

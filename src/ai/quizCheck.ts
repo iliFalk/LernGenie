@@ -82,7 +82,6 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
     if (!question.type.trim()) hard.push("kein Aufgabentyp (type)");
     if (list.some((option) => NEGATION_OPENING.test(option))) hard.push("Option beginnt mit einer Verneinung");
     if (new Set(list.map((option) => questionKey(option))).size < list.length) hard.push("doppelte Option");
-    if ((question.text.match(/\?/g) ?? []).length > 1) hard.push("Stamm enthält mehr als eine Frage");
 
     // Soft, not hard: a plausible distractor is a misconception the material does NOT
     // contain verbatim, so a missing lexical anchor is a style signal, not a defect.
@@ -114,6 +113,9 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
       soft.push("Stamm klingt nach Abfragen, der Typ nennt eine Denkoperation");
     }
 
+    // Soft: two question marks in a stem usually quote a question, they do not mean the
+    // stem asks two things. Measured: as a hard rule this alone triggered a 150 s repair.
+    if ((question.text.match(/\?/g) ?? []).length > 1) soft.push("Stamm enthält zwei Fragezeichen");
     if (expectRationales && optionRationales.length === list.length) {
       const missing = optionRationales.filter((text) => !text.trim()).length;
       if (missing > 0) soft.push(`${missing} Option(en) ohne Begründung`);
