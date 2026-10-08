@@ -33,7 +33,8 @@ test("a good answer passes with one provider call", async () => {
   if (result.ok) {
     assert.equal(result.repaired, false);
     assert.equal(result.value.length, 1);
-    assert.equal(result.value[0].correctIndex, 0);
+    // The option order is randomised, so the answer is checked by its text.
+    assert.equal(result.value[0].options[result.value[0].correctIndex], "Mitose");
   }
   assert.equal(stub.calls(), 1);
 });
@@ -68,7 +69,7 @@ test("a fenced quiz answer wrapped in prose reaches the contract shape", async (
   const stub = makeStub([fenced]);
   const result = await generateArtifact<QuizQuestion[]>("quiz", quizInput, config, stub);
   assert.equal(result.ok, true);
-  if (result.ok) assert.equal(result.value[0].options[0], "Mitose");
+  if (result.ok) assert.ok(result.value[0].options.includes("Mitose"), "expected the option text in any order");
 });
 
 test("a provider error yields a typed error", async () => {
@@ -126,4 +127,66 @@ test("the repair prompt carries the validation error back to the model", async (
   });
   assert.equal(result.ok, true);
   assert.match(secondPrompt, /ungültig/i);
+});
+
+// --- length, duplicates and the already-asked questions ----------------------
+
+const question = (text: string) => ({ question: text, options: ["richtig", "falsch"], correct_answer: "A", hint: "", explanation: "", topic: "t" });
+
+test("the answer is trimmed to the requested number of questions", async () => {
+  const surplus = JSON.stringify({ quiz: [1, 2, 3, 4, 5, 6, 7].map((n) => question(`Frage ${n}`)) });
+  const stub = makeStub([surplus]);
+  const result = await generateArtifact<QuizQuestion[]>("quiz", { content: "c", grade: 5, count: 5 }, config, stub);
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.value.length, 5);
+    assert.deepEqual(result.value.map((q) => q.text), ["Frage 1", "Frage 2", "Frage 3", "Frage 4", "Frage 5"]);
+  }
+});
+
+test("a question duplicated inside one answer is dropped, a new one takes its place", async () => {
+  const withDuplicate = JSON.stringify({
+    quiz: [question("Frage 1"), question("Frage 1"), question("Frage 2"), question("Frage 3"), question("Frage 4"), question("Frage 5"), question("Frage 6")],
+  });
+  const stub = makeStub([withDuplicate]);
+  const result = await generateArtifact<QuizQuestion[]>("quiz", { content: "c", grade: 5, count: 5 }, config, stub);
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.deepEqual(result.value.map((q) => q.text), ["Frage 1", "Frage 2", "Frage 3", "Frage 4", "Frage 5"]);
+  }
+});
+
+test("questions listed in `previous` are not asked again", async () => {
+  const answer = JSON.stringify({ quiz: [1, 2, 3, 4, 5, 6].map((n) => question(`Frage ${n}`)) });
+  const stub = makeStub([answer]);
+  const result = await generateArtifact<QuizQuestion[]>(
+    "quiz",
+    { content: "c", grade: 5, count: 5, previous: ["Frage 2", "frage 3!"] },
+    config,
+    stub,
+  );
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.deepEqual(result.value.map((q) => q.text), ["Frage 1", "Frage 4", "Frage 5", "Frage 6", "Frage 2"]);
+  }
+});
+
+test("the previous questions reach the prompt", async () => {
+  let prompt = "";
+  const stub = makeStub([goodQuiz]);
+  await generateArtifact<QuizQuestion[]>("quiz", { content: "c", grade: 5, count: 5, previous: ["Was ist Osmose?"] }, config, {
+    callModel: async (params) => {
+      prompt = params.prompt;
+      return stub.callModel(params);
+    },
+  });
+  assert.match(prompt, /bereits gestellt/);
+  assert.match(prompt, /Was ist Osmose\?/);
+});
+
+test("a short answer is kept as it is instead of being padded", async () => {
+  const stub = makeStub([JSON.stringify({ quiz: [question("Nur eine")] })]);
+  const result = await generateArtifact<QuizQuestion[]>("quiz", { content: "c", grade: 5, count: 10 }, config, stub);
+  assert.equal(result.ok, true);
+  if (result.ok) assert.equal(result.value.length, 1);
 });

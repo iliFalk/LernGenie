@@ -28,8 +28,12 @@ export async function generateQuiz(content: string, grade: number, count: number
   return await handleResponse(response);
 }
 
-export async function getCachedQuiz(packageId: string, regenerate: boolean = false): Promise<Question[]> {
-  const response = await authFetch(`/api/packages/${packageId}/quiz${regenerate ? "?regenerate=true" : ""}`);
+export async function getCachedQuiz(packageId: string, regenerate: boolean = false, count?: number): Promise<Question[]> {
+  const params = new URLSearchParams();
+  if (regenerate) params.set("regenerate", "true");
+  if (count) params.set("count", String(count));
+  const query = params.toString();
+  const response = await authFetch(`/api/packages/${packageId}/quiz${query ? `?${query}` : ""}`);
   return await handleResponse(response);
 }
 

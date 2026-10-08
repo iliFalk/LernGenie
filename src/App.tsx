@@ -50,6 +50,14 @@ export default function App() {
   const [loadingMessage, setLoadingMessage] = useState("");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("dark_mode") === "true");
   const [isSideNavOpen, setIsSideNavOpen] = useState(false);
+  const [questionCount, setQuestionCount] = useState(() => {
+    const stored = Number(localStorage.getItem("question_count"));
+    return Number.isFinite(stored) && stored >= 5 && stored <= 50 ? stored : 10;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("question_count", String(questionCount));
+  }, [questionCount]);
 
   useEffect(() => {
     fetchPackages();
@@ -78,9 +86,9 @@ export default function App() {
 
   const handleStartQuiz = async (pkg: StudyPackage, regenerate: boolean = false) => {
     setIsLoading(true);
-    setLoadingMessage(regenerate ? "Generiere neue Quizfragen..." : "Lade Quiz...");
+    setLoadingMessage(regenerate ? `Generiere ${questionCount} neue Quizfragen...` : "Lade Quiz...");
     try {
-      const questions = await getCachedQuiz(pkg.id, regenerate);
+      const questions = await getCachedQuiz(pkg.id, regenerate, questionCount);
       setActiveQuiz(questions);
       setSelectedPackage(pkg);
       setView("quiz");
@@ -389,6 +397,8 @@ export default function App() {
               >
                 <PackageDetailView
                   pkg={selectedPackage}
+                  questionCount={questionCount}
+                  onQuestionCountChange={setQuestionCount}
                   onBack={() => setView("library")}
                   onStartQuiz={(pkg, regenerate) => handleStartQuiz(pkg, regenerate)}
                   onShowFlashcards={handleShowFlashcards}

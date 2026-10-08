@@ -5,6 +5,8 @@
  * the wrapper, not the model, owns structure.
  */
 
+import { clampQuestionCount } from "../contracts/quiz";
+
 export type ArtifactKind = "quiz" | "flashcards" | "analysis" | "text";
 
 export interface PromptSpec {
@@ -12,7 +14,16 @@ export interface PromptSpec {
   isJson?: boolean;
   useFlashModel?: boolean;
   imageData?: { data: string; mimeType: string };
+  /** Number of items the answer must finally contain; a surplus is requested and trimmed. */
+  targetCount?: number;
 }
+
+/**
+ * Questions the model may return beyond `target`. The answer is generated with a
+ * surplus and the gateway keeps the first `target` distinct questions, so a
+ * repeated question costs nothing.
+ */
+export const questionSurplus = (target: number): number => Math.max(3, Math.ceil(target * 0.3));
 
 /** The exact JSON (or prose) shape each artifact must have. Reused in the repair retry. */
 export const OUTPUT_CONTRACT: Record<ArtifactKind, string> = {
@@ -22,15 +33,25 @@ export const OUTPUT_CONTRACT: Record<ArtifactKind, string> = {
   text: "Reiner Text in Markdown, kein JSON.",
 };
 
-const quizPrompt = (count: number, grade: number, content: string): string => `
+const previousBlock = (previous: string[]): string =>
+  previous.length === 0
+    ? ""
+    : `
+Diese Fragen wurden bereits gestellt. Prüfe andere Textstellen und andere Aspekte des Materials — keine inhaltliche Wiederholung:
+${previous.map((text) => `- ${text}`).join("\n")}
+`;
+
+const quizPrompt = (count: number, grade: number, content: string, previous: string[] = []): string => `
 Du bist ein pädagogischer Experte für tiefgehendes Verständnis.
 Analysiere das folgende Lernmaterial und erstelle ein Quiz mit ${count} Multiple-Choice-Fragen für die Klassenstufe ${grade}.
 
 Regeln:
 1. QUELLENTREUE: Alle Fragen stützen sich ausschließlich auf den bereitgestellten Inhalt. Erfinde keine Fakten.
 2. DIDAKTIK: Die Sprache ist für Klassenstufe ${grade} angemessen und intellektuell anregend.
-3. Jede Frage hat einen Hinweis (hint), der zum Nachdenken anregt, ohne die Lösung zu verraten, eine ausführliche Erklärung (explanation) und ein Thema (topic).
-
+3. STREUUNG: Die Fragen verteilen sich über das ganze Material. Keine zwei Fragen prüfen denselben Punkt.
+4. POSITION: Hinweis und Erklärung nennen den Inhalt einer Option, nie ihre Position. Kein Buchstabe und kein "erste Option".
+5. Jede Frage hat einen Hinweis (hint), der zum Nachdenken anregt, ohne die Lösung zu verraten, eine ausführliche Erklärung (explanation) und ein Thema (topic).
+${previousBlock(previous)}
 Ausgabe-Vertrag — halte ihn exakt ein:
 ${OUTPUT_CONTRACT.quiz}
 Jede Frage hat mindestens zwei Optionen. Die Optionen sind reine Antworttexte ohne Präfix wie "A)". "correct_answer" ist der exakte Text einer der Optionen.
@@ -109,11 +130,17 @@ const textPrompt = (input: Record<string, unknown>): PromptSpec => {
 
 export function buildPrompt(kind: ArtifactKind, input: Record<string, unknown>): PromptSpec {
   switch (kind) {
-    case "quiz":
+    case "quiz": {
+      const target = clampQuestionCount(Number(input.count));
+      const previous = Array.isArray(input.previous) ? input.previous.map(String).filter(Boolean) : [];
       return {
-        prompt: quizPrompt(Number(input.count) || 10, Number(input.grade) || 0, String(input.content ?? "")),
+        // Ask for a surplus: the gateway trims to `target` and drops a question
+        // that repeats an earlier one. Same prompt, one model call.
+        prompt: quizPrompt(target + questionSurplus(target), Number(input.grade) || 0, String(input.content ?? ""), previous),
         isJson: true,
+        targetCount: target,
       };
+    }
     case "flashcards":
       return { prompt: flashcardsPrompt(String(input.content ?? "")), isJson: true, useFlashModel: true };
     case "analysis":

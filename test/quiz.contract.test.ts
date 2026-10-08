@@ -81,6 +81,11 @@ const missingAnswer = {
 };
 
 // --- normaliseQuiz ----------------------------------------------------------
+// The normaliser randomises the option order, so a test compares the option SET
+// and the option the index points at — never a position.
+
+const sortedOptions = (options: string[]): string[] => [...options].sort();
+const correctOption = (q: { options: string[]; correctIndex: number }): string => q.options[q.correctIndex];
 
 test("PascalCase keys normalise to the contract array", () => {
   const out = normaliseQuiz(pascalCase);
@@ -97,8 +102,8 @@ test("PascalCase keys normalise to the contract array", () => {
     "topic",
   ]);
   assert.equal(q.text, "Welches Organell enthält die Erbinformation?");
-  assert.deepEqual(q.options, ["Zellmembran", "Ribosom", "Zellkern", "Mitochondrium"]);
-  assert.equal(q.correctIndex, 2);
+  assert.deepEqual(sortedOptions(q.options), ["Mitochondrium", "Ribosom", "Zellkern", "Zellmembran"]);
+  assert.equal(correctOption(q), "Zellkern");
   assert.equal(q.topic, "Zellbiologie");
   assert.equal(q.hint, "Denke an den Ort der DNA.");
   assert.equal(q.explanation, "Die DNA liegt im Zellkern.");
@@ -106,22 +111,22 @@ test("PascalCase keys normalise to the contract array", () => {
 
 test("lowercase contract keys pass through", () => {
   const q = normaliseQuiz(lowercase)[0];
-  assert.deepEqual(q.options, ["Mitose", "Meiose"]);
-  assert.equal(q.correctIndex, 0);
+  assert.deepEqual(sortedOptions(q.options), ["Meiose", "Mitose"]);
+  assert.equal(correctOption(q), "Mitose");
 });
 
 test("German keys normalise to the contract shape", () => {
   const q = normaliseQuiz(german)[0];
   assert.equal(q.text, "Wie heißt die kleinste lebende Einheit?");
-  assert.deepEqual(q.options, ["Zelle", "Atom"]);
-  assert.equal(q.correctIndex, 0);
+  assert.deepEqual(sortedOptions(q.options), ["Atom", "Zelle"]);
+  assert.equal(correctOption(q), "Zelle");
   assert.equal(q.topic, "Biologie");
 });
 
 test("German 'Antworten'/'Antwort' keys split options from the answer", () => {
   const q = normaliseQuiz(germanAnswer)[0];
-  assert.deepEqual(q.options, ["46", "23"]);
-  assert.equal(q.correctIndex, 0);
+  assert.deepEqual(sortedOptions(q.options), ["23", "46"]);
+  assert.equal(correctOption(q), "46");
 });
 
 test("a question without an answer key keeps index -1", () => {
@@ -136,15 +141,43 @@ test("an object that is not a list yields an empty array", () => {
 
 test("options with and without a letter prefix both become bare texts", () => {
   const withPrefix = normaliseQuiz({ quiz: [{ question: "x", options: ["A) Alpha", "B) Beta"], correct_answer: "B" }] })[0];
-  assert.deepEqual(withPrefix.options, ["Alpha", "Beta"]);
+  assert.deepEqual(sortedOptions(withPrefix.options), ["Alpha", "Beta"]);
+  assert.equal(correctOption(withPrefix), "Beta");
   const withoutPrefix = normaliseQuiz({ quiz: [{ question: "x", options: ["Alpha", "Beta"], correct_answer: "B" }] })[0];
-  assert.deepEqual(withoutPrefix.options, ["Alpha", "Beta"]);
-  assert.equal(withPrefix.correctIndex, withoutPrefix.correctIndex);
+  assert.deepEqual(sortedOptions(withoutPrefix.options), ["Alpha", "Beta"]);
+  assert.equal(correctOption(withoutPrefix), "Beta");
 });
 
-// --- resolveCorrectIndex ----------------------------------------------------
+// --- option order -----------------------------------------------------------
 
 const FOUR = ["Alpha", "Beta", "Gamma", "Delta"];
+
+test("the correct answer is not always the first option", () => {
+  const raw = { quiz: [{ question: "x", options: FOUR, correct_answer: "A" }] };
+  const positions = new Set<number>();
+  for (let i = 0; i < 200; i += 1) {
+    const q = normaliseQuiz(raw)[0];
+    assert.equal(correctOption(q), "Alpha", "the shuffle must carry the index with the option");
+    assert.deepEqual(sortedOptions(q.options), [...FOUR].sort(), "no option may be lost or added");
+    positions.add(q.correctIndex);
+  }
+  assert.deepEqual([...positions].sort(), [0, 1, 2, 3], "all four positions must occur");
+});
+
+test("the shuffle is reproducible with an injected rng", () => {
+  // A fixed stream of rng values pins the permutation, so the test is exact.
+  const raw = { quiz: [{ question: "x", options: FOUR, correct_answer: "C" }] };
+  const first = normaliseQuiz(raw, () => 0)[0];
+  const second = normaliseQuiz(raw, () => 0)[0];
+  assert.deepEqual(first, second);
+  assert.equal(correctOption(first), "Gamma");
+});
+
+test("a single-option question is left untouched", () => {
+  const q = normaliseQuiz({ quiz: [{ question: "x", options: ["nur eine"], correct_answer: "A" }] })[0];
+  assert.deepEqual(q.options, ["nur eine"]);
+  assert.equal(q.correctIndex, 0);
+});
 
 test("resolveCorrectIndex reads a letter", () => {
   assert.equal(resolveCorrectIndex("B", FOUR), 1);

@@ -15,7 +15,7 @@
 import { callLLM } from "../../llm";
 import { extractJson } from "./extract";
 import { buildPrompt, OUTPUT_CONTRACT, type ArtifactKind, type PromptSpec } from "./prompts";
-import { normaliseQuiz, validateQuiz, type QuizQuestion } from "../contracts/quiz";
+import { normaliseQuiz, validateQuiz, questionKey, type QuizQuestion } from "../contracts/quiz";
 import { normaliseFlashcards, validateFlashcards, type Flashcard } from "../contracts/flashcards";
 import { normaliseAnalysis, validateAnalysis, type AnalysisData } from "../contracts/analysis";
 import { normaliseText, validateText, type TextArtifact } from "../contracts/text";
@@ -51,6 +51,36 @@ interface ContractSpec<T> {
   structured: boolean;
   normalise: (raw: unknown) => T;
   validate: (value: unknown) => ValidationResult<T>;
+}
+
+/**
+ * Keeps the first `target` questions that are new: a question whose text already
+ * appeared in `previous` (the set the user just solved) or earlier in this batch
+ * is dropped. The prompt asks for a surplus, so the trim usually still yields
+ * `target` questions. If too few remain, the dropped ones top the list up — a
+ * short quiz is worse than a repeated question.
+ */
+export function selectQuestions(questions: QuizQuestion[], target: number, previous: string[]): QuizQuestion[] {
+  const seen = new Set(previous.map(questionKey).filter(Boolean));
+  const kept: QuizQuestion[] = [];
+  const rest: QuizQuestion[] = [];
+
+  for (const question of questions) {
+    const key = questionKey(question.text);
+    if (!key || seen.has(key)) {
+      rest.push(question);
+      continue;
+    }
+    seen.add(key);
+    kept.push(question);
+  }
+
+  for (const question of rest) {
+    if (kept.length >= target) break;
+    kept.push(question);
+  }
+
+  return kept.slice(0, target);
 }
 
 const CONTRACTS: {
@@ -106,6 +136,13 @@ export async function generateArtifact<T = unknown>(
   const spec: PromptSpec = buildPrompt(kind, input);
   const contract = CONTRACTS[kind] as unknown as ContractSpec<T>;
   const callModel = deps.callModel ?? defaultDeps.callModel;
+  const previous = Array.isArray(input.previous) ? input.previous.map(String).filter(Boolean) : [];
+
+  /** A quiz answer is trimmed to its target length and freed of repeats. */
+  const finalise = (value: T): T => {
+    if (kind !== "quiz" || !spec.targetCount) return value;
+    return selectQuestions(value as unknown as QuizQuestion[], spec.targetCount, previous) as unknown as T;
+  };
 
   const call = (prompt: string): Promise<string> =>
     callModel({
@@ -124,7 +161,7 @@ export async function generateArtifact<T = unknown>(
   }
 
   const first = toContract(contract, firstRaw);
-  if (first.ok) return { ok: true, value: first.value, repaired: false };
+  if (first.ok) return { ok: true, value: finalise(first.value), repaired: false };
 
   // One repair retry with the validation error.
   const repairPrompt = `${spec.prompt}\n\nDeine letzte Antwort war ungültig: ${first.error}\nAntworte erneut und halte den Ausgabe-Vertrag exakt ein:\n${OUTPUT_CONTRACT[kind]}`;
@@ -136,7 +173,7 @@ export async function generateArtifact<T = unknown>(
   }
 
   const second = toContract(contract, secondRaw);
-  if (second.ok) return { ok: true, value: second.value, repaired: true };
+  if (second.ok) return { ok: true, value: finalise(second.value), repaired: true };
 
   return {
     ok: false,

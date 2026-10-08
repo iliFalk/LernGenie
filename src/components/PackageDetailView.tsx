@@ -24,6 +24,8 @@ import Markdown from "react-markdown";
 
 interface PackageDetailViewProps {
   pkg: StudyPackage;
+  questionCount: number;
+  onQuestionCountChange: (count: number) => void;
   onBack: () => void;
   onStartQuiz: (pkg: StudyPackage, regenerate?: boolean) => void;
   onShowFlashcards: () => void;
@@ -31,8 +33,13 @@ interface PackageDetailViewProps {
   onViewResultDetails: (result: QuizResult) => void;
 }
 
+/** Preset lengths offered next to the quiz buttons. The server clamps onto 5-50. */
+const QUESTION_PRESETS = [10, 15, 20, 30, 50];
+
 export default function PackageDetailView({ 
   pkg, 
+  questionCount,
+  onQuestionCountChange,
   onBack, 
   onStartQuiz, 
   onShowFlashcards, 
@@ -172,9 +179,32 @@ export default function PackageDetailView({
                 onClick={() => onStartQuiz(pkg, true)}
                 className="cds--btn cds--btn--secondary w-full justify-between"
               >
-                <span>Neue Fragen generieren</span>
+                <span>{questionCount} neue Fragen generieren</span>
                 <Idea size={18} />
               </button>
+
+              <div className="pt-2">
+                <label className="cds--label">Anzahl Fragen</label>
+                <div className="grid grid-cols-5 gap-1">
+                  {QUESTION_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => onQuestionCountChange(preset)}
+                      className={`h-9 text-xs font-mono border transition-colors ${
+                        questionCount === preset
+                          ? "bg-[#0f62fe] text-white border-[#0f62fe] font-bold"
+                          : "bg-[var(--cds-layer-02)] text-[var(--cds-text-primary)] border-[var(--cds-border-subtle-01)] hover:bg-[var(--cds-layer-01)]"
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-[var(--cds-text-helper)] mt-1.5 leading-tight">
+                  Gilt für neue Fragen. "Quiz starten (gespeichert)" liefert nur ein Quiz dieser Länge.
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--cds-border-subtle-01)]">

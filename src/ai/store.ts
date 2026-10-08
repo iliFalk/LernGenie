@@ -54,17 +54,23 @@ function validate(kind: CacheKind, value: unknown): ValidationResult<unknown> {
   }
 }
 
-export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: "quiz"): QuizQuestion[] | null;
-export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: "flashcards"): Flashcard[] | null;
-export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: "study-guide"): TextArtifact | null;
-export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: CacheKind): unknown {
+export interface CacheReadOptions {
+  /** Serve a row whose `schema_version` is older than the code. Used only to read the
+   * previous question set, so a regeneration can exclude questions already asked. */
+  ignoreVersion?: boolean;
+}
+
+export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: "quiz", options?: CacheReadOptions): QuizQuestion[] | null;
+export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: "flashcards", options?: CacheReadOptions): Flashcard[] | null;
+export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: "study-guide", options?: CacheReadOptions): TextArtifact | null;
+export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: CacheKind, options: CacheReadOptions = {}): unknown {
   const spec = COLUMNS[kind];
   const row = db
     .prepare(`SELECT ${spec.column} AS data, ${spec.versionColumn} AS version FROM package_cache WHERE package_id = ?`)
     .get(packageId) as { data?: string | null; version?: number | null } | undefined;
 
   if (!row || !row.data) return null;
-  if (row.version !== spec.version) return null;
+  if (!options.ignoreVersion && row.version !== spec.version) return null;
 
   let parsed: unknown;
   try {

@@ -8,7 +8,7 @@ import { callLLM } from "./llm";
 import { generateArtifact } from "./src/ai/gateway";
 import { subjectClassificationPrompt } from "./src/ai/prompts";
 import { ensureCacheSchema, readCachedArtifact, writeCachedArtifact } from "./src/ai/store";
-import type { QuizQuestion } from "./src/contracts/quiz";
+import { clampQuestionCount, type QuizQuestion } from "./src/contracts/quiz";
 import type { TextArtifact } from "./src/contracts/text";
 
 // Load environment variables
@@ -218,8 +218,8 @@ async function startServer() {
 
   app.post("/api/ai/quiz", async (req, res) => {
     try {
-      const { content, grade, count } = req.body;
-      const result = await generateArtifact<QuizQuestion[]>("quiz", { content, grade, count }, getAIConfig(req));
+      const { content, grade, count, previous } = req.body;
+      const result = await generateArtifact<QuizQuestion[]>("quiz", { content, grade, count, previous }, getAIConfig(req));
       if (!result.ok) return aiFailure(res, result);
       res.json(result.value);
     } catch (error: any) {
@@ -326,20 +326,28 @@ async function startServer() {
       if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert", code: "FORBIDDEN" });
 
       const regenerate = req.query.regenerate === "true";
+      const count = clampQuestionCount(Number(req.query.count));
       if (!regenerate) {
         // A cached row with an older schema_version is not served: it is regenerated.
+        // A cached quiz of another length is not served either — the user asked for
+        // a different number of questions.
         const cached = readCachedArtifact(db, req.params.id, "quiz");
-        if (cached) return res.json(cached);
+        if (cached && cached.length === count) return res.json(cached);
       }
 
-      // Generate since not cached (or a stale version) or force regenerate
+      // Generate since not cached (or a stale version, another length) or force regenerate.
       const materials = db.prepare("SELECT content_text FROM materials WHERE package_id = ?").all(req.params.id) as { content_text: string }[];
       const content = materials.map(m => m.content_text).join("\n\n");
       if (!content.trim()) {
         return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien.", code: "NO_MATERIALS" });
       }
 
-      const result = await generateArtifact<QuizQuestion[]>("quiz", { content, grade: pkg.grade || 10, count: 10 }, getAIConfig(req));
+      // The questions the user already saw are handed to the prompt, so a second
+      // round cannot repeat them. Read regardless of the stored schema_version.
+      const previousSet = readCachedArtifact(db, req.params.id, "quiz", { ignoreVersion: true }) || [];
+      const previous = previousSet.map((question) => question.text);
+
+      const result = await generateArtifact<QuizQuestion[]>("quiz", { content, grade: pkg.grade || 10, count, previous }, getAIConfig(req));
       if (!result.ok) return aiFailure(res, result);
 
       writeCachedArtifact(db, req.params.id, "quiz", result.value);

@@ -17,7 +17,7 @@ Erstellt Quizfragen, Karteikarten und Lernleitfäden aus eigenen Lernmaterialien
 |---|---|
 | Bibliothek | Lernpakete anlegen, öffnen und löschen. Ein Paket hat Klasse, Fach und Name. |
 | Upload | Material als Foto oder als Text hinzufügen. Fotos liest das Vision-Modell (OCR). |
-| Quiz | Fragen aus dem Material erzeugen. Du wählst Anzahl und Klassenstufe. |
+| Quiz | Fragen aus dem Material erzeugen. Klasse und Anzahl sind wählbar (5 bis 50, Voreinstellung 10). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge zur gewählten Anzahl passt. |
 | Karteikarten | Karteikarten zum selben Material. Der Server speichert sie im Cache. |
 | Lernleitfaden | Kurze Zusammenfassung je Paket. Ein Flash-Modell schreibt sie. |
 | Auswertung | Ergebnis-Historie, Fehleranalyse und Statistik nach Thema und Fach. |
@@ -56,7 +56,7 @@ llm.ts                Provider-Schicht für Gemini und OpenRouter
 | `POST /api/ai/topic` | Das Thema zu Material bestimmen |
 | `GET/POST/DELETE /api/packages[/:id]` | Lernpakete lesen, anlegen und löschen |
 | `GET/POST /api/materials` | Materialien zu einem Paket lesen und anlegen |
-| `GET /api/packages/:id/{quiz,flashcards,study-guide}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie) |
+| `GET /api/packages/:id/{quiz,flashcards,study-guide}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 50). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. |
 | `GET/POST /api/results[/:packageId]` | Ergebnisse lesen und schreiben |
 
 Der Nutzerkontext kommt über den Header `x-user-id`. In Telegram liefert die Mini-App die
@@ -133,7 +133,19 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   einem 200 mit falscher Form.
 - `package_cache` trägt je Artefakt eine `schema_version` (`quiz_version`, `flashcards_version`,
   `study_guide_version`). Eine Zeile mit älterer Version gilt als leer und wird neu erzeugt.
-  Das repariert alte Pakete beim Lesen.
+  Das repariert alte Pakete beim Lesen. `quiz_version` ist 2 (2026-10-08) — die Option-Reihenfolge
+  kommt seither gemischt aus dem Server, deshalb gilt jede Zeile mit Version 1 als leer.
+- Die richtige Antwort landet nicht mehr fest vorn. Das Modell schrieb sie in jeder gemessenen
+  Frage an die erste Stelle (10 von 10 Fragen, drei Pakete). `normaliseQuiz` mischt die Optionen
+  jetzt und zieht `correctIndex` mit. Der Prompt verlangt zusätzlich, dass Hinweis und Erklärung
+  eine Option über ihren Inhalt benennen, nie über ihre Position.
+- Ein erneutes Erzeugen wiederholt die Fragen nicht. Die Route liest die bisherigen Fragen aus dem
+  Cache und gibt ihre Texte als Ausschlussliste in den Prompt. Der Prompt fordert zugleich einen
+  Überschuss an (Ziel plus mindestens 3). `selectQuestions` behält dann die ersten neuen Fragen
+  und wirft eine Frage weg, deren Text schon gestellt wurde oder im selben Lauf doppelt vorkommt.
+  Ein Modellaufruf bleibt es. Reicht die Anzahl danach nicht, füllt der Rest auf: ein kurzes Quiz
+  ist besser als eine wiederholte Frage. Der Text-Vergleich sieht nur die Schreibweise
+  (`questionKey`); ein inhaltlich gleiches, umformuliertes Frage-Paar erkennt er nicht.
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
 - Die App läuft im Heimnetz über einfaches HTTP. Das ist **kein** sicherer Kontext. Die Browser-APIs

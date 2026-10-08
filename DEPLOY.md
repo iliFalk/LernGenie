@@ -119,6 +119,32 @@ curl -s -X POST $B/api/ai/quiz -H 'Content-Type: application/json' -H 'x-user-id
 ssh falknest 'ss -tlnp | grep 3001'                                # nur 192.168.178.100
 ```
 
+## Änderung (2026-10-08): Quiz-Länge, Antwort-Position, Wiederholungen
+
+Drei Beschwerden aus dem Betrieb waren die Ursache:
+
+1. **Immer dieselben Fragen nach dem Neu-Erzeugen.** Der Prompt war identisch und kannte die
+   vorherigen Fragen nicht. Gemessen: zwei Läufe hintereinander ergaben 3 von 10 Fragetexten
+   wortgleich, die übrigen prüften dieselben zehn Fakten.
+2. **Die richtige Antwort stand immer an erster Stelle.** Gemessen über drei Pakete: `correctIndex`
+   war `[0,0,0,0,0,0,0,0,0,0]`.
+3. **Die Anzahl war nicht einstellbar.** `server.ts` gab `count: 10` fest vor; es gab kein Feld im UI.
+
+Der Umbau: `?count=N` an `GET /api/packages/:id/quiz` (Grenzen 5 bis 50, `clampQuestionCount`),
+Ausschlussliste der bisherigen Fragen im Prompt, Überschuss-Anforderung plus Trimmen in
+`selectQuestions`, Mischen der Optionen in `normaliseQuiz`, `quiz_version` 1 → 2, Anzahl-Wähler
+(10/15/20/30/50) in `PackageDetailView`.
+
+Prüfung nach dem Deploy am 2026-10-08:
+
+| Prüfung | Ergebnis |
+|---|---|
+| `npm test` (75 Tests) | pass |
+| `npx tsc --noEmit`, `npm run build` | sauber |
+| `GET /api/packages/:id/quiz?count=20` | 20 Fragen |
+| `correctIndex` über 3 Pakete | nicht mehr konstant 0 |
+| Zwei Läufe `?regenerate=true` | kein wortgleicher Fragetext doppelt |
+
 ## Rollback
 
 ```bash

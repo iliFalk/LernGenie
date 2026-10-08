@@ -23,7 +23,49 @@ export interface QuizQuestion {
   topic: string;
 }
 
-export const QUIZ_SCHEMA_VERSION = 1;
+export const QUIZ_SCHEMA_VERSION = 2;
+
+/** Bounds for a quiz length. The server clamps every request onto this range. */
+export const MIN_QUESTIONS = 5;
+export const MAX_QUESTIONS = 50;
+export const DEFAULT_QUESTIONS = 10;
+
+export function clampQuestionCount(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_QUESTIONS;
+  return Math.min(MAX_QUESTIONS, Math.max(MIN_QUESTIONS, Math.round(value)));
+}
+
+/** Text used to compare two questions: case, punctuation and spacing are dropped. */
+export function questionKey(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Shuffles the options of one question and moves `correctIndex` with them.
+ *
+ * The model puts the correct option first far too often (measured on the live
+ * deployment: 10 of 10 questions, across three packages). The order is therefore
+ * randomised here and the index is re-derived from the permutation, so the
+ * answer can never sit in a fixed position.
+ */
+export function shuffleOptions(question: QuizQuestion, rng: () => number = Math.random): QuizQuestion {
+  const { options, correctIndex } = question;
+  if (correctIndex < 0 || correctIndex >= options.length || options.length < 2) return question;
+  const order = options.map((_, index) => index);
+  for (let i = order.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return {
+    ...question,
+    options: order.map((index) => options[index]),
+    correctIndex: order.indexOf(correctIndex),
+  };
+}
 
 const OPTION_PREFIX = /^\s*[A-Ha-h]\s*[).:\-]\s*/;
 
@@ -78,7 +120,11 @@ export function resolveCorrectIndex(value: unknown, options: string[]): number {
   return -1;
 }
 
-export function normaliseQuiz(raw: unknown): QuizQuestion[] {
+/**
+ * Maps any model key style onto the contract and randomises the option order.
+ * `rng` is injectable so a test can pin the permutation.
+ */
+export function normaliseQuiz(raw: unknown, rng: () => number = Math.random): QuizQuestion[] {
   const list = Array.isArray(raw) ? raw : pickKey(raw, ["quiz", "questions", "fragen", "items", "mcq"]);
   if (!Array.isArray(list)) return [];
   return list.map((entry, position) => {
@@ -100,17 +146,20 @@ export function normaliseQuiz(raw: unknown): QuizQuestion[] {
       "loesungindex",
       "loesungsindex",
     ]);
-    return {
-      id: asText(pickKey(entry, ["id", "uuid"])) || `q${position + 1}`,
-      text: asText(pickKey(entry, ["question", "text", "frage", "title", "prompt"])),
-      options,
-      correctIndex: resolveCorrectIndex(rawCorrect, options),
-      hint: asText(pickKey(entry, ["hint", "hinweis", "tip", "tipp"])),
-      explanation: asText(
-        pickKey(entry, ["explanation", "explanationtext", "erklaerung", "why", "reason", "begruendung"]),
-      ),
-      topic: asText(pickKey(entry, ["topic", "thema", "subject", "fach"])),
-    };
+    return shuffleOptions(
+      {
+        id: asText(pickKey(entry, ["id", "uuid"])) || `q${position + 1}`,
+        text: asText(pickKey(entry, ["question", "text", "frage", "title", "prompt"])),
+        options,
+        correctIndex: resolveCorrectIndex(rawCorrect, options),
+        hint: asText(pickKey(entry, ["hint", "hinweis", "tip", "tipp"])),
+        explanation: asText(
+          pickKey(entry, ["explanation", "explanationtext", "erklaerung", "why", "reason", "begruendung"]),
+        ),
+        topic: asText(pickKey(entry, ["topic", "thema", "subject", "fach"])),
+      },
+      rng,
+    );
   });
 }
 
