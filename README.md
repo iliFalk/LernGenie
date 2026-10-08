@@ -158,7 +158,7 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   auf die übrigen Module, statt Tiefe zu erfinden.
 - Jede Option trägt ihre eigene Begründung (`rationale`), und das Modell setzt `isCorrect` selbst.
   Das ist die Grundlage der Qualitätsprüfung: eine Option ohne Begründung ist eine Fülloption.
-- `src/ai/quizCheck.ts` prüft jedes Quiz mechanisch — gleiche Optionenlänge (unter 35 % Abweichung),
+- `src/ai/quizCheck.ts` prüft jedes Quiz mechanisch und trennt harte von weichen Befunden — gleiche Optionenlänge (unter 35 % Abweichung),
   keine Option, die länger ist als jede falsche, keine Verneinungsoptionen, keine Dubletten, keine
   Option, die im Material nicht vorkommt, Begründung je Option, ein Stamm ohne zweite Frage, und
   über das Set: mindestens drei Aufgabentypen, höchstens 40 % reine Abfragen. Beanstandete Fragen
@@ -172,7 +172,7 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   und die Route antwortete `AI_INVALID`. Nur bei `openrouter` gilt ohne Wert weiter 8192 (siehe
   Umgebungstabelle).
 - Die Schätzdauer im Ladeoverlay (`src/components/LoadingOverlay.tsx`) ist eine Formel, keine
-  Messung pro Anfrage: für das Quiz `160 s + 18 s je Frage` (zehn Fragen dauerten gemessen 337 s inklusive Qualitätsprüfung), sonst ein fester Wert je Artefakt
+  Messung pro Anfrage: für das Quiz `160 s + 6 s je Frage` (zehn Fragen dauern gemessen 128–158 s; die Qualitätsprüfung schlägt nur bei einem harten Befund mit 120–180 s dazu), sonst ein fester Wert je Artefakt
   (Karteikarten 45 s, Lernleitfaden 80 s, KI-Synthese 100 s, Auswertung 45 s, Speichern 3 s).
   Grundlage sind die Messungen oben (10 Fragen 116 s, 25 Fragen 162 s, kleines Material mit
   2 Fragen 10 s; Karteikarten 27–30 s, Lernleitfaden 61 s, KI-Synthese 83 s). Der Grundaufwand

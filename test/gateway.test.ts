@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { generateArtifact, type ModelCallParams } from "../src/ai/gateway";
+import type { QuizCheckResult } from "../src/ai/quizCheck";
 import type { QuizQuestion } from "../src/contracts/quiz";
 import type { TextArtifact } from "../src/contracts/text";
 import type { Flashcard } from "../src/contracts/flashcards";
@@ -17,14 +18,14 @@ const goodQuiz = JSON.stringify({
 const makeStub = (responses: string[]): {
   callModel: (p: ModelCallParams) => Promise<string>;
   calls: () => number;
-  check: () => { items: Record<number, string[]>; global: string[]; flagged: number };
+  check: (quiz: QuizQuestion[], options: { source: string }) => QuizCheckResult;
 } => {
   let count = 0;
   return {
     calls: () => count,
     // The quality pass is stubbed out here: these tests count model calls, and the
     // mechanical checks have their own test file.
-    check: () => ({ items: {}, global: [], flagged: 0 }),
+    check: () => ({ items: {}, hardItems: {}, global: [], flagged: 0, soft: 0 }),
     callModel: async () => {
       const value = responses[Math.min(count, responses.length - 1)];
       count += 1;
@@ -243,4 +244,24 @@ test("the findings name the question and the reason", async () => {
   assert.match(repairPrompt, /BEANSTANDETE FRAGEN/);
   assert.match(repairPrompt, /Frage 1/);
   assert.match(repairPrompt, /Verneinung/);
+});
+
+test("soft findings do not pay for a repair call", async () => {
+  const stub = makeStub([goodQuiz]);
+  let calls = 0;
+  const result = await generateArtifact<QuizQuestion[]>(
+    "quiz",
+    { content: "Zellen", grade: 5, count: 5 },
+    config,
+    {
+      callModel: async (params) => {
+        calls += 1;
+        return stub.callModel(params);
+      },
+      check: () => ({ items: { 1: ["Optionslängen streuen um 40 %"] }, hardItems: {}, global: [], flagged: 0, soft: 1 }),
+    },
+  );
+  assert.equal(result.ok, true);
+  assert.equal(calls, 1);
+  if (result.ok) assert.equal(result.value.length, 1);
 });

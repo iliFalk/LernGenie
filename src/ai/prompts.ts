@@ -96,10 +96,12 @@ REGELN:
    vorkommt, ist verboten.
 6. Die richtige Option ist nicht länger als jede falsche. Die richtige Antwort steht nicht gehäuft
    an derselben Position.
-7. Jede Option trägt ihre eigene Begründung: "rationale" nennt die Regel (Oberbegriff, Satz vom
-   Widerspruch, hinreichende Bedingung, notwendige Bedingung), nicht nur eine Behauptung.
-8. hint lenkt auf die logische Struktur und verrät die Lösung nicht. explanation sagt, warum die
-   richtige Option zwingend stimmt. topic ist ein Stichwort aus dem Material.
+7. Jede Option trägt ihre eigene Begründung: "rationale" nennt in HÖCHSTENS 15 Wörtern die Regel
+   (Oberbegriff, Satz vom Widerspruch, hinreichende Bedingung, notwendige Bedingung) — keine
+   Behauptung, kein Satz aus dem Material.
+8. hint lenkt in höchstens 12 Wörtern auf die logische Struktur und verrät die Lösung nicht.
+   explanation sagt in höchstens 25 Wörtern, warum die richtige Option zwingend stimmt. topic ist
+   ein Stichwort aus dem Material.
 ${previousBlock(previous)}
 Ausgabe-Vertrag — halte ihn exakt ein:
 ${OUTPUT_CONTRACT.quiz}
@@ -126,8 +128,8 @@ bleiben wörtlich unverändert und in derselben Reihenfolge. Die Regeln des Ursp
 genau vier Optionen, grammatisch parallel, ähnliche Länge (unter 30 % Abweichung), keine Option
 beginnt mit "ohne", "nicht", "kein" oder "niemals", jede falsche Option stammt aus derselben
 Textstelle und unterscheidet sich in EINEM Merkmal, keine Option, die im Material nicht vorkommt,
-die richtige Option ist nicht länger als jede falsche, jede Option trägt ihre eigene rationale.
-Typ und topic der ersetzten Frage bleiben erhalten.
+die richtige Option ist nicht länger als jede falsche, jede Option trägt ihre eigene rationale in
+höchstens 15 Wörtern. Typ und topic der ersetzten Frage bleiben erhalten.
 
 QUIZ (JSON):
 ${JSON.stringify(quiz)}

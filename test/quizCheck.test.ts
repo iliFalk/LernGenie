@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { checkQuiz, formatQuizFlags } from "../src/ai/quizCheck";
+import { checkQuiz, formatQuizFlags, summariseQuizFlags } from "../src/ai/quizCheck";
 import type { QuizQuestion } from "../src/contracts/quiz";
 
 const MATERIAL =
@@ -81,10 +81,31 @@ test("a mixed quiz passes the set level", () => {
 });
 
 test("the repair prompt lists question number, text and reason", () => {
-  const quiz = [question({ options: ["kurz", "ein sehr viel laengerer Text mit Zusatz", "mittel", "ok"] })];
+  const quiz = [question({ options: ["nicht in den Chloroplasten", "in den Thylakoiden", "im Calvin-Zyklus", "im Chlorophyll"] })];
   const flags = checkQuiz(quiz, context);
   const text = formatQuizFlags(quiz, flags);
   assert.match(text, /Frage 1/);
   assert.match(text, /Wo laeuft die Photosynthese ab\?/);
-  assert.match(text, /streuen/);
+  assert.match(text, /Verneinung/);
+});
+
+test("only hard findings count as flagged, soft ones are counted apart", () => {
+  const softOnly = [question({ options: ["in den Chloroplasten", "in den Thylakoiden", "im Calvin-Zyklus", "im Chlorophyll und im Stroma der Pflanzenzelle"] })];
+  const soft = checkQuiz(softOnly, context);
+  assert.equal(soft.flagged, 0);
+  assert.equal(soft.soft, 1);
+  assert.ok(soft.items[1].length > 0, "der weiche Befund bleibt im Bericht");
+  assert.deepEqual(soft.hardItems, {});
+  assert.equal(formatQuizFlags(softOnly, soft), "", "weiche Befunde gehen nicht in die Reparatur");
+
+  const hard = [question({ options: ["nicht in den Chloroplasten", "in den Thylakoiden", "im Calvin-Zyklus", "im Chlorophyll"] })];
+  const found = checkQuiz(hard, context);
+  assert.equal(found.flagged, 1);
+  assert.ok(found.hardItems[1].length > 0);
+});
+
+test("the log line names the hard and the soft findings", () => {
+  const quiz = [question({ options: ["nicht in den Chloroplasten", "in den Thylakoiden", "im Calvin-Zyklus", "im Chlorophyll"] })];
+  const text = summariseQuizFlags(checkQuiz(quiz, context));
+  assert.match(text, /1 harte Beanstandung/);
 });

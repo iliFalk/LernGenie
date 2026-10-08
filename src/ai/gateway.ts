@@ -15,7 +15,7 @@
 import { callLLM } from "../../llm";
 import { extractJson } from "./extract";
 import { buildPrompt, OUTPUT_CONTRACT, quizRepairPrompt, type ArtifactKind, type PromptSpec } from "./prompts";
-import { checkQuiz, formatQuizFlags, type QuizCheckResult } from "./quizCheck";
+import { checkQuiz, formatQuizFlags, summariseQuizFlags, type QuizCheckResult } from "./quizCheck";
 import { normaliseQuiz, validateQuiz, questionKey, type QuizQuestion } from "../contracts/quiz";
 import { normaliseFlashcards, validateFlashcards, type Flashcard } from "../contracts/flashcards";
 import { normaliseAnalysis, validateAnalysis, type AnalysisData } from "../contracts/analysis";
@@ -168,13 +168,15 @@ export async function generateArtifact<T = unknown>(
     const source = String(input.content ?? "");
     const before = qualityCheck(value as unknown as QuizQuestion[], { source });
     const total = (value as unknown as QuizQuestion[]).length;
-    if (before.flagged === 0 && before.global.length === 0) {
+    if (before.items && Object.keys(before.items).length === 0 && before.global.length === 0) {
       console.log(`[quiz] Qualitätsprüfung: ${total} Fragen, keine Beanstandungen`);
       return { value, repaired: false, flags: [] };
     }
-    console.log(
-      `[quiz] Qualitätsprüfung: ${before.flagged}/${total} Fragen beanstandet, ${before.global.length} Befund(e) zum Set`,
-    );
+    console.log(`[quiz] Qualitätsprüfung: ${total} Fragen · ${summariseQuizFlags(before)}`);
+
+    // Only a hard finding pays for the second call: a repair costs 120-180 s and the
+    // soft findings are style, not a broken exercise.
+    if (before.flagged === 0) return { value, repaired: false, flags: before.items ? Object.values(before.items).flat().map(String) : [] };
 
     const flags = formatQuizFlags(value as unknown as QuizQuestion[], before);
     const prompt = quizRepairPrompt(value, flags, source, Number(input.grade) || 0);
@@ -189,10 +191,13 @@ export async function generateArtifact<T = unknown>(
 
     const repairedValue = finalise(candidate.value);
     const after = qualityCheck(repairedValue as unknown as QuizQuestion[], { source });
-    const better =
-      after.flagged + after.global.length < before.flagged + before.global.length;
+    const better = after.flagged < before.flagged;
+    console.log(
+      `[quiz] Reparatur: ${before.flagged} harte Beanstandung(en) → ${after.flagged}` +
+        (better ? " (übernommen)" : " (Ausgangsfassung behalten)"),
+    );
     return better
-      ? { value: repairedValue, repaired: true, flags: [...formatQuizFlags(repairedValue as unknown as QuizQuestion[], after).split("\n")] }
+      ? { value: repairedValue, repaired: true, flags: Object.values(after.items ?? {}).flat().map(String) }
       : { value, repaired: false, flags: flags.split("\n") };
   };
 

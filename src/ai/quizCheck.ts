@@ -7,6 +7,13 @@
  * characters) and the correct option was up to 93 characters longer than the
  * longest distractor, so the answer was readable from its length alone.
  *
+ * A finding is **hard** or **soft**, and only hard findings pay for a repair call.
+ * Hard means the exercise is broken or misleading: a missing answer, an invented
+ * option, a negation, a duplicate, a compound stem. Soft means the style drifted:
+ * uneven lengths, a long correct option, a thin justification, an unbalanced set.
+ * Repairing the soft ones costs another full model call (~120-180 s measured) for a
+ * cosmetic gain, so they are logged instead.
+ *
  * These checks are pure functions over the normalised quiz, so the gateway can run
  * them before and after a repair pass and a test can pin each finding.
  */
@@ -20,12 +27,16 @@ const NEGATION_OPENING = /^\s*(ohne|nicht|kein|keine|keinen|keiner|niemals|nie|w
 const words = (text: string): string[] => (text.match(/[\wÄÖÜäöüß]+/g) ?? []).filter((word) => word.length >= 6);
 
 export interface QuizCheckResult {
-  /** Findings per question number (1-based). Empty means the question passed. */
+  /** All findings per question number (1-based). Empty means the question passed. */
   items: Record<number, string[]>;
-  /** Findings about the set as a whole. */
+  /** Findings that justify a repair call, per question number. */
+  hardItems: Record<number, string[]>;
+  /** Findings about the set as a whole; all of them are soft. */
   global: string[];
-  /** Number of questions with at least one finding. */
+  /** Number of questions with at least one hard finding. Only these are repaired. */
   flagged: number;
+  /** Number of questions with soft findings only. They are logged, not repaired. */
+  soft: number;
 }
 
 export interface QuizCheckOptions {
@@ -45,10 +56,8 @@ const isRecall = (type: string): boolean => /wiedergeb/i.test(type);
 const recallStem = /^(was|wo|wer|wann|wie viele)\b/i;
 
 /**
- * Finds the questions the prompt's own rules should have prevented: uneven option
- * lengths, a correct option that is the longest by far, negation options,
- * duplicates, options that do not exist in the material, a missing justification and
- * a compound stem.
+ * Finds the questions the prompt's own rules should have prevented. The findings are
+ * split by severity: hard (repair) and soft (log only).
  */
 export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): QuizCheckResult {
   const source = new Set(words(options.source).map((word) => word.toLowerCase()));
@@ -57,34 +66,23 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
   const expectRationales = options.expectRationales ?? true;
 
   const items: Record<number, string[]> = {};
+  const hardItems: Record<number, string[]> = {};
+  let softCount = 0;
 
   quiz.forEach((question, index) => {
     const number = index + 1;
-    const found: string[] = [];
+    const hard: string[] = [];
+    const soft: string[] = [];
     const { options: list, correctIndex, optionRationales } = question;
     const lengths = list.map((option) => option.length);
 
-    if (list.length !== 4) found.push("nicht genau vier Optionen");
-    if (correctIndex < 0 || correctIndex >= list.length) found.push("keine gültige richtige Antwort");
-    if (!question.type.trim()) found.push("kein Aufgabentyp (type)");
-    else if (recallStem.test(question.text.trim()) && !isRecall(question.type) && list.length > 0) {
-      found.push("Stamm klingt nach Abfragen, der Typ nennt eine Denkoperation");
-    }
-
-    if (lengths.length > 0 && Math.max(...lengths) > 0) {
-      const spread = (Math.max(...lengths) - Math.min(...lengths)) / Math.max(...lengths);
-      if (spread > 0.35) found.push(`Optionslängen streuen um ${Math.round(spread * 100)} %`);
-    }
-
-    if (correctIndex >= 0 && correctIndex < list.length) {
-      const others = lengths.filter((_, i) => i !== correctIndex);
-      if (others.length > 0 && Math.max(...others) > 0 && lengths[correctIndex] > Math.max(...others) * 1.25) {
-        found.push("richtige Option ist deutlich länger als jede falsche");
-      }
-    }
-
-    if (list.some((option) => NEGATION_OPENING.test(option))) found.push("Option beginnt mit einer Verneinung");
-    if (new Set(list.map((option) => questionKey(option))).size < list.length) found.push("doppelte Option");
+    // Hard: the exercise itself is broken or would teach the wrong thing.
+    if (list.length !== 4) hard.push("nicht genau vier Optionen");
+    if (correctIndex < 0 || correctIndex >= list.length) hard.push("keine gültige richtige Antwort");
+    if (!question.type.trim()) hard.push("kein Aufgabentyp (type)");
+    if (list.some((option) => NEGATION_OPENING.test(option))) hard.push("Option beginnt mit einer Verneinung");
+    if (new Set(list.map((option) => questionKey(option))).size < list.length) hard.push("doppelte Option");
+    if ((question.text.match(/\?/g) ?? []).length > 1) hard.push("Stamm enthält mehr als eine Frage");
 
     if (source.size > 0) {
       const foreign = list.findIndex((option, i) => {
@@ -92,17 +90,35 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
         const wordsInOption = words(option).map((word) => word.toLowerCase());
         return wordsInOption.length > 0 && !wordsInOption.some((word) => source.has(word));
       });
-      if (foreign !== -1) found.push(`Option ${foreign + 1} kommt im Material nicht vor`);
+      if (foreign !== -1) hard.push(`Option ${foreign + 1} kommt im Material nicht vor`);
+    }
+
+    // Soft: the style drifted, the exercise still works.
+    if (lengths.length > 0 && Math.max(...lengths) > 0) {
+      const spread = (Math.max(...lengths) - Math.min(...lengths)) / Math.max(...lengths);
+      if (spread > 0.35) soft.push(`Optionslängen streuen um ${Math.round(spread * 100)} %`);
+    }
+
+    if (correctIndex >= 0 && correctIndex < list.length) {
+      const others = lengths.filter((_, i) => i !== correctIndex);
+      if (others.length > 0 && Math.max(...others) > 0 && lengths[correctIndex] > Math.max(...others) * 1.25) {
+        soft.push("richtige Option ist deutlich länger als jede falsche");
+      }
+    }
+
+    if (recallStem.test(question.text.trim()) && question.type.trim() && !isRecall(question.type)) {
+      soft.push("Stamm klingt nach Abfragen, der Typ nennt eine Denkoperation");
     }
 
     if (expectRationales && optionRationales.length === list.length) {
       const missing = optionRationales.filter((text) => !text.trim()).length;
-      if (missing > 0) found.push(`${missing} Option(en) ohne Begründung`);
+      if (missing > 0) soft.push(`${missing} Option(en) ohne Begründung`);
     }
 
-    if ((question.text.match(/\?/g) ?? []).length > 1) found.push("Stamm enthält mehr als eine Frage");
-
+    const found = [...hard, ...soft];
     if (found.length > 0) items[number] = found;
+    if (hard.length > 0) hardItems[number] = hard;
+    else if (soft.length > 0) softCount += 1;
   });
 
   const global: string[] = [];
@@ -115,15 +131,31 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
     global.push(`${recall} von ${quiz.length} Fragen sind reines Abfragen`);
   }
 
-  return { items, global, flagged: Object.keys(items).length };
+  return { items, hardItems, global, flagged: Object.keys(hardItems).length, soft: softCount };
 }
 
-/** The same findings as readable lines, for the repair prompt. */
+/**
+ * The hard findings as readable lines, for the repair prompt. Soft findings stay out:
+ * a question is only rewritten when its exercise is broken, not when it is uneven.
+ */
 export function formatQuizFlags(quiz: QuizQuestion[], flags: QuizCheckResult): string {
-  const lines = Object.entries(flags.items).map(([number, reasons]) => {
+  const lines = Object.entries(flags.hardItems).map(([number, reasons]) => {
     const question = quiz[Number(number) - 1];
     return `- Frage ${number} ("${question ? question.text.slice(0, 70) : "?"}"): ${reasons.join("; ")}`;
   });
-  for (const reason of flags.global) lines.push(`- Gesamtset: ${reason}`);
   return lines.join("\n");
+}
+
+/** One line for the container log: what was found, how much of it is hard. */
+export function summariseQuizFlags(flags: QuizCheckResult): string {
+  const softOnly = Object.entries(flags.items)
+    .filter(([number]) => !flags.hardItems[Number(number)])
+    .map(([number, reasons]) => `Frage ${number}: ${reasons.join("; ")}`);
+  const parts = [
+    `${flags.flagged} harte Beanstandung(en)`,
+    `${flags.soft} weiche`,
+  ];
+  if (flags.global.length > 0) parts.push(`Set: ${flags.global.join("; ")}`);
+  if (softOnly.length > 0) parts.push(softOnly.join(" | ").slice(0, 200));
+  return parts.join(" · ");
 }

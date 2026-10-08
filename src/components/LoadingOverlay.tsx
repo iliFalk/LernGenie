@@ -7,12 +7,12 @@ import React, { useEffect, useState } from "react";
  * report — only an estimate. The bar therefore walks towards a cap and completes
  * when the answer arrives.
  *
- * Measured on the live deployment (2026-10-08, build 91460db): ten questions took
- * 337 s including the quality pass, which fired for 3 of 10 questions and roughly
- * doubles the wait. The estimate therefore runs a little high on purpose: the
- * display then reads "still working" instead of promising an end that has passed.
+ * Measured on the live deployment (2026-10-08, build 91460db): generating ten
+ * questions takes 128-158 s; the quality pass adds 120-180 s, but it runs only when a
+ * hard finding is present, so the estimate describes the common case. A run that
+ * repairs shows "still working" past the estimate.
  */
-export const quizEstimateMs = (count: number): number => (160 + count * 18) * 1000;
+export const quizEstimateMs = (count: number): number => (160 + count * 6) * 1000;
 
 /** Estimate for the performance analysis after a quiz (measured ~10-20 s, generous margin). */
 export const ANALYSIS_ESTIMATE_MS = 45_000;
