@@ -80,6 +80,8 @@ ${count} Multiple-Choice-Fragen, verteilt auf drei Module:
 
 REGELN
 - Nur Aussagen des Materials. Trägt es ein Modul nicht, verteile die Fragen um. Keine neue Prämisse.
+- Streuung: verschiedene Textstellen und verschiedene Aspekte. Höchstens ein Drittel der Fragen
+  darf ein Faktum abfragen (type WIEDERGEBEN).
 - Stamm: eine Frage, kein Lösungshinweis. Bei FEHLER und AUSSCHLUSS steht die Aussage im Stamm.
 - Genau 4 Optionen, grammatisch parallel, ähnliche Länge. Keine Option beginnt mit ohne/nicht/kein/niemals.
 - Jede falsche Option ist ein typischer Denkfehler aus derselben Textstelle, unterschieden in EINEM
