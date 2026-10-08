@@ -100,9 +100,11 @@ test("PascalCase keys normalise to the contract array", () => {
     "explanation",
     "hint",
     "id",
+    "optionRationales",
     "options",
     "text",
     "topic",
+    "type",
   ]);
   assert.equal(q.text, "Welches Organell enthält die Erbinformation?");
   assert.deepEqual(sortedOptions(q.options), ["Mitochondrium", "Ribosom", "Zellkern", "Zellmembran"]);
@@ -258,4 +260,73 @@ test("validateQuiz rejects an out-of-range correctIndex", () => {
 
 test("schema version is a positive integer", () => {
   assert.ok(Number.isInteger(QUIZ_SCHEMA_VERSION) && QUIZ_SCHEMA_VERSION >= 1);
+});
+
+// --- Optionen als Objekt, Begründungen je Option -----------------------------
+
+test("option objects carry the correctness flag and their own rationale", () => {
+  const raw = {
+    quiz: [{
+      type: "FEHLER",
+      question: "Welcher Fehler steckt in der Aussage?",
+      options: [
+        { text: "vorschnelle Verallgemeinerung", isCorrect: true, rationale: "die Aussage dehnt einen Einzelfall aus" },
+        { text: "Zirkel", isCorrect: false, rationale: "der Beweis laeuft nicht im Kreis" },
+        { text: "Widerspruch", isCorrect: false, rationale: "es liegt kein Gegensatz vor" },
+        { text: "falsche Analogie", isCorrect: false, rationale: "es wird nichts verglichen" },
+      ],
+      hint: "Pruefe, ob ein Einzelfall verallgemeinert wird.",
+      explanation: "Die Aussage dehnt einen Einzelfall aus.",
+      topic: "Denkfehler",
+    }],
+  };
+  const q = normaliseQuiz(raw, () => 0)[0];
+  assert.equal(q.type, "FEHLER");
+  assert.equal(q.options.length, 4);
+  assert.equal(q.optionRationales.length, 4);
+  // Die Reihenfolge ist gemischt, die Begruendung muss mit ihrer Option wandern.
+  assert.equal(q.optionRationales[q.correctIndex], "die Aussage dehnt einen Einzelfall aus");
+  assert.equal(q.options[q.correctIndex], "vorschnelle Verallgemeinerung");
+  assert.deepEqual(sortedOptions(q.options), [
+    "Widerspruch",
+    "Zirkel",
+    "falsche Analogie",
+    "vorschnelle Verallgemeinerung",
+  ]);
+});
+
+test("the correctness flag beats a wrong correct_answer text", () => {
+  const raw = {
+    quiz: [{
+      question: "x",
+      options: [
+        { text: "Zellkern", isCorrect: false, rationale: "falsch" },
+        { text: "Ribosom", isCorrect: true, rationale: "richtig" },
+      ],
+      correct_answer: "Zellkern",
+    }],
+  };
+  const q = normaliseQuiz(raw, () => 0)[0];
+  assert.equal(q.options[q.correctIndex], "Ribosom");
+});
+
+test("validateQuiz rejects rationales of the wrong length", () => {
+  const broken = [{
+    id: "q1",
+    text: "x",
+    options: ["a", "b"],
+    correctIndex: 0,
+    optionRationales: ["nur eine"],
+    hint: "",
+    explanation: "",
+    topic: "",
+    type: "WIEDERGEBEN",
+  }];
+  assert.equal(validateQuiz(broken).ok, false);
+});
+
+test("a hyphenated term keeps its leading letter", () => {
+  const q = normaliseQuiz({ quiz: [{ question: "x", options: ["A-Dur", "H-Moll", "C-Dur"], correct_answer: "B" }] })[0];
+  assert.deepEqual(sortedOptions(q.options), ["A-Dur", "C-Dur", "H-Moll"]);
+  assert.equal(correctOption(q), "H-Moll");
 });

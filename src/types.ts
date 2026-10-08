@@ -16,9 +16,13 @@ export interface Material {
 
 export interface Question {
   id: string;
+  /** Thinking operation of the question: WIEDERGEBEN, BEZIEHUNG, AUSSCHLUSS, FOLGERUNG, FEHLER … */
+  type?: string;
   text: string;
   options: string[];
   correctIndex: number;
+  /** One justification per option, aligned with `options`. */
+  optionRationales?: string[];
   hint: string;
   explanation: string;
   topic: string;

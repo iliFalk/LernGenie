@@ -9,30 +9,38 @@
  * badge itself (`QuizView.tsx`). A `correctIndex` outside the option range means
  * the answer could not be resolved; the validator rejects it, so a quiz that
  * scores every answer wrong can never reach the client.
+ *
+ * Since 2026-10-08 a question also carries its reasoning surface: `type` names the
+ * thinking operation (the module from the prompt) and `optionRationales` holds one
+ * justification per option. The option order is randomised, so the rationales are
+ * permuted with the options.
  */
 
-import { asStringArray, asText, pickKey, type ValidationResult } from "./util";
+import { asText, isRecord, pickKey, type ValidationResult } from "./util";
 
 export interface QuizQuestion {
   id: string;
+  /** Thinking operation: WIEDERGEBEN, BEZIEHUNG, AUSSCHLUSS, FOLGERUNG, GRUND/FOLGE, FEHLER … */
+  type: string;
   text: string;
   options: string[];
   correctIndex: number;
+  /** One justification per option, aligned with `options`. Empty strings are allowed. */
+  optionRationales: string[];
   hint: string;
   explanation: string;
   topic: string;
 }
 
-export const QUIZ_SCHEMA_VERSION = 2;
+export const QUIZ_SCHEMA_VERSION = 3;
 
 /** Bounds for a quiz length. The server clamps every request onto this range.
- *  The ceiling comes from the output budget, not from the subject: with
- *  `LLM_MAX_TOKENS=32768`, 25 questions need 19918 completion tokens
- *  (`finish_reason=stop`, ~120 s), most of it the model's reasoning. At 8192 the
- *  same request spent the whole budget on reasoning and returned no content at all
- *  (`finish_reason=length`), so the route answered AI_INVALID. */
+ *  The ceiling comes from the runtime, not from the subject: the reasoning prompt
+ *  costs 128-158 s and 21 000-27 000 output tokens for ten questions, and a repair
+ *  pass roughly repeats that. Fifteen questions stay inside `LLM_TIMEOUT_MS`
+ *  (600 s); twenty-five do not. */
 export const MIN_QUESTIONS = 5;
-export const MAX_QUESTIONS = 25;
+export const MAX_QUESTIONS = 15;
 export const DEFAULT_QUESTIONS = 10;
 
 export function clampQuestionCount(value: number): number {
@@ -49,35 +57,51 @@ export function questionKey(text: string): string {
     .trim();
 }
 
-/**
- * Shuffles the options of one question and moves `correctIndex` with them.
- *
- * The model puts the correct option first far too often (measured on the live
- * deployment: 10 of 10 questions, across three packages). The order is therefore
- * randomised here and the index is re-derived from the permutation, so the
- * answer can never sit in a fixed position.
- */
-export function shuffleOptions(question: QuizQuestion, rng: () => number = Math.random): QuizQuestion {
-  const { options, correctIndex } = question;
-  if (correctIndex < 0 || correctIndex >= options.length || options.length < 2) return question;
-  const order = options.map((_, index) => index);
-  for (let i = order.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  return {
-    ...question,
-    options: order.map((index) => options[index]),
-    correctIndex: order.indexOf(correctIndex),
-  };
-}
-
-const OPTION_PREFIX = /^\s*[A-Ha-h]\s*[).:\-]\s*/;
+// The separator must be followed by a space: "A) Alpha" is a marker, "A-Dur" is a term
+// (German music and chemistry write hyphenated terms with a leading capital letter).
+const OPTION_PREFIX = /^\s*[A-Ha-h]\s*[).:\-]\s+/;
 
 /** Removes a leading `A)`/`A.`/`A:` marker, unless nothing would remain. */
 export function stripOptionPrefix(option: string): string {
   const stripped = option.replace(OPTION_PREFIX, "");
   return stripped.length > 0 ? stripped : option;
+}
+
+/** The option shape the prompt asks for: text, correctness flag, own justification. */
+interface ParsedOptions {
+  options: string[];
+  rationales: string[];
+  /** Index of the option the model flagged `isCorrect: true`, or -1. */
+  flagged: number;
+}
+
+const OPTION_TEXT_KEYS = ["text", "option", "answer", "antwort", "optiontext", "label"];
+const RATIONALE_KEYS = ["rationale", "begruendung", "begruendungstext", "reason", "why", "warum"];
+const CORRECT_KEYS = ["iscorrect", "correct", "richtig", "istrichtig"];
+
+/**
+ * Reads the options in either shape: the plain string list of the older contract or
+ * the `{text, isCorrect, rationale}` objects the prompt asks for.
+ */
+function parseOptions(value: unknown): ParsedOptions {
+  if (!Array.isArray(value)) return { options: [], rationales: [], flagged: -1 };
+  const options: string[] = [];
+  const rationales: string[] = [];
+  let flagged = -1;
+
+  value.forEach((entry, index) => {
+    if (isRecord(entry)) {
+      options.push(stripOptionPrefix(asText(pickKey(entry, OPTION_TEXT_KEYS))));
+      rationales.push(asText(pickKey(entry, RATIONALE_KEYS)));
+      const isCorrect = pickKey(entry, CORRECT_KEYS);
+      if (isCorrect === true || isCorrect === "true" || isCorrect === 1) flagged = index;
+      return;
+    }
+    options.push(stripOptionPrefix(asText(entry)));
+    rationales.push("");
+  });
+
+  return { options, rationales, flagged };
 }
 
 const normaliseText = (value: string): string => value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -126,6 +150,31 @@ export function resolveCorrectIndex(value: unknown, options: string[]): number {
 }
 
 /**
+ * Shuffles the options of one question and moves `correctIndex` and the per-option
+ * rationales with them.
+ *
+ * The model puts the correct option first far too often (measured on the live
+ * deployment: 10 of 10 questions, across three packages). The order is therefore
+ * randomised here and the index is re-derived from the permutation, so the answer
+ * can never sit in a fixed position.
+ */
+export function shuffleOptions(question: QuizQuestion, rng: () => number = Math.random): QuizQuestion {
+  const { options, correctIndex, optionRationales } = question;
+  if (correctIndex < 0 || correctIndex >= options.length || options.length < 2) return question;
+  const order = options.map((_, index) => index);
+  for (let i = order.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return {
+    ...question,
+    options: order.map((index) => options[index]),
+    optionRationales: order.map((index) => optionRationales[index] ?? ""),
+    correctIndex: order.indexOf(correctIndex),
+  };
+}
+
+/**
  * Maps any model key style onto the contract and randomises the option order.
  * `rng` is injectable so a test can pin the permutation.
  */
@@ -133,9 +182,9 @@ export function normaliseQuiz(raw: unknown, rng: () => number = Math.random): Qu
   const list = Array.isArray(raw) ? raw : pickKey(raw, ["quiz", "questions", "fragen", "items", "mcq"]);
   if (!Array.isArray(list)) return [];
   return list.map((entry, position) => {
-    const options = asStringArray(
-      pickKey(entry, ["options", "answers", "choices", "antworten", "optionen"]),
-    ).map(stripOptionPrefix);
+    const parsed = parseOptions(
+      pickKey(entry, ["options", "answers", "choices", "antworten", "optionen", "answeroptions"]),
+    );
     const rawCorrect = pickKey(entry, [
       "correct_answer",
       "correctanswer",
@@ -151,12 +200,18 @@ export function normaliseQuiz(raw: unknown, rng: () => number = Math.random): Qu
       "loesungindex",
       "loesungsindex",
     ]);
+    const correctIndex =
+      parsed.flagged >= 0 && parsed.flagged < parsed.options.length
+        ? parsed.flagged
+        : resolveCorrectIndex(rawCorrect, parsed.options);
     return shuffleOptions(
       {
         id: asText(pickKey(entry, ["id", "uuid"])) || `q${position + 1}`,
-        text: asText(pickKey(entry, ["question", "text", "frage", "title", "prompt"])),
-        options,
-        correctIndex: resolveCorrectIndex(rawCorrect, options),
+        type: asText(pickKey(entry, ["type", "typ", "aufgabentyp", "art", "kategorie", "category"])),
+        text: asText(pickKey(entry, ["question", "text", "frage", "title", "prompt", "stem"])),
+        options: parsed.options,
+        correctIndex,
+        optionRationales: parsed.rationales,
         hint: asText(pickKey(entry, ["hint", "hinweis", "tip", "tipp"])),
         explanation: asText(
           pickKey(entry, ["explanation", "explanationtext", "erklaerung", "why", "reason", "begruendung"]),
@@ -190,6 +245,15 @@ export function validateQuiz(value: unknown): ValidationResult<QuizQuestion[]> {
       (question.correctIndex as number) >= question.options.length
     ) {
       return { ok: false, error: `${label} hat keine gültige richtige Antwort.` };
+    }
+    // The rationales may be empty, but they must not shift the mapping: an array of
+    // another length would attach a justification to the wrong option.
+    if (
+      question.optionRationales !== undefined &&
+      (!Array.isArray(question.optionRationales) ||
+        question.optionRationales.length !== question.options.length)
+    ) {
+      return { ok: false, error: `${label} hat Begründungen, die nicht zu den Optionen passen.` };
     }
   }
 

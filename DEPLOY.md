@@ -52,7 +52,7 @@ Die Compose-Datei gehört zum Projekt `falknest`, genau wie `infra.yml`. Compose
 COMMANDCODE_API_KEY=<CommandCode-Key>
 AI_PROVIDER=commandcode
 AI_MODEL=deepseek/deepseek-v4.1-flash
-LLM_TIMEOUT_MS=300000
+LLM_TIMEOUT_MS=600000
 DB_PATH=/data/study_quiz.db
 NODE_ENV=production
 ```
@@ -178,6 +178,26 @@ Prüfung nach dem Deploy am 2026-10-08:
 | Aufruf ohne `max_tokens` | `finish_reason=stop`, 25 Fragen, 114,5 s |
 | zwei Läufe `?regenerate=true&count=10` | kein wortgleicher Fragetext doppelt |
 | Ladeoverlay | neue Bundle-Datei enthält die Schätzanzeige |
+
+## Änderung (2026-10-08, zweiter Teil): Denk-Prompt, Qualitätsprüfung
+
+Der Quiz-Prompt erzeugt keine Abfragen mehr, sondern Denkoperationen, aufgeteilt auf drei Module
+(Begriffe, Schlüsse, Fangfragen) nach dem Schulbuch der klassischen Logik (Winogradow/Kusmin 1954).
+Jede Option trägt `isCorrect` und ihre eigene `rationale`. `MAX_QUESTIONS` sinkt auf 15, weil der
+Prompt teurer ist; `LLM_TIMEOUT_MS` steigt auf 600000.
+
+Neu: `src/ai/quizCheck.ts` prüft mechanisch, `quizRepairPrompt` bessert beanstandete Fragen einmal
+nach, `quiz_version` ist 3 — Zeilen mit Version 2 gelten als leer.
+
+Gemessen am 2026-10-08 mit echten Paketen (CommandCode, DeepSeek V4.1 Flash, ohne Token-Limit):
+
+| Prüfung | Ergebnis |
+|---|---|
+| zehn Fragen erzeugen | 128–158 s, 21 000–27 000 Ausgabe-Token |
+| Qualitätsprüfung, Ethik | 1 von 10 beanstandet, nach der Reparatur 0 |
+| Qualitätsprüfung, Englisch | 4 von 10 beanstandet (Optionen außerhalb des Materials) |
+| Aufgabentypen | 6 Typen über zehn Fragen, Positionen 3/3/2/2 |
+| Stems mit Was/Wo/Wer | 2 von 10 (vorher 18 von 25) |
 | Karteikarten, Lernleitfaden, KI-Synthese | 27–30 s, 61 s, 83 s gemessen |
 
 ## Rollback

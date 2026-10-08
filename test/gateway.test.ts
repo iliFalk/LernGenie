@@ -14,10 +14,17 @@ const goodQuiz = JSON.stringify({
   quiz: [{ question: "Wie teilt sich eine Körperzelle?", options: ["Mitose", "Meiose"], correct_answer: "A", hint: "h", explanation: "e", topic: "t" }],
 });
 
-const makeStub = (responses: string[]): { callModel: (p: ModelCallParams) => Promise<string>; calls: () => number } => {
+const makeStub = (responses: string[]): {
+  callModel: (p: ModelCallParams) => Promise<string>;
+  calls: () => number;
+  check: () => { items: Record<number, string[]>; global: string[]; flagged: number };
+} => {
   let count = 0;
   return {
     calls: () => count,
+    // The quality pass is stubbed out here: these tests count model calls, and the
+    // mechanical checks have their own test file.
+    check: () => ({ items: {}, global: [], flagged: 0 }),
     callModel: async () => {
       const value = responses[Math.min(count, responses.length - 1)];
       count += 1;
@@ -121,7 +128,7 @@ test("the repair prompt carries the validation error back to the model", async (
     callModel: async (params) => {
       count += 1;
       if (count === 1) return "kein JSON";
-      secondPrompt = params.prompt;
+      if (count === 2) secondPrompt = params.prompt;
       return goodQuiz;
     },
   });
@@ -174,9 +181,10 @@ test("questions listed in `previous` are not asked again", async () => {
 test("the previous questions reach the prompt", async () => {
   let prompt = "";
   const stub = makeStub([goodQuiz]);
+  let first = true;
   await generateArtifact<QuizQuestion[]>("quiz", { content: "c", grade: 5, count: 5, previous: ["Was ist Osmose?"] }, config, {
     callModel: async (params) => {
-      prompt = params.prompt;
+      if (first) { prompt = params.prompt; first = false; }
       return stub.callModel(params);
     },
   });
@@ -189,4 +197,50 @@ test("a short answer is kept as it is instead of being padded", async () => {
   const result = await generateArtifact<QuizQuestion[]>("quiz", { content: "c", grade: 5, count: 10 }, config, stub);
   assert.equal(result.ok, true);
   if (result.ok) assert.equal(result.value.length, 1);
+});
+
+// --- Qualitaetspruefung ------------------------------------------------------
+
+const flawedQuiz = JSON.stringify({
+  quiz: [{
+    type: "WIEDERGEBEN",
+    question: "Wo laeuft die Photosynthese ab?",
+    options: ["nicht in den Chloroplasten", "im Zellkern", "im Blutkreislauf", "in den Wurzeln"],
+    correct_answer: "nicht in den Chloroplasten",
+    hint: "h", explanation: "e", topic: "t",
+  }],
+});
+
+test("a flagged quiz triggers exactly one quality repair", async () => {
+  const stub = makeStub([flawedQuiz, JSON.stringify({ quiz: [] })]);
+  const result = await generateArtifact<QuizQuestion[]>(
+    "quiz",
+    { content: "Zellen", grade: 5, count: 5 },
+    config,
+    { callModel: stub.callModel },
+  );
+  assert.equal(result.ok, true);
+  // Ein Erzeugungsaufruf plus der Reparaturaufruf; die leere Antwort wird verworfen.
+  assert.equal(stub.calls(), 2);
+  if (result.ok) assert.ok((result.flags ?? []).length > 0, "expected the findings in the result");
+});
+
+test("the findings name the question and the reason", async () => {
+  let repairPrompt = "";
+  const stub = makeStub([flawedQuiz, flawedQuiz]);
+  await generateArtifact<QuizQuestion[]>(
+    "quiz",
+    { content: "Zellen", grade: 5, count: 5 },
+    config,
+    {
+      callModel: async (params) => {
+        const answer = await stub.callModel(params);
+        if (stub.calls() === 2) repairPrompt = params.prompt;
+        return answer;
+      },
+    },
+  );
+  assert.match(repairPrompt, /BEANSTANDETE FRAGEN/);
+  assert.match(repairPrompt, /Frage 1/);
+  assert.match(repairPrompt, /Verneinung/);
 });

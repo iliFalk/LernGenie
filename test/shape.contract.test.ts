@@ -25,9 +25,11 @@ test("a normalised quiz item has exactly the Question keys", () => {
     "explanation",
     "hint",
     "id",
+    "optionRationales",
     "options",
     "text",
     "topic",
+    "type",
   ]);
 });
 

@@ -111,9 +111,16 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
       >
         {/* Topic Tag & Question */}
         <div>
-          <span className="cds--tag cds--tag--blue text-xs font-mono mb-3">
-            {currentQuestion.topic || "Thema"}
-          </span>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="cds--tag cds--tag--blue text-xs font-mono">
+              {currentQuestion.topic || "Thema"}
+            </span>
+            {currentQuestion.type && (
+              <span className="cds--tag cds--tag--gray text-xs font-mono" title="Aufgabentyp">
+                {currentQuestion.type}
+              </span>
+            )}
+          </div>
           <h2 className="text-lg sm:text-xl font-normal leading-snug text-[var(--cds-text-primary)] mt-2">
             {currentQuestion.text}
           </h2>
@@ -154,11 +161,18 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
                 disabled={isAnswered}
                 className={`w-full p-4 text-left text-sm transition-colors flex items-center justify-between border ${borderClass} ${bgClass} ${textClass} min-h-[48px]`}
               >
-                <div className="flex items-center gap-3">
-                  <span className={`w-6 h-6 text-xs font-mono font-bold flex items-center justify-center ${indicatorBg}`}>
+                <div className="flex items-start gap-3 flex-1">
+                  <span className={`w-6 h-6 shrink-0 text-xs font-mono font-bold flex items-center justify-center ${indicatorBg}`}>
                     {String.fromCharCode(65 + i)}
                   </span>
-                  <span className="flex-1">{option}</span>
+                  <span className="flex-1">
+                    {option}
+                    {isAnswered && currentQuestion.optionRationales?.[i] && (
+                      <span className="block text-[11px] font-normal text-[var(--cds-text-helper)] mt-1 leading-snug">
+                        {currentQuestion.optionRationales[i]}
+                      </span>
+                    )}
+                  </span>
                 </div>
 
                 {isAnswered && i === currentQuestion.correctIndex && (

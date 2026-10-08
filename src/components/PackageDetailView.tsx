@@ -33,8 +33,8 @@ interface PackageDetailViewProps {
   onViewResultDetails: (result: QuizResult) => void;
 }
 
-/** Preset lengths offered next to the quiz buttons. The server clamps onto 5-25. */
-const QUESTION_PRESETS = [10, 15, 20, 25];
+/** Preset lengths offered next to the quiz buttons. The server clamps onto 5-15. */
+const QUESTION_PRESETS = [5, 10, 15];
 
 export default function PackageDetailView({ 
   pkg, 
@@ -185,7 +185,7 @@ export default function PackageDetailView({
 
               <div className="pt-2">
                 <label className="cds--label">Anzahl Fragen</label>
-                <div className="grid grid-cols-4 gap-1">
+                <div className="grid grid-cols-3 gap-1">
                   {QUESTION_PRESETS.map((preset) => (
                     <button
                       key={preset}

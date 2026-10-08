@@ -17,7 +17,7 @@ Erstellt Quizfragen, Karteikarten und Lernleitfäden aus eigenen Lernmaterialien
 |---|---|
 | Bibliothek | Lernpakete anlegen, öffnen und löschen. Ein Paket hat Klasse, Fach und Name. |
 | Upload | Material als Foto oder als Text hinzufügen. Fotos liest das Vision-Modell (OCR). |
-| Quiz | Fragen aus dem Material erzeugen. Klasse und Anzahl sind wählbar (5 bis 25, Voreinstellung 10). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge zur gewählten Anzahl passt. |
+| Quiz | Fragen aus dem Material erzeugen. Klasse und Anzahl sind wählbar (5 bis 15, Voreinstellung 10). Die Fragen arbeiten mit Denkoperationen statt mit Abfragen: Begriffe und Merkmale, zwingende Schlüsse, Fangfragen. Jede Option trägt ihre eigene Begründung. Das gespeicherte Quiz wird nur geliefert, wenn seine Länge zur gewählten Anzahl passt. |
 | Karteikarten | Karteikarten zum selben Material. Der Server speichert sie im Cache. |
 | Lernleitfaden | Kurze Zusammenfassung je Paket. Ein Flash-Modell schreibt sie. |
 | Auswertung | Ergebnis-Historie, Fehleranalyse und Statistik nach Thema und Fach. |
@@ -147,18 +147,32 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   Ein Modellaufruf bleibt es. Reicht die Anzahl danach nicht, füllt der Rest auf: ein kurzes Quiz
   ist besser als eine wiederholte Frage. Der Text-Vergleich sieht nur die Schreibweise
   (`questionKey`); ein inhaltlich gleiches, umformuliertes Frage-Paar erkennt er nicht.
-- Die Quiz-Länge ist auf 25 Fragen begrenzt (`MAX_QUESTIONS`). Die Grenze kommt aus der Laufzeit,
-  nicht aus der Fachlichkeit: 25 Fragen brauchen rund 120 s (gemessen 107 s über die API, 119 s
-  im Direktaufruf), weil das Modell einen großen Teil seines Ausgabebudgets zum Denken nutzt.
-  Eine höhere Grenze braucht zuerst eine Messung der Laufzeit. Das Modell selbst erlaubt
-  384 000 Ausgabe-Token.
+- Die Quiz-Länge ist auf 15 Fragen begrenzt (`MAX_QUESTIONS`). Die Grenze kommt aus der Laufzeit,
+  nicht aus der Fachlichkeit: der Denk-Prompt braucht für zehn Fragen gemessen 128–158 s und
+  21 000–27 000 Ausgabe-Token, und die Qualitätsprüfung kostet im Fehlerfall noch einmal ähnlich
+  viel. Fünfzehn Fragen bleiben unter `LLM_TIMEOUT_MS` (600 s), fünfundzwanzig nicht.
+- Der Quiz-Prompt arbeitet nach der Methode der klassischen Logik (Begriff, Urteil, Schluss, nach
+  dem Schulbuch von Winogradow/Kusmin 1954) und verteilt die Fragen auf drei Module: Begriffe,
+  Schlüsse, Fangfragen. Der Aufgabentyp steht als `type` in jeder Frage. Die Verteilung ist ein
+  Anteil, kein Versprechen: sagt das Material ein Modul nicht her, verteilt der Prompt die Fragen
+  auf die übrigen Module, statt Tiefe zu erfinden.
+- Jede Option trägt ihre eigene Begründung (`rationale`), und das Modell setzt `isCorrect` selbst.
+  Das ist die Grundlage der Qualitätsprüfung: eine Option ohne Begründung ist eine Fülloption.
+- `src/ai/quizCheck.ts` prüft jedes Quiz mechanisch — gleiche Optionenlänge (unter 35 % Abweichung),
+  keine Option, die länger ist als jede falsche, keine Verneinungsoptionen, keine Dubletten, keine
+  Option, die im Material nicht vorkommt, Begründung je Option, ein Stamm ohne zweite Frage, und
+  über das Set: mindestens drei Aufgabentypen, höchstens 40 % reine Abfragen. Beanstandete Fragen
+  gehen einmal in eine Reparatur; behalten wird die Fassung mit weniger Befunden. Beide Zahlen
+  stehen im Container-Log (`[quiz] Qualitätsprüfung: …`).
+- Gemessene Wirkung der Prüfung an echten Paketen: Ethik 1 von 10 Fragen beanstandet, Englisch 4 von
+  10 (jeweils Optionen, die im Material nicht vorkommen).
 - Der Aufruf trägt kein `max_tokens`, solange `LLM_MAX_TOKENS` leer ist — dann gilt der Default des
   Modells. Das ist der Produktivzustand. Gemessen mit `max_tokens=8192`: eine Anfrage über 25
   Fragen verbrauchte das komplette Budget im Reasoning (`finish_reason=length`, `content` leer)
   und die Route antwortete `AI_INVALID`. Nur bei `openrouter` gilt ohne Wert weiter 8192 (siehe
   Umgebungstabelle).
 - Die Schätzdauer im Ladeoverlay (`src/components/LoadingOverlay.tsx`) ist eine Formel, keine
-  Messung pro Anfrage: für das Quiz `100 s + 2,5 s je Frage`, sonst ein fester Wert je Artefakt
+  Messung pro Anfrage: für das Quiz `150 s + 13 s je Frage`, sonst ein fester Wert je Artefakt
   (Karteikarten 45 s, Lernleitfaden 80 s, KI-Synthese 100 s, Auswertung 45 s, Speichern 3 s).
   Grundlage sind die Messungen oben (10 Fragen 116 s, 25 Fragen 162 s, kleines Material mit
   2 Fragen 10 s; Karteikarten 27–30 s, Lernleitfaden 61 s, KI-Synthese 83 s). Der Grundaufwand

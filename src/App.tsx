@@ -54,7 +54,7 @@ export default function App() {
   const [isSideNavOpen, setIsSideNavOpen] = useState(false);
   const [questionCount, setQuestionCount] = useState(() => {
     const stored = Number(localStorage.getItem("question_count"));
-    return Number.isFinite(stored) && stored >= 5 && stored <= 25 ? stored : 10;
+    return Number.isFinite(stored) && stored >= 5 && stored <= 15 ? stored : 10;
   });
 
   useEffect(() => {

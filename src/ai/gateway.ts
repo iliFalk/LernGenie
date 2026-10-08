@@ -14,7 +14,8 @@
 
 import { callLLM } from "../../llm";
 import { extractJson } from "./extract";
-import { buildPrompt, OUTPUT_CONTRACT, type ArtifactKind, type PromptSpec } from "./prompts";
+import { buildPrompt, OUTPUT_CONTRACT, quizRepairPrompt, type ArtifactKind, type PromptSpec } from "./prompts";
+import { checkQuiz, formatQuizFlags, type QuizCheckResult } from "./quizCheck";
 import { normaliseQuiz, validateQuiz, questionKey, type QuizQuestion } from "../contracts/quiz";
 import { normaliseFlashcards, validateFlashcards, type Flashcard } from "../contracts/flashcards";
 import { normaliseAnalysis, validateAnalysis, type AnalysisData } from "../contracts/analysis";
@@ -36,6 +37,8 @@ export interface ModelCallParams extends ModelConfig {
 
 export interface GatewayDeps {
   callModel: (params: ModelCallParams) => Promise<string>;
+  /** The mechanical quality checks; injectable so a test can pin when the pass fires. */
+  check?: (quiz: QuizQuestion[], options: { source: string }) => QuizCheckResult;
 }
 
 export interface GatewayError {
@@ -44,8 +47,8 @@ export interface GatewayError {
 }
 
 export type GatewayResult<T> =
-  | { ok: true; value: T; error?: null; repaired: boolean }
-  | { ok: false; value?: null; error: GatewayError; repaired?: false };
+  | { ok: true; value: T; error?: null; repaired: boolean; flags?: string[] }
+  | { ok: false; value?: null; error: GatewayError; repaired?: false; flags?: string[] };
 
 interface ContractSpec<T> {
   structured: boolean;
@@ -136,6 +139,7 @@ export async function generateArtifact<T = unknown>(
   const spec: PromptSpec = buildPrompt(kind, input);
   const contract = CONTRACTS[kind] as unknown as ContractSpec<T>;
   const callModel = deps.callModel ?? defaultDeps.callModel;
+  const qualityCheck = deps.check ?? checkQuiz;
   const previous = Array.isArray(input.previous) ? input.previous.map(String).filter(Boolean) : [];
 
   /** A quiz answer is trimmed to its target length and freed of repeats. */
@@ -153,6 +157,45 @@ export async function generateArtifact<T = unknown>(
       imageData: spec.imageData,
     });
 
+  /**
+   * Quality pass for a quiz. The mechanical checks catch what the prompt only asked
+   * for — a correct option that is the longest, negation options, options that do
+   * not exist in the material, missing justifications. One repair call rewrites the
+   * flagged questions; the version with fewer findings wins.
+   */
+  const qualityRepair = async (value: T): Promise<{ value: T; repaired: boolean; flags: string[] }> => {
+    if (kind !== "quiz") return { value, repaired: false, flags: [] };
+    const source = String(input.content ?? "");
+    const before = qualityCheck(value as unknown as QuizQuestion[], { source });
+    const total = (value as unknown as QuizQuestion[]).length;
+    if (before.flagged === 0 && before.global.length === 0) {
+      console.log(`[quiz] Qualitätsprüfung: ${total} Fragen, keine Beanstandungen`);
+      return { value, repaired: false, flags: [] };
+    }
+    console.log(
+      `[quiz] Qualitätsprüfung: ${before.flagged}/${total} Fragen beanstandet, ${before.global.length} Befund(e) zum Set`,
+    );
+
+    const flags = formatQuizFlags(value as unknown as QuizQuestion[], before);
+    const prompt = quizRepairPrompt(value, flags, source, Number(input.grade) || 0);
+    let raw: string;
+    try {
+      raw = await call(prompt);
+    } catch {
+      return { value, repaired: false, flags: flags.split("\n") };
+    }
+    const candidate = toContract(contract, raw);
+    if (!candidate.ok) return { value, repaired: false, flags: flags.split("\n") };
+
+    const repairedValue = finalise(candidate.value);
+    const after = qualityCheck(repairedValue as unknown as QuizQuestion[], { source });
+    const better =
+      after.flagged + after.global.length < before.flagged + before.global.length;
+    return better
+      ? { value: repairedValue, repaired: true, flags: [...formatQuizFlags(repairedValue as unknown as QuizQuestion[], after).split("\n")] }
+      : { value, repaired: false, flags: flags.split("\n") };
+  };
+
   let firstRaw: string;
   try {
     firstRaw = await call(spec.prompt);
@@ -161,7 +204,10 @@ export async function generateArtifact<T = unknown>(
   }
 
   const first = toContract(contract, firstRaw);
-  if (first.ok) return { ok: true, value: finalise(first.value), repaired: false };
+  if (first.ok) {
+    const checked = await qualityRepair(finalise(first.value));
+    return { ok: true, value: checked.value, repaired: false, flags: checked.flags };
+  }
 
   // One repair retry with the validation error.
   const repairPrompt = `${spec.prompt}\n\nDeine letzte Antwort war ungültig: ${first.error}\nAntworte erneut und halte den Ausgabe-Vertrag exakt ein:\n${OUTPUT_CONTRACT[kind]}`;
@@ -173,7 +219,10 @@ export async function generateArtifact<T = unknown>(
   }
 
   const second = toContract(contract, secondRaw);
-  if (second.ok) return { ok: true, value: finalise(second.value), repaired: true };
+  if (second.ok) {
+    const checked = await qualityRepair(finalise(second.value));
+    return { ok: true, value: checked.value, repaired: true, flags: checked.flags };
+  }
 
   return {
     ok: false,
