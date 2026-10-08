@@ -84,13 +84,17 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
     if (new Set(list.map((option) => questionKey(option))).size < list.length) hard.push("doppelte Option");
     if ((question.text.match(/\?/g) ?? []).length > 1) hard.push("Stamm enthält mehr als eine Frage");
 
+    // Soft, not hard: a plausible distractor is a misconception the material does NOT
+    // contain verbatim, so a missing lexical anchor is a style signal, not a defect.
+    // Measured: as a hard rule this flagged the intended distractors and forced a
+    // repair pass (120-180 s) on almost every generation.
     if (source.size > 0) {
       const foreign = list.findIndex((option, i) => {
         if (i === correctIndex) return false;
         const wordsInOption = words(option).map((word) => word.toLowerCase());
         return wordsInOption.length > 0 && !wordsInOption.some((word) => source.has(word));
       });
-      if (foreign !== -1) hard.push(`Option ${foreign + 1} kommt im Material nicht vor`);
+      if (foreign !== -1) soft.push(`Option ${foreign + 1} hat keinen Wortanker im Material`);
     }
 
     // Soft: the style drifted, the exercise still works.
@@ -156,6 +160,10 @@ export function summariseQuizFlags(flags: QuizCheckResult): string {
     `${flags.soft} weiche`,
   ];
   if (flags.global.length > 0) parts.push(`Set: ${flags.global.join("; ")}`);
-  if (softOnly.length > 0) parts.push(softOnly.join(" | ").slice(0, 200));
+  const hardDetail = Object.entries(flags.hardItems).map(
+    ([number, reasons]) => `hart ${number}: ${reasons.join("; ")}`,
+  );
+  if (hardDetail.length > 0) parts.push(hardDetail.join(" | ").slice(0, 300));
+  if (softOnly.length > 0) parts.push(`weich: ${softOnly.join(" | ").slice(0, 200)}`);
   return parts.join(" · ");
 }

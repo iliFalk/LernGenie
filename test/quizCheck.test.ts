@@ -50,12 +50,13 @@ test("a negation option is reported", () => {
   assert.match(result.items[1].join(" | "), /Verneinung/);
 });
 
-test("an option that does not occur in the material is reported", () => {
+test("an option without a lexical anchor in the material is a soft signal", () => {
   const result = checkQuiz(
     [question({ options: ["in den Chloroplasten", "im Weltraumbahnhof", "im Chlorophyll", "im Calvin-Zyklus"] })],
     context,
   );
-  assert.match(result.items[1].join(" | "), /kommt im Material nicht vor/);
+  assert.match(result.items[1].join(" | "), /keinen Wortanker/);
+  assert.equal(result.flagged, 0, "ein plausibler Distraktor darf nicht repariert werden");
 });
 
 test("a missing justification is reported", () => {
