@@ -17,7 +17,7 @@ Erstellt Quizfragen, Karteikarten und Lernleitfäden aus eigenen Lernmaterialien
 |---|---|
 | Bibliothek | Lernpakete anlegen, öffnen und löschen. Ein Paket hat Klasse, Fach und Name. |
 | Upload | Material als Foto oder als Text hinzufügen. Fotos liest das Vision-Modell (OCR). |
-| Quiz | Fragen aus dem Material erzeugen. Klasse und Anzahl sind wählbar (5 bis 50, Voreinstellung 10). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge zur gewählten Anzahl passt. |
+| Quiz | Fragen aus dem Material erzeugen. Klasse und Anzahl sind wählbar (5 bis 25, Voreinstellung 10). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge zur gewählten Anzahl passt. |
 | Karteikarten | Karteikarten zum selben Material. Der Server speichert sie im Cache. |
 | Lernleitfaden | Kurze Zusammenfassung je Paket. Ein Flash-Modell schreibt sie. |
 | Auswertung | Ergebnis-Historie, Fehleranalyse und Statistik nach Thema und Fach. |
@@ -56,7 +56,7 @@ llm.ts                Provider-Schicht für Gemini und OpenRouter
 | `POST /api/ai/topic` | Das Thema zu Material bestimmen |
 | `GET/POST/DELETE /api/packages[/:id]` | Lernpakete lesen, anlegen und löschen |
 | `GET/POST /api/materials` | Materialien zu einem Paket lesen und anlegen |
-| `GET /api/packages/:id/{quiz,flashcards,study-guide}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 50). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. |
+| `GET /api/packages/:id/{quiz,flashcards,study-guide}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 25). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. |
 | `GET/POST /api/results[/:packageId]` | Ergebnisse lesen und schreiben |
 
 Der Nutzerkontext kommt über den Header `x-user-id`. In Telegram liefert die Mini-App die
@@ -146,6 +146,12 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   Ein Modellaufruf bleibt es. Reicht die Anzahl danach nicht, füllt der Rest auf: ein kurzes Quiz
   ist besser als eine wiederholte Frage. Der Text-Vergleich sieht nur die Schreibweise
   (`questionKey`); ein inhaltlich gleiches, umformuliertes Frage-Paar erkennt er nicht.
+- Die Quiz-Länge ist auf 25 Fragen begrenzt (`MAX_QUESTIONS`). Die Grenze kommt aus dem
+  Ausgabebudget, nicht aus der Fachlichkeit: eine Frage kostet etwa 130 Ausgabe-Token,
+  `LLM_MAX_TOKENS` ist 8192 und das Modell verbraucht vorher einige Tausend Denk-Token.
+  Gemessen: 30 Fragen in einer Antwort laufen über das Limit, das JSON wird abgeschnitten und
+  der Aufruf endet mit `AI_INVALID` („keine JSON-Struktur gefunden", 100 s). Eine höhere Grenze
+  braucht zuerst ein höheres `LLM_MAX_TOKENS` beim Provider.
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
 - Die App läuft im Heimnetz über einfaches HTTP. Das ist **kein** sicherer Kontext. Die Browser-APIs

@@ -25,9 +25,13 @@ export interface QuizQuestion {
 
 export const QUIZ_SCHEMA_VERSION = 2;
 
-/** Bounds for a quiz length. The server clamps every request onto this range. */
+/** Bounds for a quiz length. The server clamps every request onto this range.
+ *  The ceiling comes from the output budget: one question costs roughly 130 output
+ *  tokens, `LLM_MAX_TOKENS` is 8192 and the model spends a few thousand reasoning
+ *  tokens first. Measured with a larger ceiling: 30 questions asked in one answer
+ *  run past the limit, the JSON is cut and the call fails with AI_INVALID. */
 export const MIN_QUESTIONS = 5;
-export const MAX_QUESTIONS = 50;
+export const MAX_QUESTIONS = 25;
 export const DEFAULT_QUESTIONS = 10;
 
 export function clampQuestionCount(value: number): number {

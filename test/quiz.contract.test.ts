@@ -5,6 +5,9 @@ import {
   normaliseQuiz,
   validateQuiz,
   resolveCorrectIndex,
+  clampQuestionCount,
+  MAX_QUESTIONS,
+  MIN_QUESTIONS,
   QUIZ_SCHEMA_VERSION,
 } from "../src/contracts/quiz";
 
@@ -183,6 +186,17 @@ test("resolveCorrectIndex reads a letter", () => {
   assert.equal(resolveCorrectIndex("B", FOUR), 1);
   assert.equal(resolveCorrectIndex("b)", FOUR), 1);
   assert.equal(resolveCorrectIndex("C", FOUR), 2);
+});
+
+// --- length bounds ----------------------------------------------------------
+
+test("the requested length is clamped onto the supported range", () => {
+  assert.equal(clampQuestionCount(10), 10);
+  assert.equal(clampQuestionCount(0), MIN_QUESTIONS);
+  assert.equal(clampQuestionCount(4), MIN_QUESTIONS);
+  assert.equal(clampQuestionCount(1000), MAX_QUESTIONS);
+  assert.equal(clampQuestionCount(12.6), 13);
+  assert.equal(clampQuestionCount(Number.NaN), 10);
 });
 
 test("resolveCorrectIndex reads a letter plus option text", () => {

@@ -130,19 +130,26 @@ Drei Beschwerden aus dem Betrieb waren die Ursache:
    war `[0,0,0,0,0,0,0,0,0,0]`.
 3. **Die Anzahl war nicht einstellbar.** `server.ts` gab `count: 10` fest vor; es gab kein Feld im UI.
 
-Der Umbau: `?count=N` an `GET /api/packages/:id/quiz` (Grenzen 5 bis 50, `clampQuestionCount`),
+Der Umbau: `?count=N` an `GET /api/packages/:id/quiz` (Grenzen 5 bis 25, `clampQuestionCount`),
 Ausschlussliste der bisherigen Fragen im Prompt, Überschuss-Anforderung plus Trimmen in
 `selectQuestions`, Mischen der Optionen in `normaliseQuiz`, `quiz_version` 1 → 2, Anzahl-Wähler
-(10/15/20/30/50) in `PackageDetailView`.
+(10/15/20/25) in `PackageDetailView`.
+
+Die Obergrenze 25 ist gemessen, nicht geschätzt. Der Prompt forderte zuerst einen Überschuss an
+(Ziel + 30 %), auch bei der ersten Erzeugung. Dadurch lief die Antwort über `LLM_MAX_TOKENS`
+(8192): 30 Fragen in einem Lauf endeten nach 100 s mit `AI_INVALID` („keine JSON-Struktur
+gefunden"), 50 Fragen nach 96 s ebenso. Der Überschuss gilt deshalb nur noch beim Erneuern, wenn
+eine Ausschlussliste existiert, und ist auf `MAX_QUESTIONS` gedeckelt. Eine höhere Grenze als 25
+braucht zuerst ein höheres `LLM_MAX_TOKENS`.
 
 Prüfung nach dem Deploy am 2026-10-08:
 
 | Prüfung | Ergebnis |
 |---|---|
-| `npm test` (75 Tests) | pass |
+| `npm test` | 76 Tests, pass |
 | `npx tsc --noEmit`, `npm run build` | sauber |
 | `GET /api/packages/:id/quiz?count=20` | 20 Fragen |
-| `correctIndex` über 3 Pakete | nicht mehr konstant 0 |
+| `correctIndex` über drei Pakete | nicht mehr konstant 0 |
 | Zwei Läufe `?regenerate=true` | kein wortgleicher Fragetext doppelt |
 
 ## Rollback

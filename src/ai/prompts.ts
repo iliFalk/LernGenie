@@ -5,7 +5,7 @@
  * the wrapper, not the model, owns structure.
  */
 
-import { clampQuestionCount } from "../contracts/quiz";
+import { clampQuestionCount, MAX_QUESTIONS } from "../contracts/quiz";
 
 export type ArtifactKind = "quiz" | "flashcards" | "analysis" | "text";
 
@@ -133,10 +133,12 @@ export function buildPrompt(kind: ArtifactKind, input: Record<string, unknown>):
     case "quiz": {
       const target = clampQuestionCount(Number(input.count));
       const previous = Array.isArray(input.previous) ? input.previous.map(String).filter(Boolean) : [];
+      // The surplus exists to replace a question that repeats an earlier one. Without an
+      // earlier set there is nothing to replace, and the longer answer only risks
+      // running into the output limit. Above the ceiling the surplus would too.
+      const asked = previous.length > 0 ? Math.min(target + questionSurplus(target), MAX_QUESTIONS) : target;
       return {
-        // Ask for a surplus: the gateway trims to `target` and drops a question
-        // that repeats an earlier one. Same prompt, one model call.
-        prompt: quizPrompt(target + questionSurplus(target), Number(input.grade) || 0, String(input.content ?? ""), previous),
+        prompt: quizPrompt(asked, Number(input.grade) || 0, String(input.content ?? ""), previous),
         isJson: true,
         targetCount: target,
       };
