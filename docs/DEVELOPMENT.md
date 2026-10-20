@@ -1,0 +1,163 @@
+# LernGenie — Referenz
+
+Der README zeigt den Start. Diese Datei hält Technik, API,
+Einstellungen, Deployment und die bekannten Punkte.
+
+## Technik
+
+- Frontend: React 19, Vite 6, Tailwind 4, Carbon Design Icons und Lucide, Motion, Recharts.
+- Backend: Node 22, Express 4, TypeScript (`tsx`), better-sqlite3.
+- KI: Google Gemini (`@google/genai`) oder OpenRouter.
+- Auslieferung: `vite build` erzeugt `dist/`. Der Express-Server liefert die SPA aus.
+
+```
+index.html            Einstiegspunkt der SPA
+src/App.tsx           Tabs und Hauptzustand
+src/components/       Library, UploadModal, QuizView, FlashcardsView, StudyGuideView,
+                      ResultsView, StatsView, PackageDetailView, SettingsView
+src/services/         auth.ts (User-ID und AI-Header), gemini.ts (API-Aufrufe)
+src/prompts/          Prompt-Templates
+server.ts             Express-API, SQLite-Schema, Static-Serving
+llm.ts                Provider-Schicht für Gemini und OpenRouter
+```
+
+## API
+
+| Endpunkt | Zweck |
+|---|---|
+| `POST /api/ai/ocr` | Text aus einem Bild lesen |
+| `POST /api/ai/quiz` | Quizfragen erzeugen |
+| `POST /api/ai/flashcards` | Karteikarten erzeugen |
+| `POST /api/ai/study-guide` | Lernleitfaden erzeugen |
+| `POST /api/ai/analyze` | Ein Ergebnis analysieren |
+| `POST /api/ai/topic` | Das Thema zu Material bestimmen |
+| `GET/POST/DELETE /api/packages[/:id]` | Lernpakete lesen, anlegen und löschen |
+| `GET/POST /api/materials` | Materialien zu einem Paket lesen und anlegen |
+| `GET /api/packages/:id/{quiz,flashcards,study-guide}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 25). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. |
+| `GET/POST /api/results[/:packageId]` | Ergebnisse lesen und schreiben |
+
+Der Nutzerkontext kommt über den Header `x-user-id`. In Telegram liefert die Mini-App die
+Telegram-ID. Im Browser erzeugt die App eine ID im `localStorage`.
+
+## KI einstellen
+
+Reihenfolge: Header schlagen Umgebungsvariablen. Die App sendet im Dev Mode `x-ai-key`,
+`x-ai-provider` und `x-ai-model` (Einstellungen → Developer Options, gespeichert in `localStorage`).
+Ohne Dev Mode gelten die Server-Defaults.
+
+| Variable | Bedeutung |
+|---|---|
+| `AI_PROVIDER` | `gemini` (Default), `openrouter` oder `commandcode` |
+| `AI_MODEL` | Modell-ID. Leer heißt Provider-Default: `gemini-3.1-pro-preview`, für kurze Aufgaben `gemini-3-flash-preview`, bei OpenRouter `google/gemini-2.0-flash-exp:free`, bei CommandCode `deepseek/deepseek-v4.1-flash` |
+| `GEMINI_API_KEY` | Key für `provider = gemini` |
+| `OPENROUTER_API_KEY` | Key für `provider = openrouter` (kostenlose Modelle, zum Beispiel `dots-studio/dots-3-note-preview:free`) |
+| `COMMANDCODE_API_KEY` | Key für `provider = commandcode` (Abo-Provider, OpenAI-kompatibel; Modell-IDs mit Organisations-Präfix, zum Beispiel `deepseek/deepseek-v4.1-flash`) |
+| `COMMANDCODE_BASE_URL` | Basis-URL für `provider = commandcode`. Default `https://api.commandcode.ai/provider/v1` |
+| `LLM_TIMEOUT_MS` | Zeitlimit für einen OpenRouter- oder CommandCode-Aufruf in Millisekunden. Default `180000` (3 Minuten), produktiv **300000**. 25 Fragen brauchen rund 120 s |
+| `LLM_MAX_TOKENS` | Grenze für die Antwort in Token. Leer = der Aufruf trägt **kein** `max_tokens`, es gilt der Default des Modells. Eine Zahl setzt die Grenze für alle Provider. Ausnahme: bei `openrouter` gilt ohne Wert 8192, weil OpenRouter sonst das volle Ausgabefenster des Modells reserviert (bis 131072 Token) und den Aufruf mit HTTP 402 ablehnt, wenn das Key-Limit kleiner ist |
+| `DB_PATH` | Pfad zur SQLite-Datei. Ein relativer Pfad gilt gegen das Arbeitsverzeichnis des Prozesses |
+| `APP_URL` | Eigene URL, von AI Studio injiziert |
+
+Alle Variablen stehen erklärt in [.env.example](.env.example).
+
+## Lokal starten
+
+1. `npm install`
+2. `cp .env.example .env` und den Key setzen. Setze dazu `AI_PROVIDER` auf `gemini` oder `openrouter`.
+3. `npm run dev` startet den Server auf http://localhost:3000.
+
+`npm run build` erzeugt `dist/`. Mit `NODE_ENV=production` liefert der Server `dist/` aus.
+
+## Deployment
+
+Docker:
+
+```bash
+docker build -t lernquiz .
+docker run --rm -p 127.0.0.1:3001:3000 -v "$PWD/data:/data" \
+  -e DB_PATH=/data/study_quiz.db -e AI_PROVIDER=openrouter \
+  -e OPENROUTER_API_KEY=... -e AI_MODEL=dots-studio/dots-3-note-preview:free lernquiz
+```
+
+Produktiv läuft die App auf falknest (Homelab-Server, 192.168.178.100). Der Port ist an das
+LAN-Interface gebunden. Es gibt keinen Reverse-Proxy-Eintrag und keinen Cloudflare-Tunnel-Hostnamen.
+Deshalb ist die App von außen nicht erreichbar. Sie startet nicht automatisch mit dem Host, sondern
+nur auf Anforderung. Details, Start, Stop und Rollback: [DEPLOY.md](DEPLOY.md).
+
+## Daten
+
+Alle Daten liegen in einer SQLite-Datei. `DB_PATH` verschiebt sie. Die Tabellen heißen `packages`,
+`materials`, `quiz_results` und `package_cache`. Der Cache hält je Paket Quiz, Karteikarten und
+Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopiere die Datei.
+
+## Bekannte Punkte
+
+- CommandCode lehnt `response_format: json_object` mit HTTP 400 (`invalid request error`) ab,
+  sobald der Prompt länger wird. Der Server sendet das Feld daher nur an OpenRouter. Die Form der
+  Antwort sichern `src/contracts/*` und `src/ai/extract.ts`, nicht der Provider.
+- Ein bezahltes Modell braucht beim Anbieter ein Kredit-Polster. Ohne `max_tokens` reserviert
+  OpenRouter das volle Ausgabefenster des Modells (bis 131072 Token) und lehnt den Aufruf mit
+  HTTP 402 ab (`This request requires more credits, or fewer max_tokens`). Jeder Aufruf trägt
+  deshalb `LLM_MAX_TOKENS`.
+- Kostenlose OpenRouter-Modelle haben Rate-Limits. Sie lehnen manchmal `response_format: json_object`
+  ab. Die App zeigt dann die Provider-Meldung im UI.
+- Kostenlose Modelle liefern JSON in eigener Schreibweise: PascalCase (`Quiz`, `CorrectAnswer`),
+  deutsche Wörter oder andere Schlüssel. Seit dem Umbau gehört die Struktur dem Wrapper, nicht dem
+  Modell. `src/contracts/*` normalisiert jede Antwort auf die Schlüssel, die das UI liest
+  (`text`, `options`, `correctIndex`, `hint`, `explanation`, `topic`), und validiert sie.
+  `src/ai/gateway.ts` baut den Prompt, zieht JSON aus der Antwort, validiert und wiederholt genau
+  einmal. Eine Antwort, die danach noch ungültig ist, wird zu `{error, code}` mit HTTP 500, nie zu
+  einem 200 mit falscher Form.
+- `package_cache` trägt je Artefakt eine `schema_version` (`quiz_version`, `flashcards_version`,
+  `study_guide_version`). Eine Zeile mit älterer Version gilt als leer und wird neu erzeugt.
+  Das repariert alte Pakete beim Lesen. `quiz_version` ist 2 (2026-10-08) — die Option-Reihenfolge
+  kommt seither gemischt aus dem Server, deshalb gilt jede Zeile mit Version 1 als leer.
+- Die richtige Antwort landet nicht mehr fest vorn. Das Modell schrieb sie in jeder gemessenen
+  Frage an die erste Stelle (10 von 10 Fragen, drei Pakete). `normaliseQuiz` mischt die Optionen
+  jetzt und zieht `correctIndex` mit. Der Prompt verlangt zusätzlich, dass Hinweis und Erklärung
+  eine Option über ihren Inhalt benennen, nie über ihre Position.
+- Ein erneutes Erzeugen wiederholt die Fragen nicht. Die Route liest die bisherigen Fragen aus dem
+  Cache und gibt ihre Texte als Ausschlussliste in den Prompt. Der Prompt fordert zugleich einen
+  Überschuss an (Ziel plus mindestens 3). `selectQuestions` behält dann die ersten neuen Fragen
+  und wirft eine Frage weg, deren Text schon gestellt wurde oder im selben Lauf doppelt vorkommt.
+  Ein Modellaufruf bleibt es. Reicht die Anzahl danach nicht, füllt der Rest auf: ein kurzes Quiz
+  ist besser als eine wiederholte Frage. Der Text-Vergleich sieht nur die Schreibweise
+  (`questionKey`); ein inhaltlich gleiches, umformuliertes Frage-Paar erkennt er nicht.
+- Die Quiz-Länge ist auf 15 Fragen begrenzt (`MAX_QUESTIONS`). Die Grenze kommt aus der Laufzeit,
+  nicht aus der Fachlichkeit: der Denk-Prompt braucht für zehn Fragen gemessen 128–158 s und
+  21 000–27 000 Ausgabe-Token, und die Qualitätsprüfung kostet im Fehlerfall noch einmal ähnlich
+  viel. Fünfzehn Fragen bleiben unter `LLM_TIMEOUT_MS` (600 s), fünfundzwanzig nicht.
+- Der Quiz-Prompt arbeitet nach der Methode der klassischen Logik (Begriff, Urteil, Schluss, nach
+  dem Schulbuch von Winogradow/Kusmin 1954) und verteilt die Fragen auf drei Module: Begriffe,
+  Schlüsse, Fangfragen. Der Aufgabentyp steht als `type` in jeder Frage. Die Verteilung ist ein
+  Anteil, kein Versprechen: sagt das Material ein Modul nicht her, verteilt der Prompt die Fragen
+  auf die übrigen Module, statt Tiefe zu erfinden.
+- Jede Option trägt ihre eigene Begründung (`rationale`), und das Modell setzt `isCorrect` selbst.
+  Das ist die Grundlage der Qualitätsprüfung: eine Option ohne Begründung ist eine Fülloption.
+- `src/ai/quizCheck.ts` prüft jedes Quiz mechanisch und trennt harte von weichen Befunden — gleiche Optionenlänge (unter 35 % Abweichung),
+  keine Option, die länger ist als jede falsche, keine Verneinungsoptionen, keine Dubletten, keine
+  Option, die im Material nicht vorkommt, Begründung je Option, ein Stamm ohne zweite Frage, und
+  über das Set: mindestens drei Aufgabentypen, höchstens 40 % reine Abfragen. Beanstandete Fragen
+  gehen einmal in eine Reparatur; behalten wird die Fassung mit weniger Befunden. Beide Zahlen
+  stehen im Container-Log (`[quiz] Qualitätsprüfung: …`).
+- Gemessene Wirkung der Prüfung an echten Paketen: Ethik 1 von 10 Fragen beanstandet, Englisch 4 von
+  10 (jeweils Optionen, die im Material nicht vorkommen).
+- Der Aufruf trägt kein `max_tokens`, solange `LLM_MAX_TOKENS` leer ist — dann gilt der Default des
+  Modells. Das ist der Produktivzustand. Gemessen mit `max_tokens=8192`: eine Anfrage über 25
+  Fragen verbrauchte das komplette Budget im Reasoning (`finish_reason=length`, `content` leer)
+  und die Route antwortete `AI_INVALID`. Nur bei `openrouter` gilt ohne Wert weiter 8192 (siehe
+  Umgebungstabelle).
+- Die Schätzdauer im Ladeoverlay (`src/components/LoadingOverlay.tsx`) ist eine Formel, keine
+  Messung pro Anfrage: für das Quiz `160 s + 6 s je Frage` (zehn Fragen dauern gemessen 128–158 s; die Qualitätsprüfung schlägt nur bei einem harten Befund mit 120–180 s dazu), sonst ein fester Wert je Artefakt
+  (Karteikarten 45 s, Lernleitfaden 80 s, KI-Synthese 100 s, Auswertung 45 s, Speichern 3 s).
+  Grundlage sind die Messungen oben (10 Fragen 116 s, 25 Fragen 162 s, kleines Material mit
+  2 Fragen 10 s; Karteikarten 27–30 s, Lernleitfaden 61 s, KI-Synthese 83 s). Der Grundaufwand
+  des Modells dominiert, deshalb steigt die Schätzung nur schwach mit der Anzahl. Die Schätzung liegt bewusst etwas hoch: lieber „rechnet noch" als ein
+  Ende zu versprechen, das schon vorbei ist. Die verstrichene Zeit daneben ist immer exakt.
+- Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
+  (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.
+- Die App läuft im Heimnetz über einfaches HTTP. Das ist **kein** sicherer Kontext. Die Browser-APIs
+  `crypto.randomUUID` und `navigator.clipboard` fehlen dort. `src/services/uuid.ts` und
+  `src/services/clipboard.ts` kapseln beide: native API, wenn vorhanden, sonst ein Ersatz
+  (`crypto.getRandomValues` für UUID v4, versteckte Textarea mit `document.execCommand("copy")`).
+  Neue Aufrufe dieser APIs immer über die Helfer, nie direkt.
