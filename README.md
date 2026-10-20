@@ -3,7 +3,7 @@
 Erstellt Quizfragen, Karteikarten und Lernleitfäden aus eigenen Lernmaterialien.
 
 ```text
-server.ts             Express-API, SQLite-Schema, statische Auslieferung
+server.ts             der Server: Routen, SQLite-Schema, statische Auslieferung
 llm.ts                Provider-Schicht für Gemini und OpenRouter
 src/App.tsx           Tabs und Hauptzustand
 src/components/       Library, UploadModal, QuizView, FlashcardsView, StudyGuideView, ...
@@ -11,7 +11,7 @@ src/components/       Library, UploadModal, QuizView, FlashcardsView, StudyGuide
 
 - **Was ist das:** eine Web-App aus React, Express und SQLite, die im eigenen Netz läuft.
 - **Was macht es:** baut aus hochgeladenen Fotos oder Texten Quizfragen, Karteikarten und einen Lernleitfaden und speichert Ergebnisse und Fehleranalyse pro Lernpaket — nach dem Material aus dem echten Unterricht, ohne Cloud-Konto.
-- **Was es braucht:** Node 22 oder Docker, und einen Schlüssel für Gemini oder OpenRouter.
+- **Was es braucht:** Node 22 auf dem Server, und einen Schlüssel für ein Sprachmodell.
 - **Wie fange ich an:** `docker compose up -d`, dann `http://<dein-server>:3001` öffnen und ein Lernpaket anlegen.
 
 ## Install
