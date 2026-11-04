@@ -27,7 +27,7 @@ export const questionSurplus = (target: number): number => Math.max(3, Math.ceil
 
 /** The exact JSON (or prose) shape each artifact must have. Reused in the repair retry. */
 export const OUTPUT_CONTRACT: Record<ArtifactKind, string> = {
-  quiz: '{"quiz":[{"type":"<Aufgabentyp>","question":"...","options":[{"text":"...","isCorrect":true,"rationale":"≤8 Wörter"},{"text":"...","isCorrect":false,"rationale":"≤8 Wörter"}],"hint":"≤8 Wörter","explanation":"≤15 Wörter","topic":"Stichwort"}]}',
+  quiz: '{"quiz":[{"type":"<Aufgabentyp>","question":"...","options":[{"text":"...","isCorrect":true,"rationale":"..."},{"text":"...","isCorrect":false,"rationale":"..."}],"hint":"...","explanation":"...","topic":"Stichwort"}]}',
   flashcards: '{"flashcards":[{"front":"...","back":"..."}]}',
   analysis: '{"strengths":["..."],"growthAreas":["..."],"topicPerformance":[{"topic":"...","score":0,"total":0}]}',
   text: "Reiner Text in Markdown, kein JSON.",
