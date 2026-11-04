@@ -98,26 +98,48 @@ export const quizModules = (count: number, grade = 9, hard = false): { begriffe:
  * block allowed 20 to 30. Each rule is one line and one thought.
  */
 export const quizRules = (): string => `REGELN
-- Nimm nur Aussagen aus dem Material.
-- Erfinde keine Aussage, die nicht im Material steht.
+- Nimm den Inhalt nur aus dem Material.
+- Erfinde keine Aussage, die dem Material widerspricht.
 - Verteile die Fragen über verschiedene Textstellen und Aspekte.
 - Frage höchstens ein Drittel der Fragen als reines Faktum ab (type WIEDERGEBEN).
+- Trägt das Material ein Modul nicht, verteile die Fragen auf die übrigen Module.
 - Stelle in einem Stamm genau eine Frage.
 - Gib im Stamm keinen Lösungshinweis.
-- Setze bei FEHLER und AUSSCHLUSS die Aussage in den Stamm.
+- Zitiere im Stamm höchstens 6 Wörter aus dem Material.
 - Verweise im Stamm nicht auf die Quelle: kein "laut Material", kein "im Text".
 - Gib genau vier Optionen.
 - Formuliere die Optionen grammatisch parallel.
 - Halte die Optionen gleich lang. Abweichung höchstens 35 %.
 - Beginne keine Option mit ohne, nicht, kein oder niemals.
-- Nimm die falsche Option aus derselben Textstelle wie die richtige.
-- Unterscheide eine falsche Option in genau EINEM Merkmal.
-- Nimm keine Option auf, die im Material nicht vorkommt.
+- Eine falsche Option nennt eine typische Verwechslung.
+- Sie widerspricht dem Material in genau EINEM Merkmal.
+- Bei AUSSCHLUSS gilt das Gegenteil: die drei falschen Optionen sind wahre Aussagen aus dem Material.
 - Mache die richtige Option nicht zur längsten.
 - Wechsle die Position der richtigen Option.
 - Fasse die Begründung in höchstens 8 Wörter.
 - Fasse den Hinweis in höchstens 8 Wörter.
 - Nenne als topic ein Stichwort.`;
+
+/** One definition per term, so prompt, gate, log and UI name the same thing the same way. */
+export const quizGlossary = (): string => `BEGRIFFE
+- MATERIAL: der Text, aus dem die Fragen entstehen. Das ist der Lerntext oder ein hochgeladener Text.
+- STAMM: der Fragetext einer Frage.
+- OPTION: ein Antwortvorschlag.
+- BEGRÜNDUNG: warum eine Option stimmt oder nicht stimmt.
+- HINWEIS: eine Hilfe, die die Lösung nicht nennt.
+- ERKLÄRUNG: ein Satz, der die Lösung begründet.`;
+
+/**
+ * The block for the harder set. It stands after the rules, so the stricter rule wins over the
+ * general one it restricts (a weaker rule printed later used to cancel it).
+ */
+export const quizHardRules = (): string => `STUFE SCHWER — jede Frage verlangt zwei Schritte:
+- Kein WIEDERGEBEN, auch nicht im Modul BEGRIFFE. Nutze dort nur type BEZIEHUNG.
+- Mindestens drei Fragen verbinden zwei Aussagen des Materials.
+- Die falschen Optionen unterscheiden sich in einem feinen Merkmal.
+- Keine falsche Option ist grob falsch.
+- Die richtige Option steht nie wörtlich im Material.
+- Die richtige Option fasst das Material in eigenen Worten zusammen.`;
 
 const previousBlock = (previous: string[]): string =>
   previous.length === 0
@@ -153,6 +175,8 @@ SPRACHE (gilt für Stamm, Optionen, Hinweis und Erklärung)
 - Zitiere ein solches Wort nur, wenn es im Material steht.
 - Erkläre die Regel in der Sprache des Kindes. Benenne sie nicht.
 
+${quizGlossary()}
+
 ${count} Multiple-Choice-Fragen, verteilt auf drei Module:
 1. BEGRIFFE (${modules.begriffe}, type BEZIEHUNG oder WIEDERGEBEN): Merkmale trennen, Ober-/Unterbegriff,
    Definition prüfen.
@@ -166,17 +190,11 @@ ${count} Multiple-Choice-Fragen, verteilt auf drei Module:
    Die Optionen beschreiben den Fehler in einfachen Worten.
    Beispiel: "Man schließt von einem Fall auf alle."
    Beispiel: "Der Grund wird mit der Folge verwechselt."
-${hard ? `
-STUFE SCHWER — jede Frage verlangt zwei Schritte:
-- Kein WIEDERGEBEN. Jede Frage braucht einen Schluss, einen Vergleich oder eine Fehlerprüfung.
-- Mindestens drei Fragen verbinden zwei Aussagen des Materials.
-- Die falschen Optionen unterscheiden sich in einem feinen Merkmal.
-- Keine falsche Option ist grob falsch.
-- Die richtige Option steht nie wörtlich im Material.
-- Die richtige Option fasst das Material in eigenen Worten zusammen.
-` : ""}
 
 ${quizRules()}
+${hard ? `
+${quizHardRules()}
+` : ""}
 ${previousBlock(previous)}
 AUSGABE — nur JSON:
 ${OUTPUT_CONTRACT.quiz}
@@ -192,7 +210,7 @@ ${content}
  * generated quiz and, when they flag questions, sends this prompt: the model
  * rewrites only the flagged items and leaves the rest untouched.
  */
-export const quizRepairPrompt = (quiz: unknown, flags: string, content: string, grade: number): string => {
+export const quizRepairPrompt = (quiz: unknown, flags: string, content: string, grade: number, hard = false): string => {
   const style = gradeStyle(grade);
   return `
 Du prüfst ein Multiple-Choice-Quiz für Klassenstufe ${grade}.
@@ -214,6 +232,11 @@ SPRACHE für Klasse ${grade}
 - Nur Wörter, die ein Kind der Klasse ${grade} kennt.
 - Keine Fachsprache im Stamm: Denkfehler, Schluss, Prämisse, Umkehrung, zwingend, logisch.
 
+${quizGlossary()}
+
+${hard ? `
+${quizHardRules()}
+` : ""}
 ${quizRules()}
 
 QUIZ (JSON):
@@ -239,6 +262,7 @@ SPRACHE
   in höchstens ${style.explanation} Wörtern, in der Sprache eines Kindes der Klasse ${grade}.
 - Nur Wörter, die ein Kind der Klasse ${grade} kennt. Ein Fachwort aus dem Material in einfachen
   Worten erklären.
+- Keine Fachsprache: Denkfehler, Schluss, Prämisse, Umkehrung, zwingend, logisch.
 
 Prinzip "Active Recall": Die Vorderseite fragt gezielt, die Rückseite erklärt knapp.
 
@@ -259,6 +283,7 @@ SPRACHE
   active over passive; three or more items go vertical; cut, never decorate.
 - Jeder Satz höchstens ${gradeStyle(grade).text} Wörter, in der Sprache eines Kindes der
   Klasse ${grade}. Keine Fachsprache aus der Lerntheorie.
+- Keine Fachsprache: Denkfehler, Schluss, Prämisse, Umkehrung, zwingend, logisch.
 
 Performance-Daten:
 ${history}

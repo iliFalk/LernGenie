@@ -85,8 +85,22 @@ Bedingung `explanation <= text` fest.
   Logik-Fachsprache im Stamm und in den Optionen (Denkfehler, Schluss, Prämisse, Umkehrung …). Die
   Regel wird in der Sprache des Kindes erklärt, nicht benannt.
 - Die Prüfung stuft ab: Stamm über der Grenze = weich, doppelt über der Grenze = hart, Fachwort im
-  Stamm = hart, Fachwort in einer Option = weich, zu lange Option = weich. Liegt der Schnitt der
-  Stämme über der Grenze, meldet sie das als Set-Befund.
+  Stamm = hart, Fachwort in einer Option = weich, zu lange Option = weich, Begründung über 8 Wörtern
+  = weich, Erklärung über der Grenze = weich und doppelt über der Grenze = hart, fehlendes `topic`
+  = hart. Liegt der Schnitt der Stämme über der Grenze, meldet sie das als Set-Befund.
+- **Ein Regelblock, ein Begriffsblock.** `quizRules()` und `quizGlossary()` gelten für den Quiz- und
+  den Reparatur-Prompt. Die Begriffe: MATERIAL (der Text, aus dem Fragen entstehen), STAMM, OPTION,
+  BEGRÜNDUNG, HINWEIS, ERKLÄRUNG. Dieselben Wörter stehen im Gating-Log und in der Oberfläche.
+- **Der harte Block steht hinter den Regeln**, weil die strengere Regel die allgemeine einschränkt:
+  `STUFE SCHWER` verbietet `WIEDERGEBEN` auch im Modul BEGRIFFE. Die Reparatur erhält den Block
+  ebenfalls, sonst könnte sie einen harten Satz in einen normalen zurückschreiben.
+- **Eine falsche Option ist eine typische Verwechslung**, die so nicht im Material steht, ihm aber in
+  genau einem Merkmal widerspricht. Für `AUSSCHLUSS` gilt das Gegenteil: dort sind drei Optionen
+  wahre Materialaussagen. Das alte Verbot „keine Option, die im Material nicht vorkommt" widersprach
+  dem Zweck des Distraktors und ist ersetzt.
+- Trägt das Material ein Modul nicht, verteilt der Prompt die Fragen auf die übrigen. Diese
+  Ausweichregel hält den Widerspruch aus Länge (Stamm höchstens 10 Wörter) und `FANGFRAGE`
+  (Behauptung zitieren) auf: zitiert wird höchstens 6 Wörter.
 - Karteikarten und Auswertung erhalten die Klassenstufe ebenfalls.
 
 Messung vorher, Wiener Sachtextformel über den ganzen Satz: Ethik Klasse 6 — Stämme 9.7, Optionen

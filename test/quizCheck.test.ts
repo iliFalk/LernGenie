@@ -146,3 +146,22 @@ test("a long option at class 6 is soft, not hard", () => {
   assert.equal(result.flagged, 0);
   assert.match(Object.values(result.items).flat().join(" "), /Option 3 über der Grenze/);
 });
+
+// --- cross-checks (2026-11-04) ------------------------------------------------
+
+test("a missing topic is hard, because the statistics group by it", () => {
+  const result = checkQuiz([question({ topic: "" })], context);
+  assert.equal(result.flagged, 1);
+  assert.match(Object.values(result.hardItems).flat().join(" "), /kein topic/);
+});
+
+test("an explanation at twice the grade limit is repaired, one step over is only logged", () => {
+  const over = "Wort ".repeat(15).trim() + ".";        // 15 Wörter, Grenze 12
+  const twice = "Wort ".repeat(26).trim() + ".";       // 26 Wörter, über 24
+  const logged = checkQuiz([question({ explanation: over })], stepContext);
+  assert.equal(logged.flagged, 0);
+  assert.match(Object.values(logged.items).flat().join(" "), /Erklärung über der Grenze/);
+  const repaired = checkQuiz([question({ explanation: twice })], stepContext);
+  assert.equal(repaired.flagged, 1);
+  assert.match(Object.values(repaired.hardItems).flat().join(" "), /doppelt so lang/);
+});

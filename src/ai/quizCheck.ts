@@ -118,6 +118,7 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
     if (list.length !== 4) hard.push("nicht genau vier Optionen");
     if (correctIndex < 0 || correctIndex >= list.length) hard.push("keine gültige richtige Antwort");
     if (!question.type.trim()) hard.push("kein Aufgabentyp (type)");
+    if (!question.topic.trim()) hard.push("kein topic");
     if (list.some((option) => NEGATION_OPENING.test(option))) hard.push("Option beginnt mit einer Verneinung");
     if (new Set(list.map((option) => questionKey(option))).size < list.length) hard.push("doppelte Option");
 
@@ -182,8 +183,12 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
     }
 
     // The explanation carries the same word limit as the prompt states for the grade.
-    if (question.explanation.trim() && countWords(question.explanation) > style.explanation) {
-      soft.push(`Erklärung über der Grenze: ${countWords(question.explanation)} Wörter, Grenze ${style.explanation}`);
+    // Twice the limit cannot be read by the pupil, so it is repaired; one step over is style.
+    const explanationWords = countWords(question.explanation);
+    if (question.explanation.trim() && explanationWords > style.explanation * 2) {
+      hard.push(`Erklärung doppelt so lang wie die Grenze: ${explanationWords} Wörter, Grenze ${style.explanation}`);
+    } else if (question.explanation.trim() && explanationWords > style.explanation) {
+      soft.push(`Erklärung über der Grenze: ${explanationWords} Wörter, Grenze ${style.explanation}`);
     }
 
     const found = [...hard, ...soft];

@@ -161,9 +161,31 @@ die Anfrage, bleibt das Paket gespeichert; der Start erzeugt die Fragen dann sel
 Die Anzahl bleibt für weitere Runden wählbar (5 bis 15, Voreinstellung 10).
 
 Über der Anzahl steht das Kästchen „Schwerere Fragen". Es lässt die Anfrage mit `low` denken und
-verlangt zwei Schritte je Frage, feinere Ablenker und keinen reinen Abfragetyp. Gemessen: 18 s je
-zehn Fragen ohne Denken, 210–287 s mit `low`. Beide Stufen halten ihren eigenen Cache-Eintrag
-(`quiz_level`), damit ein schnelles Quiz nie als schweres Quiz ausgeliefert wird.
+verlangt zwei Schritte je Frage, feinere Optionen und keinen reinen Abfragetyp. Gemessen: 18 s je
+zehn Fragen ohne Denken, 210–287 s mit `low`. Beide Stufen halten eigene Spalten
+(`quiz_questions` und `quiz_hard_questions`), damit ein schnelles Quiz nie als schweres Quiz
+ausgeliefert wird.
+
+## Logik-Abgleich der Prompts (2026-11-04)
+
+Ein Abgleich quer über die Prompts fand zehn Stellen, an denen Regeln einander widersprachen oder
+die Prüfung etwas anderes maß als der Prompt verlangte. Behoben:
+
+- Der Reparatur-Prompt kannte die Stufe „schwer" nicht: er konnte einen harten Satz in einen
+  normalen zurückschreiben. Er bekommt den Block jetzt.
+- Beim Erneuern eines harten Satzes las der Server die Ausschlussliste aus den Standard-Spalten.
+  Jetzt liest er die Spalten seiner Stufe, damit sich harte Fragen nicht wiederholen.
+- „Nur Aussagen aus dem Material" und „keine Option, die im Material nicht vorkommt" widersprachen
+  dem Distraktor. Neu: eine falsche Option ist eine typische Verwechslung, die so nicht im Material
+  steht, ihm aber in genau einem Merkmal widerspricht. Für `AUSSCHLUSS` gilt das Gegenteil.
+- `STUFE SCHWER` stand vor den Regeln und wurde von der späteren, schwächeren Regel „höchstens ein
+  Drittel WIEDERGEBEN" überstimmt. Der Block steht jetzt dahinter.
+- Der Konflikt aus Stamm-Länge und `FANGFRAGE` ist aufgelöst: Zitate im Stamm höchstens 6 Wörter,
+  und ein Material, das ein Modul nicht trägt, verteilt die Fragen auf die übrigen Module.
+- Ungedeckte Zusagen sind geprüft: fehlendes `topic` und eine doppelt zu lange Erklärung lösen eine
+  Reparatur aus; die Zahl der Karteikarten landet im Log, wenn sie von zehn abweicht.
+- Ein Begriffsblock definiert MATERIAL, STAMM, OPTION, BEGRÜNDUNG, HINWEIS und ERKLÄRUNG einmal; die
+  Oberfläche nennt das Material nicht mehr „Quellmaterialien" oder „Quelltexte".
 
 ## Wie deployt wurde (2026-10-05)
 

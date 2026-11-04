@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { quizModules, gradeStyle } from "../src/ai/prompts";
+import { quizModules, gradeStyle, buildPrompt, quizRepairPrompt } from "../src/ai/prompts";
 
 const sum = (m: { begriffe: number; schluesse: number; fangfragen: number }) => m.begriffe + m.schluesse + m.fangfragen;
 
@@ -39,4 +39,24 @@ test("the explanation is never harder than the source text", () => {
     const style = gradeStyle(grade);
     assert.ok(style.explanation <= style.text, `grade ${grade}: ${style.explanation} > ${style.text}`);
   }
+});
+
+test("the hard block stands after the rules, so the stricter rule wins", () => {
+  const prompt = buildPrompt("quiz", { content: "Photosynthese", grade: 6, count: 10, hard: true }).prompt;
+  assert.ok(prompt.indexOf("STUFE SCHWER") > prompt.indexOf("REGELN"));
+});
+
+test("the repair prompt carries the hard level and the terms", () => {
+  const withHard = quizRepairPrompt([], "- Frage 1: Test", "Material", 6, true);
+  const without = quizRepairPrompt([], "- Frage 1: Test", "Material", 6, false);
+  assert.match(withHard, /STUFE SCHWER/);
+  assert.doesNotMatch(without, /STUFE SCHWER/);
+  assert.match(without, /STAMM: der Fragetext/);
+});
+
+test("the distractor rule no longer demands a material sentence", () => {
+  const prompt = buildPrompt("quiz", { content: "Material", grade: 6, count: 10 }).prompt;
+  assert.doesNotMatch(prompt, /die im Material nicht vorkommt/);
+  assert.match(prompt, /typische Verwechslung/);
+  assert.match(prompt, /Bei AUSSCHLUSS gilt das Gegenteil/);
 });

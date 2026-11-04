@@ -197,7 +197,7 @@ export default function PackageDetailView({
                   <span className="text-xs text-[var(--cds-text-primary)] leading-tight">
                     Schwerere Fragen
                     <span className="block text-[11px] text-[var(--cds-text-helper)]">
-                      Zwei Schritte je Frage und feinere Ablenker. Das Modell denkt länger, etwa 5 Minuten für 10 Fragen.
+                      Zwei Schritte je Frage und feinere Optionen. Das Modell denkt länger, etwa 5 Minuten für 10 Fragen.
                     </span>
                   </span>
                 </label>
@@ -221,7 +221,7 @@ export default function PackageDetailView({
                     ))}
                   </div>
                   <p className="text-[11px] text-[var(--cds-text-helper)] mt-1.5 leading-tight">
-                    Gilt für neue Fragen. "Quiz starten (gespeichert)" liefert nur ein Quiz dieser Länge.
+                    Bereit liegen 10 Fragen. Jede andere Anzahl erzeugt neue Fragen.
                   </p>
                 </div>
               </div>
@@ -242,12 +242,12 @@ export default function PackageDetailView({
           {/* Uploaded Materials Structured List */}
           <div className="cds--tile">
             <h2 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-secondary)] border-b border-[var(--cds-border-subtle-01)] pb-2 mb-3">
-              Quellmaterialien ({materials.length})
+              Material ({materials.length})
             </h2>
 
             {materials.length === 0 ? (
               <p className="text-xs text-[var(--cds-text-secondary)] py-4 text-center">
-                Keine Quelltexte im Paket hinterlegt.
+                Kein Material im Paket hinterlegt.
               </p>
             ) : (
               <div className="divide-y divide-[var(--cds-border-subtle-01)]">

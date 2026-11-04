@@ -125,6 +125,12 @@ async function startServer() {
     };
   };
 
+  // The card prompt asks for ten cards. A deviation goes to the log instead of staying invisible.
+  const reportCardCount = (cards: unknown) => {
+    const count = Array.isArray(cards) ? cards.length : 0;
+    if (count !== 10) console.log(`[cards] ${count} Karten statt 10`);
+  };
+
   const getOrClassifySubject = async (packageId: string, name: string, req: express.Request): Promise<string> => {
     try {
       // First, check if db has a cached subject
@@ -256,6 +262,7 @@ async function startServer() {
       const { content, grade } = req.body;
       const result = await generateArtifact("flashcards", { content, grade }, getAIConfig(req));
       if (!result.ok) return aiFailure(res, result);
+      reportCardCount(result.value);
       res.json(result.value);
     } catch (error: any) {
       res.status(500).json({ error: error?.message || String(error), code: "AI_INTERNAL" });
@@ -349,7 +356,7 @@ async function startServer() {
 
       // The questions the user already saw are handed to the prompt, so a second
       // round cannot repeat them. Read regardless of the stored schema_version.
-      const previousSet = readCachedArtifact(db, req.params.id, "quiz", { ignoreVersion: true }) || [];
+      const previousSet = readCachedArtifact(db, req.params.id, "quiz", { ignoreVersion: true, level }) || [];
       const previous = previousSet.map((question) => question.text);
 
       const result = await generateArtifact<QuizQuestion[]>(
@@ -388,6 +395,7 @@ async function startServer() {
 
       const result = await generateArtifact("flashcards", { content, grade: pkg.grade ?? 0 }, getAIConfig(req));
       if (!result.ok) return aiFailure(res, result);
+      reportCardCount(result.value);
 
       writeCachedArtifact(db, req.params.id, "flashcards", result.value);
       res.json(result.value);

@@ -181,7 +181,7 @@ export async function generateArtifact<T = unknown>(
     if (before.flagged === 0) return { value, repaired: false, flags: before.items ? Object.values(before.items).flat().map(String) : [] };
 
     const flags = formatQuizFlags(value as unknown as QuizQuestion[], before);
-    const prompt = quizRepairPrompt(value, flags, source, Number(input.grade) || 0);
+    const prompt = quizRepairPrompt(value, flags, source, Number(input.grade) || 0, Boolean(input.hard));
     let raw: string;
     try {
       raw = await call(prompt);
