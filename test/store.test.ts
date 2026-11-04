@@ -73,9 +73,11 @@ test("writing the same artifact twice updates it", () => {
   assert.deepEqual(readCachedArtifact(db, "p1", "quiz"), other);
 });
 
-test("a hard set is not served as the standard set", () => {
+test("both quiz levels keep their own cached set", () => {
   const db = setup();
-  writeCachedArtifact(db, "p1", "quiz", goodQuiz, "hard");
-  assert.equal(readCachedArtifact(db, "p1", "quiz", { level: "standard" }), null);
-  assert.deepEqual(readCachedArtifact(db, "p1", "quiz", { level: "hard" }), goodQuiz);
+  const hard = [{ ...goodQuiz[0], id: "h1", text: "Welche Folgerung traegt?" }];
+  writeCachedArtifact(db, "p1", "quiz", goodQuiz, "standard");
+  writeCachedArtifact(db, "p1", "quiz", hard, "hard");
+  assert.deepEqual(readCachedArtifact(db, "p1", "quiz", { level: "standard" }), goodQuiz);
+  assert.deepEqual(readCachedArtifact(db, "p1", "quiz", { level: "hard" }), hard);
 });

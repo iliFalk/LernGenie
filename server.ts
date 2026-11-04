@@ -69,8 +69,9 @@ try {
 // Add the per-artifact schema_version columns so a shape change invalidates old rows.
 ensureCacheSchema(db);
 
-// The study guide is gone (2026-11-04). Drop its columns, so an older database matches the code.
-for (const column of ["study_guide", "study_guide_version"]) {
+// The study guide is gone (2026-11-04), and so is the first attempt at a quiz level column.
+// Drop them, so an older database matches the code.
+for (const column of ["study_guide", "study_guide_version", "quiz_level"]) {
   try {
     db.exec(`ALTER TABLE package_cache DROP COLUMN ${column};`);
   } catch {
