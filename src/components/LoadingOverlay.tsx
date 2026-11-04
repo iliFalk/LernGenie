@@ -8,11 +8,12 @@ import React, { useEffect, useState } from "react";
  * when the answer arrives.
  *
  * Measured on the live deployment (2026-11-04): ten questions take 18 s with
- * `LLM_REASONING_EFFORT=none` and 210 s with `low`. The deployment runs `low`, because the
- * shorter stems and the better judgment are worth the time. A slow call shows "still
- * working" instead of a passed deadline.
+ * `LLM_REASONING_EFFORT=none`, 210 s with `low` on a small text and 287 s with `low` on a
+ * real Klasse-6 paket. The deployment runs `low`, because the shorter stems and the better
+ * judgment are worth the time. A slow call shows "still working" instead of a passed
+ * deadline.
  */
-export const quizEstimateMs = (count: number): number => (70 + count * 16) * 1000;
+export const quizEstimateMs = (count: number): number => (80 + count * 21) * 1000;
 
 /** Estimate for the performance analysis after a quiz (measured ~10-20 s, generous margin). */
 export const ANALYSIS_ESTIMATE_MS = 45_000;
