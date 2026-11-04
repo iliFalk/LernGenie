@@ -88,7 +88,11 @@ async function startServer() {
   });
 
   // Helper to handle user_id from headers
+  // A shared library: `SINGLE_USER_ID` pins every request to one user, so every device sees the
+  // same packages. Empty = the per-browser id from the `x-user-id` header applies.
   const getUserId = (req: express.Request) => {
+    const pinned = (process.env.SINGLE_USER_ID || "").trim();
+    if (pinned) return pinned;
     return req.headers["x-user-id"] as string || "default_user";
   };
 

@@ -53,6 +53,7 @@ Die Compose-Datei gehört zum Projekt `falknest`, genau wie `infra.yml`. Compose
 OPENCODE_GO_API_KEY=<OpenCode-Go-Key>
 AI_PROVIDER=opencode-go
 AI_MODEL=deepseek-v4.1-flash
+SINGLE_USER_ID=shared
 LLM_TIMEOUT_MS=600000
 DB_PATH=/data/study_quiz.db
 NODE_ENV=production
@@ -128,6 +129,20 @@ wieder, `lernquiz` antwortete mit HTTP 200, und die Zählung blieb gleich (4 Pak
 
 Was **nicht** erhalten bleibt: der Inhalt von `/data` beim Löschen des Verzeichnisses, und der
 Zustand im Browser des Geräts (`localStorage`: Dev-Mode-Einstellungen, User-ID).
+
+## Gemeinsame Bibliothek (2026-11-04)
+
+Die App hängte jedes Paket an eine Kennung, die der Browser selbst erzeugt
+(`study_genie_user_id` in `localStorage`, Header `x-user-id`). Ein zweiter Browser, ein privates
+Fenster oder ein anderes Gerät bekam damit eine neue Kennung und sah eine leere Bibliothek,
+obwohl die Pakete in der Datenbank lagen.
+
+`SINGLE_USER_ID` behebt das: steht der Wert in der Env, benutzt der Server für jede Anfrage diese
+Kennung und ignoriert den Header. Alle Geräte lesen und schreiben dann eine Bibliothek.
+
+Bestand nach der Umstellung auf `shared`: 3 Pakete von `anon_ecbyw7wuhnp` und 1 Paket von
+`anon_tmeu5hetoe9` wurden umgeschrieben (`UPDATE packages SET user_id='shared'`, dasselbe für
+`quiz_results`). Die Sicherung der Datei vor dem Umschreiben liegt neben der Datenbank.
 
 ## Wie deployt wurde (2026-10-05)
 
