@@ -49,14 +49,18 @@ export interface GradeStyle {
   option: number;
   /** Upper bound for the words of one explanation. */
   explanation: number;
+  /** Upper bound for the words of one sentence in a prose artifact (topic text, analysis). */
+  text: number;
   /** Share of the question modules: terms, inferences, traps. */
   mix: [number, number, number];
 }
 
 export const gradeStyle = (grade: number): GradeStyle => {
-  if (grade > 0 && grade <= 6) return { stem: 10, option: 8, explanation: 20, mix: [0.5, 0.3, 0.2] };
-  if (grade <= 9) return { stem: 14, option: 10, explanation: 25, mix: [0.3, 0.4, 0.3] };
-  return { stem: 18, option: 12, explanation: 30, mix: [0.3, 0.4, 0.3] };
+  if (grade > 0 && grade <= 6) {
+    return { stem: 10, option: 8, explanation: 20, text: 12, mix: [0.5, 0.3, 0.2] };
+  }
+  if (grade <= 9) return { stem: 14, option: 10, explanation: 25, text: 16, mix: [0.3, 0.4, 0.3] };
+  return { stem: 18, option: 12, explanation: 30, text: 20, mix: [0.3, 0.4, 0.3] };
 };
 
 /**
@@ -162,7 +166,9 @@ ${content}
  * generated quiz and, when they flag questions, sends this prompt: the model
  * rewrites only the flagged items and leaves the rest untouched.
  */
-export const quizRepairPrompt = (quiz: unknown, flags: string, content: string, grade: number): string => `
+export const quizRepairPrompt = (quiz: unknown, flags: string, content: string, grade: number): string => {
+  const style = gradeStyle(grade);
+  return `
 Du prüfst ein Multiple-Choice-Quiz für Klassenstufe ${grade} und verbesserst die beanstandeten Fragen.
 
 BEANSTANDETE FRAGEN und Grund:
@@ -174,8 +180,11 @@ genau vier Optionen, grammatisch parallel, ähnliche Länge (unter 30 % Abweichu
 beginnt mit "ohne", "nicht", "kein" oder "niemals", jede falsche Option stammt aus derselben
 Textstelle und unterscheidet sich in EINEM Merkmal, keine Option, die im Material nicht vorkommt,
 die richtige Option ist nicht länger als jede falsche, jede Option trägt ihre eigene rationale in
-höchstens 8 Wörtern, hint höchstens 8, explanation höchstens 15 Wörter. Typ und topic der
-ersetzten Frage bleiben erhalten.
+höchstens 8 Wörtern, hint höchstens 8. Typ und topic der ersetzten Frage bleiben erhalten.
+
+SPRACHE für Klasse ${grade}: höchstens ${style.stem} Wörter im Stamm, ${style.option} in einer
+Option, ${style.explanation} in einer Erklärung. Nur Wörter, die ein Kind der Klasse ${grade} kennt.
+Keine Fachsprache (Denkfehler, Schluss, Prämisse, Umkehrung, zwingend, logisch) im Stamm.
 
 QUIZ (JSON):
 ${JSON.stringify(quiz)}
@@ -186,6 +195,7 @@ ${content}
 Ausgabe-Vertrag — halte ihn exakt ein:
 ${OUTPUT_CONTRACT.quiz}
 `;
+};
 
 const flashcardsPrompt = (content: string, grade: number): string => {
   const style = gradeStyle(grade);
@@ -217,7 +227,7 @@ Fehler, sondern Muster im Verständnis des Schülers.
 SPRACHE
 - Style: ~80 % of the way to ASD-STE100: one thought per sentence; a verb over an abstract noun;
   active over passive; three or more items go vertical; cut, never decorate.
-- Jeder Satz höchstens ${gradeStyle(grade).explanation} Wörter, in der Sprache eines Kindes der
+- Jeder Satz höchstens ${gradeStyle(grade).text} Wörter, in der Sprache eines Kindes der
   Klasse ${grade}. Keine Fachsprache aus der Lerntheorie.
 
 Performance-Daten:
@@ -229,16 +239,28 @@ Ausgabe-Vertrag — halte ihn exakt ein:
 ${OUTPUT_CONTRACT.analysis}
 `;
 
-const topicPrompt = (topic: string, grade: number): string => `
-Du bist ein Wissens-Kurator. Erstelle eine umfassende "Source of Truth" zum Thema "${topic}" für die Klassenstufe ${grade}.
+const topicPrompt = (topic: string, grade: number): string => {
+  const style = gradeStyle(grade);
+  return `
+Du schreibst einen Lerntext zum Thema "${topic}" für Klasse ${grade}.
 
-Auftrag: ein Text wie ein perfekt recherchiertes Kapitel eines modernen, digitalen Lehrbuchs.
-1. KLARHEIT: Sprache für Klassenstufe ${grade} verständlich, ohne Details auszulassen.
-2. STRUKTUR: Einleitung (Warum ist das Thema wichtig?), Hauptteil mit klaren Überschriften, Beispiele aus der Lebenswelt der Schüler, Zusammenfassung mit den wichtigsten Take-aways.
-3. FORMAT: Markdown (Fettdruck, Listen, Tabellen wo sinnvoll).
+SPRACHE
+- Style: ~80 % of the way to ASD-STE100: one thought per sentence; a verb over an abstract noun;
+  active over passive; three or more items go vertical; cut, never decorate.
+- Jeder Satz höchstens ${style.text} Wörter, in der Sprache eines Kindes der Klasse ${grade}.
+- Nur Wörter, die ein Kind der Klasse ${grade} kennt. Ein Fachwort einmal in einfachen Worten erklären.
+- Beispiele aus Schule, Familie, Spiel oder Sport.
 
-Schreibe so, dass dieser Text als verlässliche Basis für Quizze und Karten dient.
+AUFBAU
+1. Einleitung: Warum ist das Thema wichtig?
+2. Hauptteil mit klaren Überschriften, ohne jede Einzelheit zu verlieren.
+3. Zusammenfassung mit den wichtigsten Punkten.
+
+FORMAT: Markdown (Fettdruck, Listen, Tabellen wo sinnvoll).
+
+Dieser Text ist die verlässliche Basis für Quizze und Karteikarten.
 `;
+};
 
 const OCR_PROMPT =
   "Extrahiere den gesamten Text aus diesem Bild. Transkribiere handgeschriebene Notizen so genau wie möglich. Gib nur den extrahierten Text zurück.";
