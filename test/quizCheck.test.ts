@@ -116,3 +116,33 @@ test("the log line names the hard and the soft findings", () => {
   const text = summariseQuizFlags(checkQuiz(quiz, context));
   assert.match(text, /1 harte Beanstandung/);
 });
+
+// --- grade fit (2026-11-04) ---------------------------------------------------
+
+const stepContext = { source: MATERIAL, grade: 6 };
+
+test("a stem beyond the band limit for class 6 is soft, twice the limit is hard", () => {
+  const eleven = "Welche Aufgabe hat der Farbstoff in der Zelle bei der Photosynthese genau?";
+  const long = "Welche der folgenden Aussagen beschreibt die Aufgabe des Farbstoffs in der Zelle bei der Photosynthese am genauesten, vollstaendig und ohne Auslassung?";
+  const short = checkQuiz([question({ text: eleven })], stepContext);
+  assert.equal(short.flagged, 0);
+  assert.match(Object.values(short.items).flat().join(" "), /über der Grenze/);
+  const tooLong = checkQuiz([question({ text: long })], stepContext);
+  assert.equal(tooLong.flagged, 1);
+  assert.match(Object.values(tooLong.hardItems).flat().join(" "), /Stamm zu lang/);
+});
+
+test("the vocabulary of logic is hard in a stem and soft in an option", () => {
+  const inStem = checkQuiz([question({ text: "Welcher Denkfehler steckt hier?" })], stepContext);
+  assert.match(Object.values(inStem.hardItems).flat().join(" "), /Fachsprache im Stamm/);
+  const inOption = checkQuiz([question({ options: ["zulaessige Umkehrung", "die Chloroplasten", "die Thylakoide", "der Zyklus"] })], stepContext);
+  assert.equal(inOption.flagged, 0);
+  assert.match(Object.values(inOption.items).flat().join(" "), /Fachsprache/);
+});
+
+test("a long option at class 6 is soft, not hard", () => {
+  const options = ["die Chloroplasten", "die Thylakoide", "der Zyklus im Stroma der Chloroplasten mit allen Einzelheiten", "das Chlorophyll"];
+  const result = checkQuiz([question({ options })], stepContext);
+  assert.equal(result.flagged, 0);
+  assert.match(Object.values(result.items).flat().join(" "), /Option 3 über der Grenze/);
+});

@@ -34,6 +34,32 @@ export const OUTPUT_CONTRACT: Record<ArtifactKind, string> = {
 };
 
 /**
+ * Language and structure policy per grade band.
+ *
+ * The grade used to stand in the prompt as a label only, and the model answered in the
+ * register of the source material. Measured with the Wiener Sachtextformel on the live
+ * caches: a Klasse-6 paket produced question stems at level 9.7 and explanations at 14.4,
+ * while a maths paket at the same grade stayed at 6.9. The numbers below turn the label
+ * into a limit the quality pass can also check.
+ */
+export interface GradeStyle {
+  /** Upper bound for the words of one question stem. */
+  stem: number;
+  /** Upper bound for the words of one option. */
+  option: number;
+  /** Upper bound for the words of one explanation. */
+  explanation: number;
+  /** Share of the question modules: terms, inferences, traps. */
+  mix: [number, number, number];
+}
+
+export const gradeStyle = (grade: number): GradeStyle => {
+  if (grade > 0 && grade <= 6) return { stem: 10, option: 8, explanation: 20, mix: [0.5, 0.3, 0.2] };
+  if (grade <= 9) return { stem: 14, option: 10, explanation: 25, mix: [0.3, 0.4, 0.3] };
+  return { stem: 18, option: 12, explanation: 30, mix: [0.3, 0.4, 0.3] };
+};
+
+/**
  * The three modules and their share of the questions. The structure follows the
  * Soviet school course in traditional logic (Winogradow/Kusmin, 1954): terms and
  * their marks, conclusive inference, then the traps that catch unexamined
@@ -41,13 +67,22 @@ export const OUTPUT_CONTRACT: Record<ArtifactKind, string> = {
  * collection of his 1910s-30s puzzles, and the error exercises in the 1954
  * appendix — "danach heißt deshalb", superstitious pseudo-causality).
  *
- * The module mix is a share, not a promise: a short material cannot carry three
- * inference questions, and the prompt says so.
+ * The share depends on the grade: a young pupil works with terms and their marks, an
+ * older one with inferences and traps. The mix is a target, not a promise: a short
+ * material cannot carry three inference questions, and the prompt says so.
  */
-export const quizModules = (count: number): { begriffe: number; schluesse: number; fangfragen: number } => {
-  const begriffe = Math.max(1, Math.round(count * 0.3));
-  const schluesse = Math.max(1, Math.round(count * 0.4));
-  return { begriffe, schluesse, fangfragen: Math.max(1, count - begriffe - schluesse) };
+export const quizModules = (count: number, grade = 9): { begriffe: number; schluesse: number; fangfragen: number } => {
+  const [termsShare, inferenceShare] = gradeStyle(grade).mix;
+  let begriffe = Math.max(1, Math.round(count * termsShare));
+  let schluesse = Math.max(1, Math.round(count * inferenceShare));
+  let fangfragen = count - begriffe - schluesse;
+  if (fangfragen < 1) {
+    // A short quiz keeps one trap and takes its share from the larger module.
+    fangfragen = 1;
+    if (begriffe >= schluesse) begriffe = Math.max(1, count - schluesse - fangfragen);
+    else schluesse = Math.max(1, count - begriffe - fangfragen);
+  }
+  return { begriffe, schluesse, fangfragen };
 };
 
 const previousBlock = (previous: string[]): string =>
@@ -59,24 +94,37 @@ ${previous.map((text) => `- ${text}`).join("\n")}
 `;
 
 const quizPrompt = (count: number, grade: number, content: string, previous: string[] = []): string => {
-  const modules = quizModules(count);
+  const modules = quizModules(count, grade);
+  const style = gradeStyle(grade);
   // A compact instruction matters for the runtime, not for style: measured with the same
   // model, material and question count, a terse prompt answered in 72 s where the verbose
   // one (long module prose plus eight prose rules) needed 204 s, and its own rationales
   // came out shorter (median 9 words against 14).
   return `
-Du bist Fachdidaktiker für Klasse ${grade}. Die Fragen prüfen Denkoperationen nach der klassischen
-Logik (Begriff, Urteil, Schluss); sie fragen keine Sätze ab.
+Du schreibst ein Quiz für Klasse ${grade}. Die Fragen prüfen Denken — Begriff, Urteil, Schluss —,
+sie fragen keine Sätze ab.
+
+SPRACHE (gilt für Stamm, Optionen, Hinweis und Erklärung)
+- Style: ~80 % of the way to ASD-STE100: one thought per sentence; a verb over an abstract noun;
+  active over passive; three or more items go vertical; cut, never decorate.
+- Höchstens ${style.stem} Wörter im Stamm, ${style.option} Wörter in einer Option, ${style.explanation}
+  Wörter in einer Erklärung.
+- Nur Wörter, die ein Kind der Klasse ${grade} kennt. Ein Fachwort aus dem Material ist erlaubt, wenn
+  der Stamm es in einfachen Worten erklärt. Beispiele aus Schule, Familie, Spiel oder Sport.
+- Diese Wörter stehen nicht im Stamm und nicht in den Optionen: Denkfehler, Schluss, Prämisse,
+  Umkehrung, Verallgemeinerung, Zirkel, Analogie, Begriffsvertauschung, zwingend, logisch. Steht
+  eines davon im Material, darf es nur als Zitat vorkommen. Die Regel wird in der Sprache des Kindes
+  erklärt, nicht benannt.
 
 ${count} Multiple-Choice-Fragen, verteilt auf drei Module:
 1. BEGRIFFE (${modules.begriffe}, type BEZIEHUNG oder WIEDERGEBEN): Merkmale trennen, Ober-/Unterbegriff,
    Definition prüfen.
-2. SCHLÜSSE (${modules.schluesse}, type FOLGERUNG oder AUSSCHLUSS): zwingend aus dem Material folgern.
+2. SCHLÜSSE (${modules.schluesse}, type FOLGERUNG oder AUSSCHLUSS): was sicher aus dem Material folgt.
    Falle: unzulässige Umkehrung. Bei AUSSCHLUSS nennt der Stamm eine Materialaussage, die Optionen
    sind einzelne Sätze; gesucht ist der Satz, der mit dem Stamm nicht zugleich wahr sein kann.
-3. FANGFRAGE (${modules.fangfragen}, type FEHLER oder GRUND/FOLGE): Denkfehler benennen —
-   Begriffsvertauschung, Zirkel, vorschnelle Verallgemeinerung, falsche Analogie, Widerspruch,
-   Umkehrung des Schlusses, "danach heißt deshalb", übersehene Bedingung.
+3. FANGFRAGE (${modules.fangfragen}, type FEHLER oder GRUND/FOLGE): der Stamm zitiert eine Behauptung
+   und fragt, was daran nicht stimmt. Die Optionen beschreiben den Fehler in einfachen Worten, zum
+   Beispiel "Man schließt von einem Fall auf alle." oder "Der Grund wird mit der Folge verwechselt."
 
 REGELN
 - Nur Aussagen des Materials. Trägt es ein Modul nicht, verteile die Fragen um. Keine neue Prämisse.
@@ -88,7 +136,7 @@ REGELN
   Merkmal. Keine Option, die im Material nicht vorkommt.
 - Die richtige Option ist nicht die längste; die richtige Position wechselt.
 - rationale: die Regel in höchstens 8 Wörtern, ohne Wiederholung der Option. hint ≤8 Wörter ohne
-  Lösung. explanation ≤15 Wörter. topic: Stichwort.
+  Lösung. explanation ≤${style.explanation} Wörter. topic: Stichwort.
 ${previousBlock(previous)}
 AUSGABE — nur JSON:
 ${OUTPUT_CONTRACT.quiz}
@@ -129,9 +177,20 @@ Ausgabe-Vertrag — halte ihn exakt ein:
 ${OUTPUT_CONTRACT.quiz}
 `;
 
-const flashcardsPrompt = (content: string): string => `
-Erstelle 10 hochwertige Karteikarten (Flashcards) aus dem folgenden Material.
-Folge dem Prinzip des "Active Recall": Die Vorderseite ist eine gezielte Frage oder ein Konzept, die Rückseite eine prägnante, erklärende Antwort im Stil eines Experten-Tutors.
+const flashcardsPrompt = (content: string, grade: number): string => {
+  const style = gradeStyle(grade);
+  return `
+Erstelle 10 Karteikarten aus dem Material für Klasse ${grade}.
+
+SPRACHE
+- Style: ~80 % of the way to ASD-STE100: one thought per sentence; a verb over an abstract noun;
+  active over passive; three or more items go vertical; cut, never decorate.
+- Vorderseite: eine gezielte Frage in höchstens ${style.stem} Wörtern. Rückseite: eine knappe Antwort
+  in höchstens ${style.explanation} Wörtern, in der Sprache eines Kindes der Klasse ${grade}.
+- Nur Wörter, die ein Kind der Klasse ${grade} kennt. Ein Fachwort aus dem Material in einfachen
+  Worten erklären.
+
+Prinzip "Active Recall": Die Vorderseite fragt gezielt, die Rückseite erklärt knapp.
 
 Ausgabe-Vertrag — halte ihn exakt ein:
 ${OUTPUT_CONTRACT.flashcards}
@@ -139,9 +198,17 @@ ${OUTPUT_CONTRACT.flashcards}
 Material:
 ${content}
 `;
+};
 
-const analysisPrompt = (history: string): string => `
-Du bist ein persönlicher Lern-Coach. Analysiere die folgende Quiz-Performance. Identifiziere nicht nur Fehler, sondern Muster im Verständnis des Schülers.
+const analysisPrompt = (history: string, grade: number): string => `
+Du bist ein Lern-Coach für Klasse ${grade}. Analysiere die folgende Quiz-Performance. Finde nicht nur
+Fehler, sondern Muster im Verständnis des Schülers.
+
+SPRACHE
+- Style: ~80 % of the way to ASD-STE100: one thought per sentence; a verb over an abstract noun;
+  active over passive; three or more items go vertical; cut, never decorate.
+- Jeder Satz höchstens ${gradeStyle(grade).explanation} Wörter, in der Sprache eines Kindes der
+  Klasse ${grade}. Keine Fachsprache aus der Lerntheorie.
 
 Performance-Daten:
 ${history}
@@ -198,9 +265,9 @@ export function buildPrompt(kind: ArtifactKind, input: Record<string, unknown>):
       };
     }
     case "flashcards":
-      return { prompt: flashcardsPrompt(String(input.content ?? "")), isJson: true, useFlashModel: true };
+      return { prompt: flashcardsPrompt(String(input.content ?? ""), Number(input.grade) || 0), isJson: true, useFlashModel: true };
     case "analysis":
-      return { prompt: analysisPrompt(JSON.stringify(input.history ?? [])), isJson: true, useFlashModel: true };
+      return { prompt: analysisPrompt(JSON.stringify(input.history ?? []), Number(input.grade) || 0), isJson: true, useFlashModel: true };
     case "text":
       return textPrompt(input);
   }

@@ -19,9 +19,36 @@
  */
 
 import { questionKey, type QuizQuestion } from "../contracts/quiz";
+import { gradeStyle } from "./prompts";
 
 /** An option that opens with a negation tells the pupil what is wrong, not what is right. */
 const NEGATION_OPENING = /^\s*(ohne|nicht|kein|keine|keinen|keiner|niemals|nie|weder)\b/i;
+
+/**
+ * Words from the vocabulary of logic and didactics. A pupil in Klasse 5 or 6 cannot read
+ * them; the prompt therefore bans them and this check catches the drift. A term quoted
+ * from the material is the one exception the model may use, so the check runs on the
+ * task text, not on the source.
+ */
+const META_TERMS = [
+  "Denkfehler",
+  "Schluss",
+  "Prämisse",
+  "Umkehrung",
+  "Verallgemeinerung",
+  "Zirkel",
+  "Analogie",
+  "Begriffsvertauschung",
+  "zwingend",
+  "logisch",
+];
+
+const META_PATTERNS = META_TERMS.map((term) => ({ term, pattern: new RegExp(`\\b${term}\\b`, "i") }));
+
+const metaTermIn = (text: string): string | undefined =>
+  META_PATTERNS.find(({ pattern }) => pattern.test(text))?.term;
+
+const countWords = (text: string): number => (text.match(/[\wÄÖÜäöüß-]+/g) ?? []).length;
 
 /** The content words of a text: long enough to carry meaning, case dropped. */
 const words = (text: string): string[] => (text.match(/[\wÄÖÜäöüß]+/g) ?? []).filter((word) => word.length >= 6);
@@ -42,6 +69,8 @@ export interface QuizCheckResult {
 export interface QuizCheckOptions {
   /** The material the quiz was built from; used for the "option outside the material" check. */
   source: string;
+  /** Target grade. Turns the class label into word limits per stem and option. */
+  grade?: number;
   /** A quiz must not be pure recall. */
   maxRecallShare?: number;
   /** A quiz needs several question types. */
@@ -61,6 +90,8 @@ const recallStem = /^(was|wo|wer|wann|wie viele)\b/i;
  */
 export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): QuizCheckResult {
   const source = new Set(words(options.source).map((word) => word.toLowerCase()));
+  const style = gradeStyle(options.grade ?? 0);
+  const gradeLabel = options.grade && options.grade > 0 ? String(options.grade) : "?";
   const maxRecallShare = options.maxRecallShare ?? 0.4;
   const minTypes = options.minTypes ?? 3;
   const expectRationales = options.expectRationales ?? true;
@@ -82,6 +113,23 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
     if (!question.type.trim()) hard.push("kein Aufgabentyp (type)");
     if (list.some((option) => NEGATION_OPENING.test(option))) hard.push("Option beginnt mit einer Verneinung");
     if (new Set(list.map((option) => questionKey(option))).size < list.length) hard.push("doppelte Option");
+
+    // Grade fit. A stem twice as long as the band allows cannot be read by a pupil of
+    // that class, so it is hard; a single over-long option is style and stays soft.
+    const stemWords = countWords(question.text);
+    if (stemWords > style.stem * 2) {
+      hard.push(`Stamm zu lang für Klasse ${gradeLabel}: ${stemWords} Wörter, Grenze ${style.stem}`);
+    } else if (stemWords > style.stem) {
+      soft.push(`Stamm über der Grenze für Klasse ${gradeLabel}: ${stemWords} Wörter, Grenze ${style.stem}`);
+    }
+    const stemMeta = metaTermIn(question.text);
+    if (stemMeta) hard.push(`Fachsprache im Stamm: "${stemMeta}"`);
+    list.forEach((option, position) => {
+      const optionWords = countWords(option);
+      if (optionWords > style.option) soft.push(`Option ${position + 1} über der Grenze: ${optionWords} Wörter, Grenze ${style.option}`);
+      const optionMeta = metaTermIn(option);
+      if (optionMeta) soft.push(`Option ${position + 1} nennt Fachsprache: "${optionMeta}"`);
+    });
 
     // Soft, not hard: a plausible distractor is a misconception the material does NOT
     // contain verbatim, so a missing lexical anchor is a style signal, not a defect.
@@ -140,6 +188,11 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
   ).length;
   if (quiz.length > 0 && recall / quiz.length > maxRecallShare) {
     global.push(`${recall} von ${quiz.length} Fragen sind reines Abfragen`);
+  }
+  const stems = quiz.map((question) => countWords(question.text));
+  const averageStem = stems.reduce((sum, value) => sum + value, 0) / Math.max(1, stems.length);
+  if (averageStem > style.stem) {
+    global.push(`Stämme im Schnitt ${averageStem.toFixed(1)} Wörter, Grenze für Klasse ${gradeLabel} ${style.stem}`);
   }
 
   return { items, hardItems, global, flagged: Object.keys(hardItems).length, soft: softCount };

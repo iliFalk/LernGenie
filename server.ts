@@ -241,8 +241,8 @@ async function startServer() {
 
   app.post("/api/ai/analyze", async (req, res) => {
     try {
-      const { history } = req.body;
-      const result = await generateArtifact("analysis", { history }, getAIConfig(req));
+      const { history, grade } = req.body;
+      const result = await generateArtifact("analysis", { history, grade }, getAIConfig(req));
       if (!result.ok) return aiFailure(res, result);
       res.json(result.value);
     } catch (error: any) {
@@ -252,8 +252,8 @@ async function startServer() {
 
   app.post("/api/ai/flashcards", async (req, res) => {
     try {
-      const { content } = req.body;
-      const result = await generateArtifact("flashcards", { content }, getAIConfig(req));
+      const { content, grade } = req.body;
+      const result = await generateArtifact("flashcards", { content, grade }, getAIConfig(req));
       if (!result.ok) return aiFailure(res, result);
       res.json(result.value);
     } catch (error: any) {
@@ -362,7 +362,7 @@ async function startServer() {
     try {
       const userId = getUserId(req);
       // Verify ownership
-      const pkg = db.prepare("SELECT id FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId);
+      const pkg = db.prepare("SELECT id, grade FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId) as { id: string; grade: number } | undefined;
       if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert", code: "FORBIDDEN" });
 
       const regenerate = req.query.regenerate === "true";
@@ -378,7 +378,7 @@ async function startServer() {
         return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien.", code: "NO_MATERIALS" });
       }
 
-      const result = await generateArtifact("flashcards", { content }, getAIConfig(req));
+      const result = await generateArtifact("flashcards", { content, grade: pkg.grade ?? 0 }, getAIConfig(req));
       if (!result.ok) return aiFailure(res, result);
 
       writeCachedArtifact(db, req.params.id, "flashcards", result.value);

@@ -15,7 +15,7 @@
 import { callLLM } from "../../llm";
 import { extractJson } from "./extract";
 import { buildPrompt, OUTPUT_CONTRACT, quizRepairPrompt, type ArtifactKind, type PromptSpec } from "./prompts";
-import { checkQuiz, formatQuizFlags, summariseQuizFlags, type QuizCheckResult } from "./quizCheck";
+import { checkQuiz, formatQuizFlags, summariseQuizFlags, type QuizCheckOptions, type QuizCheckResult } from "./quizCheck";
 import { normaliseQuiz, validateQuiz, questionKey, type QuizQuestion } from "../contracts/quiz";
 import { normaliseFlashcards, validateFlashcards, type Flashcard } from "../contracts/flashcards";
 import { normaliseAnalysis, validateAnalysis, type AnalysisData } from "../contracts/analysis";
@@ -38,7 +38,7 @@ export interface ModelCallParams extends ModelConfig {
 export interface GatewayDeps {
   callModel: (params: ModelCallParams) => Promise<string>;
   /** The mechanical quality checks; injectable so a test can pin when the pass fires. */
-  check?: (quiz: QuizQuestion[], options: { source: string }) => QuizCheckResult;
+  check?: (quiz: QuizQuestion[], options: QuizCheckOptions) => QuizCheckResult;
 }
 
 export interface GatewayError {
@@ -166,7 +166,7 @@ export async function generateArtifact<T = unknown>(
   const qualityRepair = async (value: T): Promise<{ value: T; repaired: boolean; flags: string[] }> => {
     if (kind !== "quiz") return { value, repaired: false, flags: [] };
     const source = String(input.content ?? "");
-    const before = qualityCheck(value as unknown as QuizQuestion[], { source });
+    const before = qualityCheck(value as unknown as QuizQuestion[], { source, grade: Number(input.grade) || 0 });
     const total = (value as unknown as QuizQuestion[]).length;
     if (before.items && Object.keys(before.items).length === 0 && before.global.length === 0) {
       console.log(`[quiz] Qualitätsprüfung: ${total} Fragen, keine Beanstandungen`);
@@ -190,7 +190,7 @@ export async function generateArtifact<T = unknown>(
     if (!candidate.ok) return { value, repaired: false, flags: flags.split("\n") };
 
     const repairedValue = finalise(candidate.value);
-    const after = qualityCheck(repairedValue as unknown as QuizQuestion[], { source });
+    const after = qualityCheck(repairedValue as unknown as QuizQuestion[], { source, grade: Number(input.grade) || 0 });
     const better = after.flagged < before.flagged;
     console.log(
       `[quiz] Reparatur: ${before.flagged} harte Beanstandung(en) → ${after.flagged}` +

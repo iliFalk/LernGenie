@@ -37,7 +37,7 @@ export async function getCachedQuiz(packageId: string, regenerate: boolean = fal
   return await handleResponse(response);
 }
 
-export async function analyzePerformance(results: { question: Question; isCorrect: boolean }[]): Promise<AnalysisData> {
+export async function analyzePerformance(results: { question: Question; isCorrect: boolean }[], grade = 0): Promise<AnalysisData> {
   const history = results.map(r => ({
     topic: r.question.topic,
     isCorrect: r.isCorrect,
@@ -47,16 +47,16 @@ export async function analyzePerformance(results: { question: Question; isCorrec
   const response = await authFetch("/api/ai/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ history }),
+    body: JSON.stringify({ history, grade }),
   });
   return await handleResponse(response);
 }
 
-export async function generateFlashcards(content: string): Promise<{ front: string; back: string }[]> {
+export async function generateFlashcards(content: string, grade = 0): Promise<{ front: string; back: string }[]> {
   const response = await authFetch("/api/ai/flashcards", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, grade }),
   });
   return await handleResponse(response);
 }

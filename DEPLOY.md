@@ -158,7 +158,7 @@ dem Speichern der Materialien an (`GET /api/packages/:id/quiz?count=10`) und zei
 Ladeoverlay. Danach öffnet sich die Paketkarte, und ein Quizstart ist ein Cache-Treffer. Scheitert
 die Anfrage, bleibt das Paket gespeichert; der Start erzeugt die Fragen dann selbst.
 
-Die Anzahl bleibt für weitere Runden wählbar (5 bis 25, Voreinstellung 10).
+Die Anzahl bleibt für weitere Runden wählbar (5 bis 15, Voreinstellung 10).
 
 ## Wie deployt wurde (2026-10-05)
 

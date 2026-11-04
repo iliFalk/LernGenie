@@ -29,7 +29,7 @@ Ohne Docker: `npm install`, `npm run dev` und `npx tsx server.ts` — die Einzel
 |---|---|
 | Bibliothek | Lernpakete anlegen, öffnen und löschen. Ein Paket hat Klasse, Fach und Name. |
 | Upload | Material als Foto oder als Text hinzufügen. Fotos liest das Vision-Modell (OCR). |
-| Quiz | Fragen aus dem Material erzeugen. Die ersten 10 Fragen entstehen beim Speichern des Pakets und liegen bereit, wenn die Karte aufgeht. Jede weitere Runde hat eine wählbare Anzahl (5 bis 25, Voreinstellung 10). Die Fragen arbeiten mit Denkoperationen statt mit Abfragen: Begriffe und Merkmale, zwingende Schlüsse, Fangfragen. Jede Option trägt ihre eigene Begründung. Das gespeicherte Quiz wird nur geliefert, wenn seine Länge zur gewählten Anzahl passt. |
+| Quiz | Fragen aus dem Material erzeugen. Die ersten 10 Fragen entstehen beim Speichern des Pakets und liegen bereit, wenn die Karte aufgeht. Jede weitere Runde hat eine wählbare Anzahl (5 bis 15, Voreinstellung 10). Die Fragen arbeiten mit Denkoperationen statt mit Abfragen: Begriffe und Merkmale, sichere Schlüsse, Fangfragen. Sprache und Satzlänge richten sich nach der Klassenstufe des Pakets. Jede Option trägt ihre eigene Begründung. Das gespeicherte Quiz wird nur geliefert, wenn seine Länge zur gewählten Anzahl passt. |
 | Karteikarten | Karteikarten zum selben Material. Der Server speichert sie im Cache. |
 | Auswertung | Ergebnis-Historie, Fehleranalyse und Statistik nach Thema und Fach. |
 | Wartezeit | Während einer KI-Anfrage zeigt die App die verstrichene Zeit, eine geschätzte Dauer und einen Fortschrittsbalken. Das gilt für Quiz, Auswertung, Karteikarten und die KI-Synthese im Upload-Fenster. Der Balken läuft bis 96 % und endet erst mit der Antwort — er zeigt eine Schätzung, keinen echten Fortschritt. |

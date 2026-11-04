@@ -34,7 +34,7 @@ llm.ts                Provider-Schicht für Gemini, OpenRouter, CommandCode und 
 | `POST /api/ai/topic` | Das Thema zu Material bestimmen |
 | `GET/POST/DELETE /api/packages[/:id]` | Lernpakete lesen, anlegen und löschen |
 | `GET/POST /api/materials` | Materialien zu einem Paket lesen und anlegen |
-| `GET /api/packages/:id/{quiz,flashcards}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 25). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. Die ersten 10 Fragen fordert das Upload-Fenster direkt nach dem Speichern an. |
+| `GET /api/packages/:id/{quiz,flashcards}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 15). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. Die ersten 10 Fragen fordert das Upload-Fenster direkt nach dem Speichern an. |
 | `GET/POST /api/results[/:packageId]` | Ergebnisse lesen und schreiben |
 
 Der Nutzerkontext kommt über den Header `x-user-id`. In Telegram liefert die Mini-App die
@@ -64,6 +64,29 @@ Ohne Dev Mode gelten die Server-Defaults.
 | `APP_URL` | Eigene URL, von AI Studio injiziert |
 
 Alle Variablen stehen erklärt in [.env.example](.env.example).
+
+## Sprache nach Klassenstufe (2026-11-04)
+
+Der Prompt nennt die Klasse nicht mehr nur als Etikett, er setzt Grenzen. `gradeStyle(grade)` in
+`src/ai/prompts.ts` liefert sie, `checkQuiz` prüft sie.
+
+| Klasse | Stamm ≤ | Option ≤ | Erklärung ≤ | Module (Begriffe / Schlüsse / Fangfragen) |
+|---|---|---|---|---|
+| 5–6 | 10 Wörter | 8 Wörter | 20 Wörter | 50 / 30 / 20 |
+| 7–9 | 14 Wörter | 10 Wörter | 25 Wörter | 30 / 40 / 30 |
+| 10–13 | 18 Wörter | 12 Wörter | 30 Wörter | 30 / 40 / 30 |
+
+- Der Prompt verlangt den Stil `~80 % of the way to ASD-STE100`: ein Gedanke je Satz, Verb vor
+  Substantiv, aktiv vor passiv, drei und mehr Punkte untereinander. Dazu verbietet er die Wörter der
+  Logik-Fachsprache im Stamm und in den Optionen (Denkfehler, Schluss, Prämisse, Umkehrung …). Die
+  Regel wird in der Sprache des Kindes erklärt, nicht benannt.
+- Die Prüfung stuft ab: Stamm über der Grenze = weich, doppelt über der Grenze = hart, Fachwort im
+  Stamm = hart, Fachwort in einer Option = weich, zu lange Option = weich. Liegt der Schnitt der
+  Stämme über der Grenze, meldet sie das als Set-Befund.
+- Karteikarten und Auswertung erhalten die Klassenstufe ebenfalls.
+
+Messung vorher, Wiener Sachtextformel über den ganzen Satz: Ethik Klasse 6 — Stämme 9.7, Optionen
+11.1, Erklärungen 14.4; Mathe Klasse 6 — 6.9 / 6.8 / 7.4. Ziel ist ±1 Klassenstufe.
 
 ## Lokal starten
 

@@ -116,7 +116,7 @@ export default function App() {
       const total = results.length;
       const accuracy = (score / total) * 100;
       
-      const analysis = await analyzePerformance(results);
+      const analysis = await analyzePerformance(results, selectedPackage?.grade ?? 0);
       
       const result: QuizResult = {
         id: randomUUID(),
