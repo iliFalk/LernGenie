@@ -13,6 +13,8 @@ test("without a configured budget the model default applies", () => {
   assert.equal(resolveMaxTokens("commandcode", undefined), undefined);
   assert.equal(resolveMaxTokens("commandcode", ""), undefined);
   assert.equal(resolveMaxTokens("gemini", undefined), undefined);
+  assert.equal(resolveMaxTokens("opencode-go", undefined), undefined);
+  assert.equal(resolveMaxTokens("opencode-go", "16384"), 16384);
 });
 
 test("OpenRouter keeps a bounded default, because it reserves the full output window", () => {

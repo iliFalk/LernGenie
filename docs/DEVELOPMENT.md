@@ -7,7 +7,7 @@ Einstellungen, Deployment und die bekannten Punkte.
 
 - Frontend: React 19, Vite 6, Tailwind 4, Carbon Design Icons und Lucide, Motion, Recharts.
 - Backend: Node 22, Express 4, TypeScript (`tsx`), better-sqlite3.
-- KI: Google Gemini (`@google/genai`) oder OpenRouter.
+- KI: Google Gemini (`@google/genai`), OpenRouter, CommandCode oder OpenCode Go.
 - Auslieferung: `vite build` erzeugt `dist/`. Der Express-Server liefert die SPA aus.
 
 ```
@@ -18,7 +18,7 @@ src/components/       Library, UploadModal, QuizView, FlashcardsView, StudyGuide
 src/services/         auth.ts (User-ID und AI-Header), gemini.ts (API-Aufrufe)
 src/prompts/          Prompt-Templates
 server.ts             Express-API, SQLite-Schema, Static-Serving
-llm.ts                Provider-Schicht für Gemini und OpenRouter
+llm.ts                Provider-Schicht für Gemini, OpenRouter, CommandCode und OpenCode Go
 ```
 
 ## API
@@ -47,13 +47,15 @@ Ohne Dev Mode gelten die Server-Defaults.
 
 | Variable | Bedeutung |
 |---|---|
-| `AI_PROVIDER` | `gemini` (Default), `openrouter` oder `commandcode` |
-| `AI_MODEL` | Modell-ID. Leer heißt Provider-Default: `gemini-3.1-pro-preview`, für kurze Aufgaben `gemini-3-flash-preview`, bei OpenRouter `google/gemini-2.0-flash-exp:free`, bei CommandCode `deepseek/deepseek-v4.1-flash` |
+| `AI_PROVIDER` | `gemini` (Default), `openrouter`, `commandcode` oder `opencode-go` |
+| `AI_MODEL` | Modell-ID. Leer heißt Provider-Default: `gemini-3.1-pro-preview`, für kurze Aufgaben `gemini-3-flash-preview`, bei OpenRouter `google/gemini-2.0-flash-exp:free`, bei CommandCode `deepseek/deepseek-v4.1-flash`, bei OpenCode Go `deepseek-v4.1-flash` |
 | `GEMINI_API_KEY` | Key für `provider = gemini` |
 | `OPENROUTER_API_KEY` | Key für `provider = openrouter` (kostenlose Modelle, zum Beispiel `dots-studio/dots-3-note-preview:free`) |
 | `COMMANDCODE_API_KEY` | Key für `provider = commandcode` (Abo-Provider, OpenAI-kompatibel; Modell-IDs mit Organisations-Präfix, zum Beispiel `deepseek/deepseek-v4.1-flash`) |
 | `COMMANDCODE_BASE_URL` | Basis-URL für `provider = commandcode`. Default `https://api.commandcode.ai/provider/v1` |
-| `LLM_TIMEOUT_MS` | Zeitlimit für einen OpenRouter- oder CommandCode-Aufruf in Millisekunden. Default `180000` (3 Minuten), produktiv **300000**. 25 Fragen brauchen rund 120 s |
+| `OPENCODE_GO_API_KEY` | Key für `provider = opencode-go` (Abo-Provider, OpenAI-kompatibel; Modell-IDs ohne Präfix, zum Beispiel `deepseek-v4.1-flash`). Der Key beginnt mit `oc_sk_` |
+| `OPENCODE_GO_BASE_URL` | Basis-URL für `provider = opencode-go`. Default `https://opencode.ai/zen/go/v1` |
+| `LLM_TIMEOUT_MS` | Zeitlimit für einen Aufruf an OpenRouter, CommandCode oder OpenCode Go in Millisekunden. Default `180000` (3 Minuten), produktiv **300000**. 25 Fragen brauchen rund 120 s |
 | `LLM_MAX_TOKENS` | Grenze für die Antwort in Token. Leer = der Aufruf trägt **kein** `max_tokens`, es gilt der Default des Modells. Eine Zahl setzt die Grenze für alle Provider. Ausnahme: bei `openrouter` gilt ohne Wert 8192, weil OpenRouter sonst das volle Ausgabefenster des Modells reserviert (bis 131072 Token) und den Aufruf mit HTTP 402 ablehnt, wenn das Key-Limit kleiner ist |
 | `DB_PATH` | Pfad zur SQLite-Datei. Ein relativer Pfad gilt gegen das Arbeitsverzeichnis des Prozesses |
 | `APP_URL` | Eigene URL, von AI Studio injiziert |
@@ -63,7 +65,7 @@ Alle Variablen stehen erklärt in [.env.example](.env.example).
 ## Lokal starten
 
 1. `npm install`
-2. `cp .env.example .env` und den Key setzen. Setze dazu `AI_PROVIDER` auf `gemini` oder `openrouter`.
+2. `cp .env.example .env` und den Key setzen. Setze dazu `AI_PROVIDER` auf `gemini`, `openrouter`, `commandcode` oder `opencode-go`.
 3. `npm run dev` startet den Server auf http://localhost:3000.
 
 `npm run build` erzeugt `dist/`. Mit `NODE_ENV=production` liefert der Server `dist/` aus.
@@ -95,6 +97,10 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
 - CommandCode lehnt `response_format: json_object` mit HTTP 400 (`invalid request error`) ab,
   sobald der Prompt länger wird. Der Server sendet das Feld daher nur an OpenRouter. Die Form der
   Antwort sichern `src/contracts/*` und `src/ai/extract.ts`, nicht der Provider.
+- OpenCode Go verlangt zwei Kopfzeilen. Ohne `User-Agent` antwortet der CDN mit HTTP 403
+  (Fehlercode 1010). Ohne `x-opencode-session` antwortet das Gateway mit HTTP 400 `MissingSessionID`.
+  Beide Kopfzeilen setzt `llm.ts` in der Route `opencode-go`. `response_format: json_object` nimmt
+  das Gateway an.
 - Ein bezahltes Modell braucht beim Anbieter ein Kredit-Polster. Ohne `max_tokens` reserviert
   OpenRouter das volle Ausgabefenster des Modells (bis 131072 Token) und lehnt den Aufruf mit
   HTTP 402 ab (`This request requires more credits, or fewer max_tokens`). Jeder Aufruf trägt

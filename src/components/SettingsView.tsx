@@ -277,6 +277,7 @@ export default function SettingsView({
                   <option value="gemini">Google Gemini (Empfohlen)</option>
                   <option value="openrouter">OpenRouter API</option>
                   <option value="commandcode">CommandCode API</option>
+                  <option value="opencode-go">OpenCode Go API</option>
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--cds-text-secondary)]">
                   <ChevronDown size={16} />
@@ -295,17 +296,17 @@ export default function SettingsView({
               />
             </div>
 
-            {(aiProvider === 'openrouter' || aiProvider === 'commandcode') && (
+            {(aiProvider === 'openrouter' || aiProvider === 'commandcode' || aiProvider === 'opencode-go') && (
               <div>
                 <label className="cds--label">
-                  {aiProvider === 'commandcode' ? 'CommandCode Modell-ID' : 'OpenRouter Modell-ID'}
+                  {aiProvider === 'commandcode' ? 'CommandCode Modell-ID' : aiProvider === 'opencode-go' ? 'OpenCode Go Modell-ID' : 'OpenRouter Modell-ID'}
                 </label>
                 <input 
                   type="text" 
                   value={modelName}
                   onChange={(e) => setModelName(e.target.value)}
                   className="cds--text-input font-mono text-xs"
-                  placeholder={aiProvider === 'commandcode' ? 'deepseek/deepseek-v4.1-flash' : 'google/gemini-2.0-flash-exp:free'}
+                  placeholder={aiProvider === 'commandcode' ? 'deepseek/deepseek-v4.1-flash' : aiProvider === 'opencode-go' ? 'deepseek-v4.1-flash' : 'google/gemini-2.0-flash-exp:free'}
                 />
               </div>
             )}

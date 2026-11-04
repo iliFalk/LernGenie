@@ -49,9 +49,9 @@ Die Compose-Datei gehört zum Projekt `falknest`, genau wie `infra.yml`. Compose
 `/opt/falknest/lernquiz/lernquiz.env`:
 
 ```
-COMMANDCODE_API_KEY=<CommandCode-Key>
-AI_PROVIDER=commandcode
-AI_MODEL=deepseek/deepseek-v4.1-flash
+OPENCODE_GO_API_KEY=<OpenCode-Go-Key>
+AI_PROVIDER=opencode-go
+AI_MODEL=deepseek-v4.1-flash
 LLM_TIMEOUT_MS=600000
 DB_PATH=/data/study_quiz.db
 NODE_ENV=production
@@ -60,11 +60,17 @@ NODE_ENV=production
 `LLM_MAX_TOKENS` steht nicht in der Datei. Dann trägt der Aufruf kein `max_tokens` und der
 Default des Modells gilt. Das ist gewollt: mit einer Grenze verbrauchte das Reasoning das Budget.
 
-Der Provider ist CommandCode (`https://api.commandcode.ai/provider/v1`, OpenAI-kompatibel). Das
-Abo deckt die Aufrufe ab, deshalb gibt es kein Guthaben pro Aufruf. Die Modell-ID trägt das
-Organisations-Präfix (`deepseek/deepseek-v4.1-flash`) und gehört zu den Modellen, die der Plan
-freigibt. Der Server sendet an CommandCode kein `response_format`: der Anbieter antwortet darauf
-mit HTTP 400, sobald der Prompt länger wird.
+Der Provider ist OpenCode Go (`https://opencode.ai/zen/go/v1`, OpenAI-kompatibel). Das Abo deckt die
+Aufrufe ab, deshalb gibt es kein Guthaben pro Aufruf. Die Modell-ID trägt kein
+Organisations-Präfix (`deepseek-v4.1-flash`), der Key beginnt mit `oc_sk_`. Der Server sendet zwei
+Kopfzeilen, die das Gateway verlangt: `User-Agent: opencode/1.18.0`, sonst antwortet der CDN mit
+HTTP 403 (Fehlercode 1010), und `x-opencode-session: ses_…`, sonst antwortet das Gateway mit HTTP 400
+`MissingSessionID`. `response_format: json_object` nimmt das Gateway an.
+
+Bis 2026-11-04 lief der Dienst auf CommandCode (`https://api.commandcode.ai/provider/v1`, Modell
+`deepseek/deepseek-v4.1-flash`). Diese Route bleibt als Alternative: `AI_PROVIDER=commandcode` plus
+`COMMANDCODE_API_KEY`. An CommandCode sendet der Server kein `response_format`, weil der Anbieter
+darauf mit HTTP 400 antwortet, sobald der Prompt länger wird.
 
 Alternativ läuft der Dienst mit `AI_PROVIDER=openrouter` und einem Key. Das Modell ist dann der
 Tages-Pick der kostenlosen OpenRouter-Rangliste (`https://shir-man.com/api/free-llm/top-models`,

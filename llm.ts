@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { GoogleGenAI, Type } from "@google/genai";
 
 const DEFAULT_GEMINI_MODEL = "gemini-3.1-pro-preview";
@@ -8,6 +9,25 @@ const DEFAULT_OPENROUTER_MODEL = "google/gemini-2.0-flash-exp:free";
 
 // CommandCode (https://api.commandcode.ai/provider/v1) speaks the OpenAI chat protocol.
 const DEFAULT_COMMANDCODE_MODEL = "deepseek/deepseek-v4.1-flash";
+
+// OpenCode Go (https://opencode.ai/zen/go/v1) speaks the OpenAI chat protocol too,
+// but its model ids carry no organisation prefix.
+const DEFAULT_OPENCODE_GO_MODEL = "deepseek-v4.1-flash";
+
+/** OpenCode Go answers a chat request without a session header with 400 MissingSessionID,
+ *  and its CDN answers 403 (error code 1010) when the request carries no User-Agent.
+ *  The header set is built once per process. */
+function openCodeGoHeaders(): Record<string, string> {
+  const hex = randomBytes(6).toString("hex");
+  const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const tail = Array.from(randomBytes(14), (b) => alphabet[b % alphabet.length]).join("");
+  return {
+    "User-Agent": "opencode/1.18.0",
+    "x-opencode-session": `ses_${hex}${tail.slice(0, 14)}`,
+  };
+}
+
+const OPENCODE_GO_HEADERS = openCodeGoHeaders();
 
 /** OpenRouter reserves the whole output window when a call carries no `max_tokens`,
  *  and then rejects it with HTTP 402 on a small key limit. This is its bound. */
@@ -78,6 +98,19 @@ export async function callLLM(params: {
     });
   }
 
+  if (provider === "opencode-go" || provider === "opencode_go") {
+    const cleanOpenCodeGoKey = sanitizeApiKey(apiKey) || sanitizeApiKey(process.env.OPENCODE_GO_API_KEY);
+    const baseUrl = (process.env.OPENCODE_GO_BASE_URL || "https://opencode.ai/zen/go/v1").replace(/\/+$/, "");
+    return callChatCompletions({
+      url: `${baseUrl}/chat/completions`,
+      label: "opencode-go",
+      apiKey: cleanOpenCodeGoKey,
+      model: model || process.env.AI_MODEL || DEFAULT_OPENCODE_GO_MODEL,
+      supportsJsonMode: true,
+      prompt, isJson, systemPrompt, imageData,
+    });
+  }
+
   // Fallback to Gemini
   const fallbackModel = useFlashModel ? DEFAULT_FLASH_MODEL : DEFAULT_GEMINI_MODEL;
   
@@ -141,6 +174,9 @@ async function callChatCompletions(params: {
   if (label === "openrouter") {
     // Only OpenRouter wants the referring app in the header.
     headers["HTTP-Referer"] = "https://ai.studio/build";
+  }
+  if (label === "opencode-go") {
+    Object.assign(headers, OPENCODE_GO_HEADERS);
   }
 
   let response: Response;
