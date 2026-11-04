@@ -12,7 +12,7 @@ import { StudyPackage } from "../types";
 import { getCachedStudyGuide } from "../services/gemini";
 import LoadingOverlay, { STUDY_GUIDE_ESTIMATE_MS } from "./LoadingOverlay";
 import { copyText } from "../services/clipboard";
-import Markdown from "react-markdown";
+import { MarkdownText } from "./MarkdownText";
 
 interface StudyGuideViewProps {
   package: StudyPackage;
@@ -150,7 +150,7 @@ export default function StudyGuideView({ package: pkg, onBack }: StudyGuideViewP
       {/* Guide Content Tile */}
       <div className="cds--tile p-6 sm:p-10">
         <div className="markdown-body">
-          <Markdown>{guide}</Markdown>
+          <MarkdownText>{guide}</MarkdownText>
         </div>
       </div>
 

@@ -20,7 +20,7 @@ import { authFetch } from "../services/auth";
 import { copyText } from "../services/clipboard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
-import Markdown from "react-markdown";
+import { MarkdownText } from "./MarkdownText";
 
 interface PackageDetailViewProps {
   pkg: StudyPackage;
@@ -484,7 +484,7 @@ export default function PackageDetailView({
               <div className="p-6 overflow-y-auto max-h-[calc(85vh-120px)] bg-[var(--cds-layer-01)]">
                 <div className="markdown-body">
                   {selectedMaterial.content_text ? (
-                    <Markdown>{selectedMaterial.content_text}</Markdown>
+                    <MarkdownText>{selectedMaterial.content_text}</MarkdownText>
                   ) : (
                     <p className="text-sm text-[var(--cds-text-secondary)] italic text-center py-8">
                       Kein Textinhalt verfügbar.

@@ -8,6 +8,8 @@ Einstellungen, Deployment und die bekannten Punkte.
 - Frontend: React 19, Vite 6, Tailwind 4, Carbon Design Icons und Lucide, Motion, Recharts.
 - Backend: Node 22, Express 4, TypeScript (`tsx`), better-sqlite3.
 - KI: Google Gemini (`@google/genai`), OpenRouter, CommandCode oder OpenCode Go.
+- Markdown: `react-markdown` mit `remark-gfm` (`src/components/MarkdownText.tsx`), damit Tabellen,
+  Task-Listen und Durchstreichen rendern. Die Stile liegen in `.markdown-body` (`src/index.css`).
 - Auslieferung: `vite build` erzeugt `dist/`. Der Express-Server liefert die SPA aus.
 
 ```
