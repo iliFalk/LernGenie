@@ -26,6 +26,8 @@ export interface ModelConfig {
   provider: string;
   apiKey?: string;
   model?: string;
+  /** Thinking budget for this artifact. Falls back to `LLM_REASONING_EFFORT`. */
+  reasoningEffort?: string;
 }
 
 export interface ModelCallParams extends ModelConfig {

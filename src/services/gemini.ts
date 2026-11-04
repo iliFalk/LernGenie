@@ -28,10 +28,11 @@ export async function generateQuiz(content: string, grade: number, count: number
   return await handleResponse(response);
 }
 
-export async function getCachedQuiz(packageId: string, regenerate: boolean = false, count?: number): Promise<Question[]> {
+export async function getCachedQuiz(packageId: string, regenerate: boolean = false, count?: number, hard: boolean = false): Promise<Question[]> {
   const params = new URLSearchParams();
   if (regenerate) params.set("regenerate", "true");
   if (count) params.set("count", String(count));
+  if (hard) params.set("hard", "true");
   const query = params.toString();
   const response = await authFetch(`/api/packages/${packageId}/quiz${query ? `?${query}` : ""}`);
   return await handleResponse(response);

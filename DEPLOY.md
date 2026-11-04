@@ -160,6 +160,11 @@ die Anfrage, bleibt das Paket gespeichert; der Start erzeugt die Fragen dann sel
 
 Die Anzahl bleibt für weitere Runden wählbar (5 bis 15, Voreinstellung 10).
 
+Über der Anzahl steht das Kästchen „Schwerere Fragen". Es lässt die Anfrage mit `low` denken und
+verlangt zwei Schritte je Frage, feinere Ablenker und keinen reinen Abfragetyp. Gemessen: 18 s je
+zehn Fragen ohne Denken, 210–287 s mit `low`. Beide Stufen halten ihren eigenen Cache-Eintrag
+(`quiz_level`), damit ein schnelles Quiz nie als schweres Quiz ausgeliefert wird.
+
 ## Wie deployt wurde (2026-10-05)
 
 1. `git clone https://github.com/iliFalk/LernGenie.git /opt/falknest/lernquiz/app`

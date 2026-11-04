@@ -327,12 +327,15 @@ async function startServer() {
       if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert", code: "FORBIDDEN" });
 
       const regenerate = req.query.regenerate === "true";
+      // A harder set costs one low-effort call. Both levels keep their own cached set.
+      const hard = req.query.hard === "true";
+      const level = hard ? "hard" : "standard";
       const count = clampQuestionCount(Number(req.query.count));
       if (!regenerate) {
         // A cached row with an older schema_version is not served: it is regenerated.
         // A cached quiz of another length is not served either — the user asked for
         // a different number of questions.
-        const cached = readCachedArtifact(db, req.params.id, "quiz");
+        const cached = readCachedArtifact(db, req.params.id, "quiz", { level });
         if (cached && cached.length === count) return res.json(cached);
       }
 
@@ -348,10 +351,14 @@ async function startServer() {
       const previousSet = readCachedArtifact(db, req.params.id, "quiz", { ignoreVersion: true }) || [];
       const previous = previousSet.map((question) => question.text);
 
-      const result = await generateArtifact<QuizQuestion[]>("quiz", { content, grade: pkg.grade || 10, count, previous }, getAIConfig(req));
+      const result = await generateArtifact<QuizQuestion[]>(
+        "quiz",
+        { content, grade: pkg.grade || 10, count, previous, hard },
+        { ...getAIConfig(req), reasoningEffort: hard ? "low" : undefined },
+      );
       if (!result.ok) return aiFailure(res, result);
 
-      writeCachedArtifact(db, req.params.id, "quiz", result.value);
+      writeCachedArtifact(db, req.params.id, "quiz", result.value, level);
       res.json(result.value);
     } catch (error: any) {
       res.status(500).json({ error: error?.message || String(error), code: "INTERNAL" });

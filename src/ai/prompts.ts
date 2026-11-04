@@ -71,8 +71,9 @@ export const gradeStyle = (grade: number): GradeStyle => {
  * older one with inferences and traps. The mix is a target, not a promise: a short
  * material cannot carry three inference questions, and the prompt says so.
  */
-export const quizModules = (count: number, grade = 9): { begriffe: number; schluesse: number; fangfragen: number } => {
-  const [termsShare, inferenceShare] = gradeStyle(grade).mix;
+export const quizModules = (count: number, grade = 9, hard = false): { begriffe: number; schluesse: number; fangfragen: number } => {
+  const shares: [number, number, number] = hard ? [0.2, 0.5, 0.3] : gradeStyle(grade).mix;
+  const [termsShare, inferenceShare] = shares;
   let begriffe = Math.max(1, Math.round(count * termsShare));
   let schluesse = Math.max(1, Math.round(count * inferenceShare));
   let fangfragen = count - begriffe - schluesse;
@@ -93,8 +94,8 @@ Diese Fragen wurden bereits gestellt. Prüfe andere Textstellen und andere Aspek
 ${previous.map((text) => `- ${text}`).join("\n")}
 `;
 
-const quizPrompt = (count: number, grade: number, content: string, previous: string[] = []): string => {
-  const modules = quizModules(count, grade);
+const quizPrompt = (count: number, grade: number, content: string, previous: string[] = [], hard = false): string => {
+  const modules = quizModules(count, grade, hard);
   const style = gradeStyle(grade);
   // A compact instruction matters for the runtime, not for style: measured with the same
   // model, material and question count, a terse prompt answered in 72 s where the verbose
@@ -125,9 +126,18 @@ ${count} Multiple-Choice-Fragen, verteilt auf drei Module:
 3. FANGFRAGE (${modules.fangfragen}, type FEHLER oder GRUND/FOLGE): der Stamm zitiert eine Behauptung
    und fragt, was daran nicht stimmt. Die Optionen beschreiben den Fehler in einfachen Worten, zum
    Beispiel "Man schließt von einem Fall auf alle." oder "Der Grund wird mit der Folge verwechselt."
+${hard ? `
+STUFE SCHWER — jede Frage verlangt zwei Schritte:
+- Kein WIEDERGEBEN. Jede Frage braucht einen Schluss, einen Vergleich oder eine Fehlerprüfung.
+- Mindestens drei Fragen verbinden zwei Aussagen des Materials.
+- Die falschen Optionen unterscheiden sich in einem feinen Merkmal, nie in einer grob falschen Aussage.
+- Die richtige Option steht nie wörtlich im Material; sie fasst das Material in eigenen Worten zusammen.
+` : ""}
 
 REGELN
 - Nur Aussagen des Materials. Trägt es ein Modul nicht, verteile die Fragen um. Keine neue Prämisse.
+- Kein Verweis auf die Quelle im Stamm: nicht "laut Material", nicht "im Text", nicht "laut Mitschrift".
+  Der Stamm fragt die Sache selbst. Ein Paket kann aus einem Thema ohne Datei entstanden sein.
 - Streuung: verschiedene Textstellen und verschiedene Aspekte. Höchstens ein Drittel der Fragen
   darf ein Faktum abfragen (type WIEDERGEBEN).
 - Stamm: eine Frage, kein Lösungshinweis. Bei FEHLER und AUSSCHLUSS steht die Aussage im Stamm.
@@ -259,7 +269,7 @@ export function buildPrompt(kind: ArtifactKind, input: Record<string, unknown>):
       // running into the output limit. Above the ceiling the surplus would too.
       const asked = previous.length > 0 ? Math.min(target + questionSurplus(target), MAX_QUESTIONS) : target;
       return {
-        prompt: quizPrompt(asked, Number(input.grade) || 0, String(input.content ?? ""), previous),
+        prompt: quizPrompt(asked, Number(input.grade) || 0, String(input.content ?? ""), previous, Boolean(input.hard)),
         isJson: true,
         targetCount: target,
       };

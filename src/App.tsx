@@ -60,6 +60,13 @@ export default function App() {
     localStorage.setItem("question_count", String(questionCount));
   }, [questionCount]);
 
+  /** Harder sets run at low thinking: fewer term questions, two-step stems, slower. */
+  const [hardQuestions, setHardQuestions] = useState(() => localStorage.getItem("hard_questions") === "true");
+
+  useEffect(() => {
+    localStorage.setItem("hard_questions", String(hardQuestions));
+  }, [hardQuestions]);
+
   useEffect(() => {
     fetchPackages();
     if (darkMode) {
@@ -89,10 +96,10 @@ export default function App() {
 
   const handleStartQuiz = async (pkg: StudyPackage, regenerate: boolean = false) => {
     setIsLoading(true);
-    setLoadingEstimateMs(quizEstimateMs(questionCount));
+    setLoadingEstimateMs(quizEstimateMs(questionCount, hardQuestions));
     setLoadingMessage(regenerate ? `Generiere ${questionCount} neue Quizfragen...` : "Lade Quiz...");
     try {
-      const questions = await getCachedQuiz(pkg.id, regenerate, questionCount);
+      const questions = await getCachedQuiz(pkg.id, regenerate, questionCount, hardQuestions);
       setActiveQuiz(questions);
       setSelectedPackage(pkg);
       setView("quiz");
@@ -398,6 +405,8 @@ export default function App() {
                   pkg={selectedPackage}
                   questionCount={questionCount}
                   onQuestionCountChange={setQuestionCount}
+                  hardQuestions={hardQuestions}
+                  onHardChange={setHardQuestions}
                   onBack={() => setView("library")}
                   onStartQuiz={(pkg, regenerate) => handleStartQuiz(pkg, regenerate)}
                   onShowFlashcards={handleShowFlashcards}

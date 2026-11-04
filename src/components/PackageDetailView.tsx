@@ -26,6 +26,8 @@ interface PackageDetailViewProps {
   pkg: StudyPackage;
   questionCount: number;
   onQuestionCountChange: (count: number) => void;
+  hardQuestions: boolean;
+  onHardChange: (value: boolean) => void;
   onBack: () => void;
   onStartQuiz: (pkg: StudyPackage, regenerate?: boolean) => void;
   onShowFlashcards: () => void;
@@ -39,6 +41,8 @@ export default function PackageDetailView({
   pkg, 
   questionCount,
   onQuestionCountChange,
+  hardQuestions,
+  onHardChange,
   onBack, 
   onStartQuiz, 
   onShowFlashcards, 
@@ -181,27 +185,45 @@ export default function PackageDetailView({
                 <Idea size={18} />
               </button>
 
-              <div className="pt-2">
-                <label className="cds--label">Anzahl Fragen</label>
-                <div className="grid grid-cols-3 gap-1">
-                  {QUESTION_PRESETS.map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => onQuestionCountChange(preset)}
-                      className={`h-9 text-xs font-mono border transition-colors ${
-                        questionCount === preset
-                          ? "bg-[#0f62fe] text-white border-[#0f62fe] font-bold"
-                          : "bg-[var(--cds-layer-02)] text-[var(--cds-text-primary)] border-[var(--cds-border-subtle-01)] hover:bg-[var(--cds-layer-01)]"
-                      }`}
-                    >
-                      {preset}
-                    </button>
-                  ))}
+              <div className="pt-2 space-y-3">
+                <label className="flex items-start gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    id="chk-hard-questions"
+                    checked={hardQuestions}
+                    onChange={(e) => onHardChange(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[#0f62fe]"
+                  />
+                  <span className="text-xs text-[var(--cds-text-primary)] leading-tight">
+                    Schwerere Fragen
+                    <span className="block text-[11px] text-[var(--cds-text-helper)]">
+                      Zwei Schritte je Frage und feinere Ablenker. Das Modell denkt länger, etwa 5 Minuten für 10 Fragen.
+                    </span>
+                  </span>
+                </label>
+
+                <div>
+                  <label className="cds--label">Anzahl Fragen</label>
+                  <div className="grid grid-cols-3 gap-1">
+                    {QUESTION_PRESETS.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => onQuestionCountChange(preset)}
+                        className={`h-9 text-xs font-mono border transition-colors ${
+                          questionCount === preset
+                            ? "bg-[#0f62fe] text-white border-[#0f62fe] font-bold"
+                            : "bg-[var(--cds-layer-02)] text-[var(--cds-text-primary)] border-[var(--cds-border-subtle-01)] hover:bg-[var(--cds-layer-01)]"
+                        }`}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-[var(--cds-text-helper)] mt-1.5 leading-tight">
+                    Gilt für neue Fragen. "Quiz starten (gespeichert)" liefert nur ein Quiz dieser Länge.
+                  </p>
                 </div>
-                <p className="text-[11px] text-[var(--cds-text-helper)] mt-1.5 leading-tight">
-                  Gilt für neue Fragen. "Quiz starten (gespeichert)" liefert nur ein Quiz dieser Länge.
-                </p>
               </div>
             </div>
 

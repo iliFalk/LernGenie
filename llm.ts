@@ -76,8 +76,12 @@ export async function callLLM(params: {
   systemPrompt?: string;
   imageData?: { data: string; mimeType: string };
   useFlashModel?: boolean;
+  /** Per-request thinking budget. Wins over `LLM_REASONING_EFFORT`, so one route can ask for
+   *  a harder run while the deployment default stays cheap. */
+  reasoningEffort?: string;
 }) {
-  const { provider, apiKey, model, prompt, isJson, systemPrompt, imageData, useFlashModel } = params;
+  const { provider, apiKey, model, prompt, isJson, systemPrompt, imageData, useFlashModel, reasoningEffort } = params;
+  const effort = reasoningEffort ?? resolveReasoningEffort();
 
   if (provider === "openrouter") {
     const cleanOpenRouterKey = sanitizeApiKey(apiKey) || sanitizeApiKey(process.env.OPENROUTER_API_KEY);
@@ -87,7 +91,7 @@ export async function callLLM(params: {
       apiKey: cleanOpenRouterKey,
       model: model || process.env.AI_MODEL || DEFAULT_OPENROUTER_MODEL,
       supportsJsonMode: true,
-      reasoningEffort: resolveReasoningEffort(),
+      reasoningEffort: effort,
       prompt, isJson, systemPrompt, imageData,
     });
   }
@@ -104,7 +108,7 @@ export async function callLLM(params: {
       // error" as soon as the prompt grows. The wrapper reads the JSON out of the
       // answer and validates it, so the field is not needed here.
       supportsJsonMode: false,
-      reasoningEffort: resolveReasoningEffort(),
+      reasoningEffort: effort,
       prompt, isJson, systemPrompt, imageData,
     });
   }
@@ -118,7 +122,7 @@ export async function callLLM(params: {
       apiKey: cleanOpenCodeGoKey,
       model: model || process.env.AI_MODEL || DEFAULT_OPENCODE_GO_MODEL,
       supportsJsonMode: true,
-      reasoningEffort: resolveReasoningEffort(),
+      reasoningEffort: effort,
       prompt, isJson, systemPrompt, imageData,
     });
   }

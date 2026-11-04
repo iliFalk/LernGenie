@@ -23,20 +23,29 @@ interface ColumnSpec {
   column: string;
   versionColumn: string;
   version: number;
+  /** Column that carries the quiz level; a row of another level is not served. */
+  levelColumn?: string;
 }
 
 const COLUMNS: Record<CacheKind, ColumnSpec> = {
-  quiz: { column: "quiz_questions", versionColumn: "quiz_version", version: QUIZ_SCHEMA_VERSION },
+  quiz: { column: "quiz_questions", versionColumn: "quiz_version", version: QUIZ_SCHEMA_VERSION, levelColumn: "quiz_level" },
   flashcards: { column: "flashcards", versionColumn: "flashcards_version", version: FLASHCARDS_SCHEMA_VERSION },
 };
 
-/** Adds the version columns to `package_cache` if they are missing. Safe to call on every start. */
+/** Adds the version and level columns to `package_cache` if they are missing. Safe to call on every start. */
 export function ensureCacheSchema(db: CacheDatabase): void {
   for (const spec of Object.values(COLUMNS)) {
     try {
       db.exec(`ALTER TABLE package_cache ADD COLUMN ${spec.versionColumn} INTEGER`);
     } catch {
       // column already exists
+    }
+    if (spec.levelColumn) {
+      try {
+        db.exec(`ALTER TABLE package_cache ADD COLUMN ${spec.levelColumn} TEXT`);
+      } catch {
+        // column already exists
+      }
     }
   }
 }
@@ -54,18 +63,25 @@ export interface CacheReadOptions {
   /** Serve a row whose `schema_version` is older than the code. Used only to read the
    * previous question set, so a regeneration can exclude questions already asked. */
   ignoreVersion?: boolean;
+  /** Serve only a row written for this quiz level (`hard` or `standard`). */
+  level?: string;
 }
 
 export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: "quiz", options?: CacheReadOptions): QuizQuestion[] | null;
 export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: "flashcards", options?: CacheReadOptions): Flashcard[] | null;
 export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: CacheKind, options: CacheReadOptions = {}): unknown {
   const spec = COLUMNS[kind];
+  const levelSelect = spec.levelColumn ? `, ${spec.levelColumn} AS level` : "";
   const row = db
-    .prepare(`SELECT ${spec.column} AS data, ${spec.versionColumn} AS version FROM package_cache WHERE package_id = ?`)
-    .get(packageId) as { data?: string | null; version?: number | null } | undefined;
+    .prepare(`SELECT ${spec.column} AS data, ${spec.versionColumn} AS version${levelSelect} FROM package_cache WHERE package_id = ?`)
+    .get(packageId) as { data?: string | null; version?: number | null; level?: string | null } | undefined;
 
   if (!row || !row.data) return null;
   if (!options.ignoreVersion && row.version !== spec.version) return null;
+  // A hard quiz and a standard quiz are different sets: never serve the other one.
+  if (spec.levelColumn && options.level !== undefined) {
+    if ((row.level ?? "standard") !== options.level) return null;
+  }
 
   let parsed: unknown;
   try {
@@ -78,12 +94,12 @@ export function readCachedArtifact(db: CacheDatabase, packageId: string, kind: C
   return result.ok ? result.value : null;
 }
 
-export function writeCachedArtifact(db: CacheDatabase, packageId: string, kind: CacheKind, value: unknown): void {
+export function writeCachedArtifact(db: CacheDatabase, packageId: string, kind: CacheKind, value: unknown, level?: string): void {
   const spec = COLUMNS[kind];
   db.prepare("INSERT OR IGNORE INTO package_cache (package_id) VALUES (?)").run(packageId);
-  db.prepare(`UPDATE package_cache SET ${spec.column} = ?, ${spec.versionColumn} = ? WHERE package_id = ?`).run(
-    JSON.stringify(value),
-    spec.version,
-    packageId,
-  );
+  const levelSet = spec.levelColumn ? `, ${spec.levelColumn} = ?` : "";
+  const params: unknown[] = [JSON.stringify(value), spec.version];
+  if (spec.levelColumn) params.push(level ?? "standard");
+  params.push(packageId);
+  db.prepare(`UPDATE package_cache SET ${spec.column} = ?, ${spec.versionColumn} = ?${levelSet} WHERE package_id = ?`).run(...params);
 }

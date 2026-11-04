@@ -28,3 +28,8 @@ test("the band limits grow with the grade", () => {
   assert.ok(gradeStyle(8).stem < gradeStyle(11).stem);
   assert.equal(gradeStyle(6).stem, 10);
 });
+
+test("a hard set shifts the questions towards inference and traps", () => {
+  assert.deepEqual(quizModules(10, 6, true), { begriffe: 2, schluesse: 5, fangfragen: 3 });
+  assert.deepEqual(quizModules(10, 6, false), { begriffe: 5, schluesse: 3, fangfragen: 2 });
+});
