@@ -90,6 +90,33 @@ export const quizModules = (count: number, grade = 9, hard = false): { begriffe:
   return { begriffe, schluesse, fangfragen };
 };
 
+/**
+ * Content and form rules. One source for the quiz prompt and the repair prompt: a copy
+ * drifted before — the repair copy still asked for 15-word explanations while the grade
+ * block allowed 20 to 30. Each rule is one line and one thought.
+ */
+export const quizRules = (): string => `REGELN
+- Nimm nur Aussagen aus dem Material.
+- Erfinde keine Aussage, die nicht im Material steht.
+- Verteile die Fragen über verschiedene Textstellen und Aspekte.
+- Frage höchstens ein Drittel der Fragen als reines Faktum ab (type WIEDERGEBEN).
+- Stelle in einem Stamm genau eine Frage.
+- Gib im Stamm keinen Lösungshinweis.
+- Setze bei FEHLER und AUSSCHLUSS die Aussage in den Stamm.
+- Verweise im Stamm nicht auf die Quelle: kein "laut Material", kein "im Text".
+- Gib genau vier Optionen.
+- Formuliere die Optionen grammatisch parallel.
+- Halte die Optionen gleich lang. Abweichung höchstens 35 %.
+- Beginne keine Option mit ohne, nicht, kein oder niemals.
+- Nimm die falsche Option aus derselben Textstelle wie die richtige.
+- Unterscheide eine falsche Option in genau EINEM Merkmal.
+- Nimm keine Option auf, die im Material nicht vorkommt.
+- Mache die richtige Option nicht zur längsten.
+- Wechsle die Position der richtigen Option.
+- Fasse die Begründung in höchstens 8 Wörter.
+- Fasse den Hinweis in höchstens 8 Wörter.
+- Nenne als topic ein Stichwort.`;
+
 const previousBlock = (previous: string[]): string =>
   previous.length === 0
     ? ""
@@ -112,45 +139,42 @@ sie fragen keine Sätze ab.
 SPRACHE (gilt für Stamm, Optionen, Hinweis und Erklärung)
 - Style: ~80 % of the way to ASD-STE100: one thought per sentence; a verb over an abstract noun;
   active over passive; three or more items go vertical; cut, never decorate.
-- Höchstens ${style.stem} Wörter im Stamm, ${style.option} Wörter in einer Option, ${style.explanation}
-  Wörter in einer Erklärung.
-- Nur Wörter, die ein Kind der Klasse ${grade} kennt. Ein Fachwort aus dem Material ist erlaubt, wenn
-  der Stamm es in einfachen Worten erklärt. Beispiele aus Schule, Familie, Spiel oder Sport.
-- Diese Wörter stehen nicht im Stamm und nicht in den Optionen: Denkfehler, Schluss, Prämisse,
-  Umkehrung, Verallgemeinerung, Zirkel, Analogie, Begriffsvertauschung, zwingend, logisch. Steht
-  eines davon im Material, darf es nur als Zitat vorkommen. Die Regel wird in der Sprache des Kindes
-  erklärt, nicht benannt.
+- Höchstens ${style.stem} Wörter im Stamm.
+- Höchstens ${style.option} Wörter in einer Option.
+- Höchstens ${style.explanation} Wörter in einer Erklärung.
+- Nur Wörter, die ein Kind der Klasse ${grade} kennt.
+- Erkläre ein Fachwort aus dem Material im Stamm in einfachen Worten.
+- Nimm Beispiele aus Schule, Familie, Spiel oder Sport.
+- Diese Wörter stehen nicht im Stamm und nicht in den Optionen:
+  Denkfehler, Schluss, Prämisse, Umkehrung, Verallgemeinerung,
+  Zirkel, Analogie, Begriffsvertauschung, zwingend, logisch.
+- Zitiere ein solches Wort nur, wenn es im Material steht.
+- Erkläre die Regel in der Sprache des Kindes. Benenne sie nicht.
 
 ${count} Multiple-Choice-Fragen, verteilt auf drei Module:
 1. BEGRIFFE (${modules.begriffe}, type BEZIEHUNG oder WIEDERGEBEN): Merkmale trennen, Ober-/Unterbegriff,
    Definition prüfen.
 2. SCHLÜSSE (${modules.schluesse}, type FOLGERUNG oder AUSSCHLUSS): was sicher aus dem Material folgt.
-   Falle: unzulässige Umkehrung. Bei AUSSCHLUSS nennt der Stamm eine Materialaussage, die Optionen
-   sind einzelne Sätze; gesucht ist der Satz, der mit dem Stamm nicht zugleich wahr sein kann.
-3. FANGFRAGE (${modules.fangfragen}, type FEHLER oder GRUND/FOLGE): der Stamm zitiert eine Behauptung
-   und fragt, was daran nicht stimmt. Die Optionen beschreiben den Fehler in einfachen Worten, zum
-   Beispiel "Man schließt von einem Fall auf alle." oder "Der Grund wird mit der Folge verwechselt."
+   Achtung: eine Umkehrung ist kein gültiger Schluss.
+   Bei AUSSCHLUSS nennt der Stamm eine Materialaussage.
+   Die Optionen sind einzelne Sätze.
+   Gesucht ist der Satz, der mit dem Stamm nicht zugleich wahr sein kann.
+3. FANGFRAGE (${modules.fangfragen}, type FEHLER oder GRUND/FOLGE): der Stamm zitiert eine Behauptung.
+   Der Stamm fragt, was daran nicht stimmt.
+   Die Optionen beschreiben den Fehler in einfachen Worten.
+   Beispiel: "Man schließt von einem Fall auf alle."
+   Beispiel: "Der Grund wird mit der Folge verwechselt."
 ${hard ? `
 STUFE SCHWER — jede Frage verlangt zwei Schritte:
 - Kein WIEDERGEBEN. Jede Frage braucht einen Schluss, einen Vergleich oder eine Fehlerprüfung.
 - Mindestens drei Fragen verbinden zwei Aussagen des Materials.
-- Die falschen Optionen unterscheiden sich in einem feinen Merkmal, nie in einer grob falschen Aussage.
-- Die richtige Option steht nie wörtlich im Material; sie fasst das Material in eigenen Worten zusammen.
+- Die falschen Optionen unterscheiden sich in einem feinen Merkmal.
+- Keine falsche Option ist grob falsch.
+- Die richtige Option steht nie wörtlich im Material.
+- Die richtige Option fasst das Material in eigenen Worten zusammen.
 ` : ""}
 
-REGELN
-- Nur Aussagen des Materials. Trägt es ein Modul nicht, verteile die Fragen um. Keine neue Prämisse.
-- Kein Verweis auf die Quelle im Stamm: nicht "laut Material", nicht "im Text", nicht "laut Mitschrift".
-  Der Stamm fragt die Sache selbst. Ein Paket kann aus einem Thema ohne Datei entstanden sein.
-- Streuung: verschiedene Textstellen und verschiedene Aspekte. Höchstens ein Drittel der Fragen
-  darf ein Faktum abfragen (type WIEDERGEBEN).
-- Stamm: eine Frage, kein Lösungshinweis. Bei FEHLER und AUSSCHLUSS steht die Aussage im Stamm.
-- Genau 4 Optionen, grammatisch parallel, ähnliche Länge. Keine Option beginnt mit ohne/nicht/kein/niemals.
-- Jede falsche Option ist ein typischer Denkfehler aus derselben Textstelle, unterschieden in EINEM
-  Merkmal. Keine Option, die im Material nicht vorkommt.
-- Die richtige Option ist nicht die längste; die richtige Position wechselt.
-- rationale: die Regel in höchstens 8 Wörtern, ohne Wiederholung der Option. hint ≤8 Wörter ohne
-  Lösung. explanation ≤${style.explanation} Wörter. topic: Stichwort.
+${quizRules()}
 ${previousBlock(previous)}
 AUSGABE — nur JSON:
 ${OUTPUT_CONTRACT.quiz}
@@ -169,22 +193,26 @@ ${content}
 export const quizRepairPrompt = (quiz: unknown, flags: string, content: string, grade: number): string => {
   const style = gradeStyle(grade);
   return `
-Du prüfst ein Multiple-Choice-Quiz für Klassenstufe ${grade} und verbesserst die beanstandeten Fragen.
+Du prüfst ein Multiple-Choice-Quiz für Klassenstufe ${grade}.
 
 BEANSTANDETE FRAGEN und Grund:
 ${flags}
 
-Auftrag: Ersetze NUR die beanstandeten Fragen durch neue, die den Grund beheben. Alle übrigen Fragen
-bleiben wörtlich unverändert und in derselben Reihenfolge. Die Regeln des Ursprungsauftrags gelten:
-genau vier Optionen, grammatisch parallel, ähnliche Länge (unter 30 % Abweichung), keine Option
-beginnt mit "ohne", "nicht", "kein" oder "niemals", jede falsche Option stammt aus derselben
-Textstelle und unterscheidet sich in EINEM Merkmal, keine Option, die im Material nicht vorkommt,
-die richtige Option ist nicht länger als jede falsche, jede Option trägt ihre eigene rationale in
-höchstens 8 Wörtern, hint höchstens 8. Typ und topic der ersetzten Frage bleiben erhalten.
+AUFTRAG
+- Ersetze nur die beanstandeten Fragen.
+- Lass alle übrigen Fragen wörtlich unverändert.
+- Behalte die Reihenfolge.
+- Behalte type und topic der ersetzten Frage.
+- Behebe den genannten Grund.
 
-SPRACHE für Klasse ${grade}: höchstens ${style.stem} Wörter im Stamm, ${style.option} in einer
-Option, ${style.explanation} in einer Erklärung. Nur Wörter, die ein Kind der Klasse ${grade} kennt.
-Keine Fachsprache (Denkfehler, Schluss, Prämisse, Umkehrung, zwingend, logisch) im Stamm.
+SPRACHE für Klasse ${grade}
+- Höchstens ${style.stem} Wörter im Stamm.
+- Höchstens ${style.option} Wörter in einer Option.
+- Höchstens ${style.explanation} Wörter in einer Erklärung.
+- Nur Wörter, die ein Kind der Klasse ${grade} kennt.
+- Keine Fachsprache im Stamm: Denkfehler, Schluss, Prämisse, Umkehrung, zwingend, logisch.
+
+${quizRules()}
 
 QUIZ (JSON):
 ${JSON.stringify(quiz)}

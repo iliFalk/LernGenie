@@ -73,7 +73,7 @@ test("a stem with two question marks is a soft signal", () => {
 test("a quiz without types is reported on the set level", () => {
   const quiz = [question({ type: "" }), question({ id: "q2", type: "" }), question({ id: "q3", type: "" })];
   const result = checkQuiz(quiz, context);
-  assert.match(result.global.join(" | "), /nur 0 Aufgabentyp/);
+  assert.match(result.global.join(" | "), /von 3 Modulen/);
   assert.match(result.global.join(" | "), /reines Abfragen/);
 });
 
@@ -81,7 +81,7 @@ test("a mixed quiz passes the set level", () => {
   const quiz = [
     question(),
     question({ id: "q2", type: "FOLGERUNG", text: "Was folgt aus dem Material?" }),
-    question({ id: "q3", type: "BEZIEHUNG", text: "In welchem Verhältnis stehen die Begriffe?" }),
+    question({ id: "q3", type: "FEHLER", text: "Was stimmt an der Behauptung nicht?" }),
   ];
   const result = checkQuiz(quiz, context);
   assert.deepEqual(result.global, []);

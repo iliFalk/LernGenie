@@ -50,6 +50,13 @@ const metaTermIn = (text: string): string | undefined =>
 
 const countWords = (text: string): number => (text.match(/[\wÄÖÜäöüß-]+/g) ?? []).length;
 
+/** The type names that belong to each of the three modules the prompt asks for. */
+const MODULE_TYPES: Record<"begriffe" | "schluesse" | "fangfragen", string[]> = {
+  begriffe: ["BEZIEHUNG", "WIEDERGEBEN"],
+  schluesse: ["FOLGERUNG", "AUSSCHLUSS"],
+  fangfragen: ["FEHLER", "GRUND/FOLGE"],
+};
+
 /** The content words of a text: long enough to carry meaning, case dropped. */
 const words = (text: string): string[] => (text.match(/[\wÄÖÜäöüß]+/g) ?? []).filter((word) => word.length >= 6);
 
@@ -73,8 +80,8 @@ export interface QuizCheckOptions {
   grade?: number;
   /** A quiz must not be pure recall. */
   maxRecallShare?: number;
-  /** A quiz needs several question types. */
-  minTypes?: number;
+  /** A quiz needs all three modules. */
+  minModules?: number;
   /** Justifications per option are expected. */
   expectRationales?: boolean;
 }
@@ -93,7 +100,7 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
   const style = gradeStyle(options.grade ?? 0);
   const gradeLabel = options.grade && options.grade > 0 ? String(options.grade) : "?";
   const maxRecallShare = options.maxRecallShare ?? 0.4;
-  const minTypes = options.minTypes ?? 3;
+  const minModules = options.minModules ?? 3;
   const expectRationales = options.expectRationales ?? true;
 
   const items: Record<number, string[]> = {};
@@ -167,11 +174,16 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
     if (expectRationales && optionRationales.length === list.length) {
       const missing = optionRationales.filter((text) => !text.trim()).length;
       if (missing > 0) soft.push(`${missing} Option(en) ohne Begründung`);
-      // The prompt caps a rationale at 8 words. This only measures whether it complied:
-      // the display and the runtime depend on it, so the log should show the drift.
+      // The prompt caps a rationale at 8 words. The display and the runtime depend on it, so
+      // the log must show the drift; the limit is the same number in both places.
       const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
-      const tooLong = optionRationales.filter((text) => text.trim() && words(text) > 12).length;
-      if (tooLong > 0) soft.push(`${tooLong} Begründung(en) länger als 12 Wörter`);
+      const tooLong = optionRationales.filter((text) => text.trim() && words(text) > 8).length;
+      if (tooLong > 0) soft.push(`${tooLong} Begründung(en) länger als 8 Wörter`);
+    }
+
+    // The explanation carries the same word limit as the prompt states for the grade.
+    if (question.explanation.trim() && countWords(question.explanation) > style.explanation) {
+      soft.push(`Erklärung über der Grenze: ${countWords(question.explanation)} Wörter, Grenze ${style.explanation}`);
     }
 
     const found = [...hard, ...soft];
@@ -181,8 +193,19 @@ export function checkQuiz(quiz: QuizQuestion[], options: QuizCheckOptions): Quiz
   });
 
   const global: string[] = [];
-  const types = new Set(quiz.map((question) => question.type.trim()).filter(Boolean));
-  if (types.size < minTypes) global.push(`nur ${types.size} Aufgabentyp(en) für ${quiz.length} Fragen`);
+  // The prompt asks for three modules, not three type names: a set can carry three types
+  // inside one module and still miss the mix. Count the modules.
+  const moduleOf = (type: string): string => {
+    const name = type.trim().toUpperCase();
+    if (MODULE_TYPES.begriffe.includes(name)) return "BEGRIFFE";
+    if (MODULE_TYPES.schluesse.includes(name)) return "SCHLÜSSE";
+    if (MODULE_TYPES.fangfragen.includes(name)) return "FANGFRAGE";
+    return "SONSTIGE";
+  };
+  const modules = new Set(quiz.map((question) => moduleOf(question.type)));
+  if (modules.size < minModules) {
+    global.push(`nur ${modules.size} von 3 Modulen vertreten (${[...modules].join(", ")})`);
+  }
   const recall = quiz.filter(
     (question) => isRecall(question.type) || (!question.type.trim() && recallStem.test(question.text)),
   ).length;
