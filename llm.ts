@@ -58,6 +58,15 @@ export function resolveMaxTokens(provider: string, raw: string | undefined = pro
   return provider === "openrouter" ? DEFAULT_OPENROUTER_MAX_TOKENS : undefined;
 }
 
+/** `LLM_REASONING_EFFORT` sets the model's thinking per deployment. `none` turns it off —
+ *  measured on OpenCode Go with a small quiz prompt: 0 reasoning tokens and 1.7 s instead of
+ *  5.1 s and 350 reasoning tokens. `low`/`medium`/`high` bound it, an unknown value is dropped.
+ *  Empty sends no field, so the provider default applies. */
+export function resolveReasoningEffort(raw: string | undefined = process.env.LLM_REASONING_EFFORT): string | undefined {
+  const value = (raw || "").trim();
+  return value === "" ? undefined : value;
+}
+
 export async function callLLM(params: {
   provider: string;
   apiKey?: string;
@@ -78,6 +87,7 @@ export async function callLLM(params: {
       apiKey: cleanOpenRouterKey,
       model: model || process.env.AI_MODEL || DEFAULT_OPENROUTER_MODEL,
       supportsJsonMode: true,
+      reasoningEffort: resolveReasoningEffort(),
       prompt, isJson, systemPrompt, imageData,
     });
   }
@@ -94,6 +104,7 @@ export async function callLLM(params: {
       // error" as soon as the prompt grows. The wrapper reads the JSON out of the
       // answer and validates it, so the field is not needed here.
       supportsJsonMode: false,
+      reasoningEffort: resolveReasoningEffort(),
       prompt, isJson, systemPrompt, imageData,
     });
   }
@@ -107,6 +118,7 @@ export async function callLLM(params: {
       apiKey: cleanOpenCodeGoKey,
       model: model || process.env.AI_MODEL || DEFAULT_OPENCODE_GO_MODEL,
       supportsJsonMode: true,
+      reasoningEffort: resolveReasoningEffort(),
       prompt, isJson, systemPrompt, imageData,
     });
   }
@@ -135,12 +147,13 @@ async function callChatCompletions(params: {
   apiKey?: string;
   model?: string;
   supportsJsonMode: boolean;
+  reasoningEffort?: string;
   prompt: string;
   isJson?: boolean;
   systemPrompt?: string;
   imageData?: { data: string; mimeType: string };
 }) {
-  const { url, label, apiKey, model, supportsJsonMode, prompt, isJson, systemPrompt, imageData } = params;
+  const { url, label, apiKey, model, supportsJsonMode, reasoningEffort, prompt, isJson, systemPrompt, imageData } = params;
 
   if (!apiKey) throw new Error(`${label} API Key is required`);
 
@@ -164,7 +177,7 @@ async function callChatCompletions(params: {
   const timeoutMs = Number(process.env.LLM_TIMEOUT_MS || 180000);
   const maxTokens = resolveMaxTokens(label);
   console.log(
-    `[llm] ${label} model=${model || "?"} json=${!!isJson} timeout=${timeoutMs}ms max_tokens=${maxTokens ?? "model default"}`,
+    `[llm] ${label} model=${model || "?"} json=${!!isJson} timeout=${timeoutMs}ms max_tokens=${maxTokens ?? "model default"} reasoning=${reasoningEffort ?? "provider default"}`,
   );
 
   const headers: Record<string, string> = {
@@ -190,6 +203,7 @@ async function callChatCompletions(params: {
         // A bounded answer keeps latency and cost predictable. The value is absent
         // when no limit is configured and the provider's default applies.
         max_tokens: maxTokens,
+        reasoning_effort: reasoningEffort,
         response_format: isJson && supportsJsonMode ? { type: "json_object" } : undefined,
       }),
       signal: AbortSignal.timeout(timeoutMs),

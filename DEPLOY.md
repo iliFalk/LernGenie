@@ -54,6 +54,7 @@ OPENCODE_GO_API_KEY=<OpenCode-Go-Key>
 AI_PROVIDER=opencode-go
 AI_MODEL=deepseek-v4.1-flash
 SINGLE_USER_ID=shared
+LLM_REASONING_EFFORT=none
 LLM_TIMEOUT_MS=600000
 DB_PATH=/data/study_quiz.db
 NODE_ENV=production

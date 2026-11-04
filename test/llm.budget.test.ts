@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { resolveMaxTokens } from "../llm";
+import { resolveMaxTokens, resolveReasoningEffort } from "../llm";
 
 test("a configured budget applies to every provider", () => {
   assert.equal(resolveMaxTokens("commandcode", "32768"), 32768);
@@ -27,4 +27,12 @@ test("an unusable value falls back to the model default instead of breaking the 
   assert.equal(resolveMaxTokens("commandcode", "-5"), undefined);
   assert.equal(resolveMaxTokens("commandcode", "keine Zahl"), undefined);
   assert.equal(resolveMaxTokens("commandcode", "1024.7"), 1024);
+});
+
+test("LLM_REASONING_EFFORT is sent only when it holds a value", () => {
+  assert.equal(resolveReasoningEffort(undefined), undefined);
+  assert.equal(resolveReasoningEffort(""), undefined);
+  assert.equal(resolveReasoningEffort("   "), undefined);
+  assert.equal(resolveReasoningEffort("none"), "none");
+  assert.equal(resolveReasoningEffort(" low "), "low");
 });

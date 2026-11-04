@@ -57,6 +57,7 @@ Ohne Dev Mode gelten die Server-Defaults.
 | `OPENCODE_GO_BASE_URL` | Basis-URL für `provider = opencode-go`. Default `https://opencode.ai/zen/go/v1` |
 | `LLM_TIMEOUT_MS` | Zeitlimit für einen Aufruf an OpenRouter, CommandCode oder OpenCode Go in Millisekunden. Default `180000` (3 Minuten), produktiv **300000**. 25 Fragen brauchen rund 120 s |
 | `LLM_MAX_TOKENS` | Grenze für die Antwort in Token. Leer = der Aufruf trägt **kein** `max_tokens`, es gilt der Default des Modells. Eine Zahl setzt die Grenze für alle Provider. Ausnahme: bei `openrouter` gilt ohne Wert 8192, weil OpenRouter sonst das volle Ausgabefenster des Modells reserviert (bis 131072 Token) und den Aufruf mit HTTP 402 ablehnt, wenn das Key-Limit kleiner ist |
+| `LLM_REASONING_EFFORT` | Denk-Budget pro Modellaufruf. `none` schaltet das Denken ab, `low`, `medium` und `high` begrenzen es. Leer heißt: der Aufruf trägt kein Feld, es gilt der Provider-Default |
 | `DB_PATH` | Pfad zur SQLite-Datei. Ein relativer Pfad gilt gegen das Arbeitsverzeichnis des Prozesses |
 | `SINGLE_USER_ID` | Ein fester Benutzer für alle Geräte. Gesetzt liest jedes Gerät dieselben Pakete, unabhängig von der Kennung im Browser. Leer: jede Browser-Kennung hat ihre eigene Bibliothek |
 | `APP_URL` | Eigene URL, von AI Studio injiziert |
