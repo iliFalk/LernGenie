@@ -83,12 +83,15 @@ docker run --rm -p 127.0.0.1:3001:3000 -v "$PWD/data:/data" \
 
 Produktiv läuft die App auf falknest (Homelab-Server, 192.168.178.100). Der Port ist an das
 LAN-Interface gebunden. Es gibt keinen Reverse-Proxy-Eintrag und keinen Cloudflare-Tunnel-Hostnamen.
-Deshalb ist die App von außen nicht erreichbar. Sie startet nicht automatisch mit dem Host, sondern
-nur auf Anforderung. Details, Start, Stop und Rollback: [DEPLOY.md](DEPLOY.md).
+Deshalb ist die App von außen nicht erreichbar. Der Dienst folgt dem Host: lief der Container beim
+Herunterfahren, startet er beim Boot wieder (`restart: unless-stopped`). Nach `stop.sh` bleibt er
+unten. Details, Start, Stop und Rollback: [DEPLOY.md](DEPLOY.md).
 
 ## Daten
 
-Alle Daten liegen in einer SQLite-Datei. `DB_PATH` verschiebt sie. Die Tabellen heißen `packages`,
+Alle Daten liegen in einer SQLite-Datei. `DB_PATH` verschiebt sie. Auf falknest liegt die Datei in
+einem Bind-Mount (`/opt/falknest/lernquiz/data`) und überlebt jeden Image-Neubau und jeden
+Host-Neustart. Die Tabellen heißen `packages`,
 `materials`, `quiz_results` und `package_cache`. Der Cache hält je Paket Quiz, Karteikarten und
 Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopiere die Datei.
 

@@ -1,8 +1,9 @@
-# Deployment — LernGenie auf falknest (LAN-only, on demand)
+# Deployment — LernGenie auf falknest (LAN-only, zustandserhaltend)
 
-Stand: 2026-10-05. Host: **falknest** = 192.168.178.100 (VM auf pve), SSH-Alias `falknest`, root.
+Stand: 2026-11-04. Host: **falknest** = 192.168.178.100 (VM auf pve), SSH-Alias `falknest`, root.
 Der Host schläft nachts (Boot ~04:11, Shutdown ~19:50).
-Die App macht das nicht mit. Sie startet nur auf Anforderung — immer unter derselben Adresse.
+Die App folgt dem Host: lief der Container beim Herunterfahren, startet er beim Boot wieder — immer
+unter derselben Adresse. Ein Aufruf von `stop.sh` hält ihn unten, bis `start.sh` ihn startet.
 
 ## Adresse
 
@@ -31,7 +32,7 @@ Erreichbar nur aus dem Heimnetz (192.168.178.0/24) und nur, solange der Containe
       dockerfile: Dockerfile
     image: lernquiz:latest
     container_name: lernquiz
-    restart: "no"                 # kein Autostart — Start nur auf Anforderung
+    restart: unless-stopped       # Host-Neustart stellt den letzten Zustand wieder her
     env_file: /opt/falknest/lernquiz/lernquiz.env
     ports:
       - "192.168.178.100:3001:3000"   # nur LAN-Interface, kein 0.0.0.0
@@ -109,6 +110,24 @@ Zustand prüfen:
 ```bash
 ssh falknest 'docker ps -a --filter name=lernquiz --format "{{.Names}} | {{.Status}}"'
 ```
+
+## Daten und Zustand (2026-11-04)
+
+Zwei Dinge bleiben erhalten: die Daten und der Laufzustand des Dienstes.
+
+| Was | Wie es erhalten bleibt |
+|---|---|
+| Pakete, Materialien, Ergebnisse, Cache | Bind-Mount `/opt/falknest/lernquiz/data` → `/data`, `DB_PATH=/data/study_quiz.db`. Die Datei liegt außerhalb des Images. Ein neues Image oder ein neuer Container ändert sie nicht |
+| Laufzustand des Dienstes | `restart: unless-stopped`. Lief der Container beim Herunterfahren, startet Docker ihn beim Boot wieder. Nach `stop.sh` bleibt er unten, bis `start.sh` ihn startet |
+
+Geprüft am 2026-11-04: `systemctl restart docker` auf falknest. Danach liefen alle sieben Container
+wieder, `lernquiz` antwortete mit HTTP 200, und die Zählung blieb gleich (4 Pakete, 10 Materialien,
+14 Ergebnisse, 3 Cache-Einträge). Eine Sicherung ist eine Kopie der Datei
+`/opt/falknest/lernquiz/data/study_quiz.db` bei gestopptem Container oder mit
+`sqlite3 … ".backup"`.
+
+Was **nicht** erhalten bleibt: der Inhalt von `/data` beim Löschen des Verzeichnisses, und der
+Zustand im Browser des Geräts (`localStorage`: Dev-Mode-Einstellungen, User-ID).
 
 ## Wie deployt wurde (2026-10-05)
 
