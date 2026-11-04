@@ -56,11 +56,13 @@ export interface GradeStyle {
 }
 
 export const gradeStyle = (grade: number): GradeStyle => {
+  // The explanation stays at or below the sentence limit of the source text: the text a
+  // pupil learns from must not be harder than the sentence that explains a mistake.
   if (grade > 0 && grade <= 6) {
-    return { stem: 10, option: 8, explanation: 20, text: 12, mix: [0.5, 0.3, 0.2] };
+    return { stem: 10, option: 8, explanation: 12, text: 12, mix: [0.5, 0.3, 0.2] };
   }
-  if (grade <= 9) return { stem: 14, option: 10, explanation: 25, text: 16, mix: [0.3, 0.4, 0.3] };
-  return { stem: 18, option: 12, explanation: 30, text: 20, mix: [0.3, 0.4, 0.3] };
+  if (grade <= 9) return { stem: 14, option: 10, explanation: 16, text: 16, mix: [0.3, 0.4, 0.3] };
+  return { stem: 18, option: 12, explanation: 20, text: 20, mix: [0.3, 0.4, 0.3] };
 };
 
 /**

@@ -33,3 +33,10 @@ test("a hard set shifts the questions towards inference and traps", () => {
   assert.deepEqual(quizModules(10, 6, true), { begriffe: 2, schluesse: 5, fangfragen: 3 });
   assert.deepEqual(quizModules(10, 6, false), { begriffe: 5, schluesse: 3, fangfragen: 2 });
 });
+
+test("the explanation is never harder than the source text", () => {
+  for (const grade of [5, 6, 7, 9, 10, 13]) {
+    const style = gradeStyle(grade);
+    assert.ok(style.explanation <= style.text, `grade ${grade}: ${style.explanation} > ${style.text}`);
+  }
+});

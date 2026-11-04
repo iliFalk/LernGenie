@@ -70,11 +70,15 @@ Alle Variablen stehen erklärt in [.env.example](.env.example).
 Der Prompt nennt die Klasse nicht mehr nur als Etikett, er setzt Grenzen. `gradeStyle(grade)` in
 `src/ai/prompts.ts` liefert sie, `checkQuiz` prüft sie.
 
-| Klasse | Stamm ≤ | Option ≤ | Erklärung ≤ | Module (Begriffe / Schlüsse / Fangfragen) |
-|---|---|---|---|---|
-| 5–6 | 10 Wörter | 8 Wörter | 20 Wörter | 50 / 30 / 20 |
-| 7–9 | 14 Wörter | 10 Wörter | 25 Wörter | 30 / 40 / 30 |
-| 10–13 | 18 Wörter | 12 Wörter | 30 Wörter | 30 / 40 / 30 |
+| Klasse | Stamm ≤ | Option ≤ | Erklärung ≤ | Satz im Lerntext ≤ | Module (Begriffe / Schlüsse / Fangfragen) |
+|---|---|---|---|---|---|
+| 5–6 | 10 Wörter | 8 Wörter | 12 Wörter | 12 Wörter | 50 / 30 / 20 |
+| 7–9 | 14 Wörter | 10 Wörter | 16 Wörter | 16 Wörter | 30 / 40 / 30 |
+| 10–13 | 18 Wörter | 12 Wörter | 20 Wörter | 20 Wörter | 30 / 40 / 30 |
+
+Die Erklärung ist nie länger als ein Satz im Lerntext: ein Kind soll den Satz, der einen Fehler
+erklärt, nicht schwerer lesen müssen als den Text, aus dem es gelernt hat. Ein Test hält die
+Bedingung `explanation <= text` fest.
 
 - Der Prompt verlangt den Stil `~80 % of the way to ASD-STE100`: ein Gedanke je Satz, Verb vor
   Substantiv, aktiv vor passiv, drei und mehr Punkte untereinander. Dazu verbietet er die Wörter der
