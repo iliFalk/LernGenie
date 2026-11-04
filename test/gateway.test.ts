@@ -94,15 +94,15 @@ test("a provider error yields a typed error", async () => {
 });
 
 test("text kind wraps a prose answer in {text}", async () => {
-  const stub = makeStub(["## Study Guide\nInhalt"]);
-  const result = await generateArtifact<TextArtifact>("text", { variant: "study-guide", content: "c" }, config, stub);
+  const stub = makeStub(["## Thema\nInhalt"]);
+  const result = await generateArtifact<TextArtifact>("text", { variant: "topic", topic: "Mitose", grade: 9 }, config, stub);
   assert.equal(result.ok, true);
-  if (result.ok) assert.deepEqual(result.value, { text: "## Study Guide\nInhalt" });
+  if (result.ok) assert.deepEqual(result.value, { text: "## Thema\nInhalt" });
 });
 
 test("an empty text answer triggers the repair then errors", async () => {
   const stub = makeStub(["   ", ""]);
-  const result = await generateArtifact<TextArtifact>("text", { variant: "study-guide", content: "c" }, config, stub);
+  const result = await generateArtifact<TextArtifact>("text", { variant: "topic", topic: "Mitose", grade: 9 }, config, stub);
   assert.equal(result.ok, false);
   if (!result.ok) assert.equal(result.error.code, "AI_INVALID");
   assert.equal(stub.calls(), 2);

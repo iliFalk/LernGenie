@@ -30,12 +30,11 @@ llm.ts                Provider-Schicht für Gemini, OpenRouter, CommandCode und 
 | `POST /api/ai/ocr` | Text aus einem Bild lesen |
 | `POST /api/ai/quiz` | Quizfragen erzeugen |
 | `POST /api/ai/flashcards` | Karteikarten erzeugen |
-| `POST /api/ai/study-guide` | Lernleitfaden erzeugen |
 | `POST /api/ai/analyze` | Ein Ergebnis analysieren |
 | `POST /api/ai/topic` | Das Thema zu Material bestimmen |
 | `GET/POST/DELETE /api/packages[/:id]` | Lernpakete lesen, anlegen und löschen |
 | `GET/POST /api/materials` | Materialien zu einem Paket lesen und anlegen |
-| `GET /api/packages/:id/{quiz,flashcards,study-guide}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 25). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. |
+| `GET /api/packages/:id/{quiz,flashcards}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 25). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. Die ersten 10 Fragen fordert das Upload-Fenster direkt nach dem Speichern an. |
 | `GET/POST /api/results[/:packageId]` | Ergebnisse lesen und schreiben |
 
 Der Nutzerkontext kommt über den Header `x-user-id`. In Telegram liefert die Mini-App die
@@ -121,8 +120,8 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   `src/ai/gateway.ts` baut den Prompt, zieht JSON aus der Antwort, validiert und wiederholt genau
   einmal. Eine Antwort, die danach noch ungültig ist, wird zu `{error, code}` mit HTTP 500, nie zu
   einem 200 mit falscher Form.
-- `package_cache` trägt je Artefakt eine `schema_version` (`quiz_version`, `flashcards_version`,
-  `study_guide_version`). Eine Zeile mit älterer Version gilt als leer und wird neu erzeugt.
+- `package_cache` trägt je Artefakt eine `schema_version` (`quiz_version`, `flashcards_version`).
+  Eine Zeile mit älterer Version gilt als leer und wird neu erzeugt.
   Das repariert alte Pakete beim Lesen. `quiz_version` ist 2 (2026-10-08) — die Option-Reihenfolge
   kommt seither gemischt aus dem Server, deshalb gilt jede Zeile mit Version 1 als leer.
 - Die richtige Antwort landet nicht mehr fest vorn. Das Modell schrieb sie in jeder gemessenen
@@ -161,11 +160,11 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
   und die Route antwortete `AI_INVALID`. Nur bei `openrouter` gilt ohne Wert weiter 8192 (siehe
   Umgebungstabelle).
 - Die Schätzdauer im Ladeoverlay (`src/components/LoadingOverlay.tsx`) ist eine Formel, keine
-  Messung pro Anfrage: für das Quiz `160 s + 6 s je Frage` (zehn Fragen dauern gemessen 128–158 s; die Qualitätsprüfung schlägt nur bei einem harten Befund mit 120–180 s dazu), sonst ein fester Wert je Artefakt
-  (Karteikarten 45 s, Lernleitfaden 80 s, KI-Synthese 100 s, Auswertung 45 s, Speichern 3 s).
-  Grundlage sind die Messungen oben (10 Fragen 116 s, 25 Fragen 162 s, kleines Material mit
-  2 Fragen 10 s; Karteikarten 27–30 s, Lernleitfaden 61 s, KI-Synthese 83 s). Der Grundaufwand
-  des Modells dominiert, deshalb steigt die Schätzung nur schwach mit der Anzahl. Die Schätzung liegt bewusst etwas hoch: lieber „rechnet noch" als ein
+  Messung pro Anfrage: für das Quiz `15 s + 2 s je Frage` (zehn Fragen dauern ohne Denken gemessen
+  33 s), sonst ein fester Wert je Artefakt
+  (Karteikarten 45 s, KI-Synthese 100 s, Auswertung 45 s, Speichern 3 s).
+  Vor dem Abschalten des Denkens lag der Grundaufwand höher (10 Fragen 116 s, 25 Fragen 162 s).
+  Die Schätzung liegt bewusst etwas hoch: lieber „rechnet noch" als ein
   Ende zu versprechen, das schon vorbei ist. Die verstrichene Zeit daneben ist immer exakt.
 - Der Lock-File gehört zu npm. Nach einer Änderung an `package.json` erzeuge ihn neu
   (`npm install --package-lock-only`). Sonst bricht `npm ci` im Docker-Build ab.

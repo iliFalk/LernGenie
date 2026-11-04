@@ -12,12 +12,12 @@ import {
 import { extractTextFromImage, generateTopicContent } from "../services/gemini";
 import { authFetch } from "../services/auth";
 import { randomUUID } from "../services/uuid";
-import LoadingOverlay, { TOPIC_ESTIMATE_MS } from "./LoadingOverlay";
+import LoadingOverlay, { TOPIC_ESTIMATE_MS, quizEstimateMs } from "./LoadingOverlay";
 
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (packageId: string) => void;
 }
 
 export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
@@ -168,7 +168,20 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
         }
       }
 
-      onSuccess();
+      // The first question set belongs to the package from the start: the card opens with it
+      // and a quiz start is a cache hit. A failure here must not lose the saved package.
+      setProcessingMessage("Die ersten 10 Fragen werden erstellt...");
+      setProcessingEstimateMs(quizEstimateMs(10));
+      try {
+        const quizResponse = await authFetch(`/api/packages/${packageId}/quiz?count=10`);
+        if (!quizResponse.ok) {
+          console.warn("Die ersten Fragen konnten nicht erstellt werden:", quizResponse.status);
+        }
+      } catch (quizError) {
+        console.warn("Die ersten Fragen konnten nicht erstellt werden:", quizError);
+      }
+
+      onSuccess(packageId);
       setName("");
       setGrade(10);
       setFiles([]);

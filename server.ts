@@ -56,7 +56,6 @@ db.exec(`
     package_id TEXT PRIMARY KEY,
     quiz_questions TEXT,
     flashcards TEXT,
-    study_guide TEXT,
     FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE
   );
 `);
@@ -69,6 +68,15 @@ try {
 
 // Add the per-artifact schema_version columns so a shape change invalidates old rows.
 ensureCacheSchema(db);
+
+// The study guide is gone (2026-11-04). Drop its columns, so an older database matches the code.
+for (const column of ["study_guide", "study_guide_version"]) {
+  try {
+    db.exec(`ALTER TABLE package_cache DROP COLUMN ${column};`);
+  } catch {
+    // column already absent
+  }
+}
 
 async function startServer() {
   const app = express();
@@ -253,17 +261,6 @@ async function startServer() {
     }
   });
 
-  app.post("/api/ai/study-guide", async (req, res) => {
-    try {
-      const { content } = req.body;
-      const result = await generateArtifact<TextArtifact>("text", { variant: "study-guide", content }, getAIConfig(req));
-      if (!result.ok) return aiFailure(res, result);
-      res.json(result.value);
-    } catch (error: any) {
-      res.status(500).json({ error: error?.message || String(error), code: "AI_INTERNAL" });
-    }
-  });
-
   app.post("/api/ai/topic", async (req, res) => {
     try {
       const { topic, grade } = req.body;
@@ -391,36 +388,6 @@ async function startServer() {
     }
   });
 
-  app.get("/api/packages/:id/study-guide", async (req, res) => {
-    try {
-      const userId = getUserId(req);
-      // Verify ownership
-      const pkg = db.prepare("SELECT id FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId);
-      if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert", code: "FORBIDDEN" });
-
-      const regenerate = req.query.regenerate === "true";
-      if (!regenerate) {
-        const cached = readCachedArtifact(db, req.params.id, "study-guide");
-        if (cached) return res.json(cached);
-      }
-
-      // Generate since not cached (or a stale version) or force regenerate
-      const materials = db.prepare("SELECT content_text FROM materials WHERE package_id = ?").all(req.params.id) as { content_text: string }[];
-      const content = materials.map(m => m.content_text).join("\n\n");
-      if (!content.trim()) {
-        return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien.", code: "NO_MATERIALS" });
-      }
-
-      const result = await generateArtifact<TextArtifact>("text", { variant: "study-guide", content }, getAIConfig(req));
-      if (!result.ok) return aiFailure(res, result);
-
-      writeCachedArtifact(db, req.params.id, "study-guide", result.value);
-      res.json(result.value);
-    } catch (error: any) {
-      res.status(500).json({ error: error?.message || String(error), code: "INTERNAL" });
-    }
-  });
-
   app.post("/api/materials", (req, res) => {
     const { id, package_id, name, content_text, mime_type } = req.body;
     const userId = getUserId(req);
@@ -481,6 +448,11 @@ async function startServer() {
   } else {
     app.use(express.static(path.join(__dirname, "dist")));
     app.get("*", (req, res) => {
+      // An unknown /api path is a removed or misspelled endpoint, not a client-side route:
+      // answer it as JSON so a stale client logs a 404 instead of parsing HTML.
+      if (req.path.startsWith("/api/")) {
+        return res.status(404).json({ error: "Unbekannter Endpunkt.", code: "NOT_FOUND" });
+      }
       res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
   }

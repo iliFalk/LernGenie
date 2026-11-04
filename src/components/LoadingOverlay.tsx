@@ -7,12 +7,12 @@ import React, { useEffect, useState } from "react";
  * report — only an estimate. The bar therefore walks towards a cap and completes
  * when the answer arrives.
  *
- * Measured on the live deployment (2026-10-08, build 91460db): generating ten
- * questions takes 128-158 s; the quality pass adds 120-180 s, but it runs only when a
- * hard finding is present, so the estimate describes the common case. A run that
- * repairs shows "still working" past the estimate.
+ * Measured on the live deployment (2026-11-04, `LLM_REASONING_EFFORT=none`): ten questions
+ * take 33 s, a five-question run 153 s when the model still thought. The estimate keeps a
+ * margin above the current measurement, so a slow call shows "still working" instead of a
+ * passed deadline.
  */
-export const quizEstimateMs = (count: number): number => (160 + count * 6) * 1000;
+export const quizEstimateMs = (count: number): number => (20 + count * 2.5) * 1000;
 
 /** Estimate for the performance analysis after a quiz (measured ~10-20 s, generous margin). */
 export const ANALYSIS_ESTIMATE_MS = 45_000;
@@ -24,7 +24,6 @@ export const ANALYSIS_ESTIMATE_MS = 45_000;
  * measurement, so a slow call shows "still working" instead of a passed deadline.
  */
 export const FLASHCARDS_ESTIMATE_MS = 45_000;
-export const STUDY_GUIDE_ESTIMATE_MS = 80_000;
 export const TOPIC_ESTIMATE_MS = 100_000;
 
 const format = (ms: number): string => {

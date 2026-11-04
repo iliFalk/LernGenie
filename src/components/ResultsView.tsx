@@ -18,7 +18,6 @@ interface ResultsViewProps {
   package: StudyPackage;
   onBack: () => void;
   onShowFlashcards: () => void;
-  onShowStudyGuide: () => void;
   onRetry: () => void;
   onRegenerate: () => void;
 }
@@ -28,7 +27,6 @@ export default function ResultsView({
   package: pkg, 
   onBack, 
   onShowFlashcards, 
-  onShowStudyGuide, 
   onRetry, 
   onRegenerate 
 }: ResultsViewProps) {
@@ -210,27 +208,6 @@ export default function ResultsView({
             </div>
             <div className="pt-3 border-t border-[var(--cds-border-subtle-01)] flex items-center justify-between text-xs font-medium text-[#0f62fe] mt-4">
               <span>Jetzt öffnen</span>
-              <ChevronRight size={16} />
-            </div>
-          </div>
-
-          <div 
-            onClick={onShowStudyGuide}
-            className="cds--tile cds--tile--clickable p-5 flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-8 h-8 bg-[var(--cds-layer-02)] border border-[var(--cds-border-subtle-01)] flex items-center justify-center text-[#0f62fe] mb-3">
-                <Document size={18} />
-              </div>
-              <h4 className="text-sm font-semibold text-[var(--cds-text-primary)] mb-1">
-                Study Guide lesen
-              </h4>
-              <p className="text-xs text-[var(--cds-text-secondary)]">
-                Lies die strukturierte KI-Zusammenfassung und Erklärungen des Lernstoffs.
-              </p>
-            </div>
-            <div className="pt-3 border-t border-[var(--cds-border-subtle-01)] flex items-center justify-between text-xs font-medium text-[#0f62fe] mt-4">
-              <span>Guide ansehen</span>
               <ChevronRight size={16} />
             </div>
           </div>

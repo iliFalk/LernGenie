@@ -145,6 +145,21 @@ Bestand nach der Umstellung auf `shared`: 3 Pakete von `anon_ecbyw7wuhnp` und 1 
 `anon_tmeu5hetoe9` wurden umgeschrieben (`UPDATE packages SET user_id='shared'`, dasselbe für
 `quiz_results`). Die Sicherung der Datei vor dem Umschreiben liegt neben der Datenbank.
 
+## Paradigma (2026-11-04): kein Lernleitfaden, erste 10 Fragen beim Anlegen
+
+Der Lernleitfaden ist raus: Knopf im Paket, Kachel in der Auswertung, eigener Bildschirm, Route
+`POST /api/ai/study-guide`, Route `GET /api/packages/:id/study-guide`, Prompt und die Spalten
+`study_guide` und `study_guide_version` in `package_cache`. Der Server entfernt beide Spalten beim
+Start (`ALTER TABLE … DROP COLUMN`), eine alte Datenbank passt danach zum Code. Karteikarten und
+Quiz bleiben.
+
+Neu: die ersten 10 Fragen entstehen beim Anlegen des Pakets. Das Upload-Fenster fordert sie nach
+dem Speichern der Materialien an (`GET /api/packages/:id/quiz?count=10`) und zeigt dabei das
+Ladeoverlay. Danach öffnet sich die Paketkarte, und ein Quizstart ist ein Cache-Treffer. Scheitert
+die Anfrage, bleibt das Paket gespeichert; der Start erzeugt die Fragen dann selbst.
+
+Die Anzahl bleibt für weitere Runden wählbar (5 bis 25, Voreinstellung 10).
+
 ## Wie deployt wurde (2026-10-05)
 
 1. `git clone https://github.com/iliFalk/LernGenie.git /opt/falknest/lernquiz/app`

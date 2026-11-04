@@ -10,8 +10,7 @@ const setup = (): Database.Database => {
   db.exec(`CREATE TABLE package_cache (
     package_id TEXT PRIMARY KEY,
     quiz_questions TEXT,
-    flashcards TEXT,
-    study_guide TEXT
+    flashcards TEXT
   )`);
   ensureCacheSchema(db);
   return db;
@@ -64,12 +63,6 @@ test("flashcards round-trip through the store", () => {
   assert.deepEqual(readCachedArtifact(db, "p1", "flashcards"), cards);
   db.prepare("UPDATE package_cache SET flashcards_version = 0 WHERE package_id = ?").run("p1");
   assert.equal(readCachedArtifact(db, "p1", "flashcards"), null);
-});
-
-test("study-guide stores and returns the {text} contract", () => {
-  const db = setup();
-  writeCachedArtifact(db, "p1", "study-guide", { text: "## Guide" });
-  assert.deepEqual(readCachedArtifact(db, "p1", "study-guide"), { text: "## Guide" });
 });
 
 test("writing the same artifact twice updates it", () => {

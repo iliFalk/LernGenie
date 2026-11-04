@@ -1,8 +1,8 @@
 /**
  * Contract: text.
  *
- * Prose artifacts — the study guide, the Lernskript topic text and OCR — are not
- * JSON. The wrapper wraps the model answer in a single contract: `{ text }`.
+ * Prose artifacts — the Lernskript topic text and OCR — are not JSON. The wrapper
+ * wraps the model answer in a single contract: `{ text }`.
  */
 
 import { isRecord, type ValidationResult } from "./util";
@@ -10,8 +10,6 @@ import { isRecord, type ValidationResult } from "./util";
 export interface TextArtifact {
   text: string;
 }
-
-export const STUDY_GUIDE_SCHEMA_VERSION = 1;
 
 export function normaliseText(raw: unknown): TextArtifact {
   if (typeof raw === "string") return { text: raw };

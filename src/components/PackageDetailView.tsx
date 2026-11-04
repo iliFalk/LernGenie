@@ -29,7 +29,6 @@ interface PackageDetailViewProps {
   onBack: () => void;
   onStartQuiz: (pkg: StudyPackage, regenerate?: boolean) => void;
   onShowFlashcards: () => void;
-  onShowStudyGuide: () => void;
   onViewResultDetails: (result: QuizResult) => void;
 }
 
@@ -43,7 +42,6 @@ export default function PackageDetailView({
   onBack, 
   onStartQuiz, 
   onShowFlashcards, 
-  onShowStudyGuide,
   onViewResultDetails
 }: PackageDetailViewProps) {
   const [results, setResults] = useState<QuizResult[]>([]);
@@ -157,11 +155,11 @@ export default function PackageDetailView({
           {/* Study Actions Card */}
           <div className="cds--tile space-y-4">
             <h2 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-secondary)] border-b border-[var(--cds-border-subtle-01)] pb-2">
-              Lern-Aktionen
+              Quiz
             </h2>
 
             <p className="text-xs text-[var(--cds-text-secondary)] leading-relaxed">
-              Wähle einen Lernmodus: Starte das gespeicherte Quiz, lasse neue Fragen generieren oder nutze Karteikarten und Zusammenfassungen.
+              Die ersten 10 Fragen liegen bereit. Starte sie direkt, oder wähle eine andere Anzahl und erzeuge neue Fragen.
             </p>
 
             <div className="space-y-2 pt-1">
@@ -207,7 +205,7 @@ export default function PackageDetailView({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--cds-border-subtle-01)]">
+            <div className="pt-2 border-t border-[var(--cds-border-subtle-01)]">
               <button 
                 id="btn-flashcards"
                 onClick={onShowFlashcards}
@@ -215,14 +213,6 @@ export default function PackageDetailView({
               >
                 <Notebook size={16} className="mr-1.5" />
                 <span>Flashcards</span>
-              </button>
-              <button 
-                id="btn-study-guide"
-                onClick={onShowStudyGuide}
-                className="cds--btn cds--btn--tertiary w-full justify-center text-xs py-3"
-              >
-                <Document size={16} className="mr-1.5" />
-                <span>Guide</span>
               </button>
             </div>
           </div>

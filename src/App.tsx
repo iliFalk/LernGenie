@@ -32,13 +32,12 @@ import UploadModal from "./components/UploadModal";
 import QuizView from "./components/QuizView";
 import ResultsView from "./components/ResultsView";
 import FlashcardsView from "./components/FlashcardsView";
-import StudyGuideView from "./components/StudyGuideView";
 import StatsView from "./components/StatsView";
 import SettingsView from "./components/SettingsView";
 import PackageDetailView from "./components/PackageDetailView";
 import LoadingOverlay, { ANALYSIS_ESTIMATE_MS, quizEstimateMs } from "./components/LoadingOverlay";
 
-type ViewState = "library" | "quiz" | "results" | "flashcards" | "study-guide" | "stats" | "settings" | "package-detail";
+type ViewState = "library" | "quiz" | "results" | "flashcards" | "stats" | "settings" | "package-detail";
 
 export default function App() {
   const [view, setView] = useState<ViewState>("library");
@@ -54,7 +53,7 @@ export default function App() {
   const [isSideNavOpen, setIsSideNavOpen] = useState(false);
   const [questionCount, setQuestionCount] = useState(() => {
     const stored = Number(localStorage.getItem("question_count"));
-    return Number.isFinite(stored) && stored >= 5 && stored <= 15 ? stored : 10;
+    return Number.isFinite(stored) && stored >= 5 && stored <= 25 ? stored : 10;
   });
 
   useEffect(() => {
@@ -72,18 +71,20 @@ export default function App() {
     }
   }, [darkMode]);
 
-  const fetchPackages = async () => {
+  const fetchPackages = async (): Promise<StudyPackage[]> => {
     try {
       const res = await authFetch("/api/packages");
       if (res.ok) {
         const data = await res.json();
         setPackages(data);
+        return data as StudyPackage[];
       } else {
         console.error("Failed to fetch packages:", res.status, res.statusText);
       }
     } catch (err) {
       console.error("Failed to fetch packages:", err);
     }
+    return [];
   };
 
   const handleStartQuiz = async (pkg: StudyPackage, regenerate: boolean = false) => {
@@ -148,11 +149,6 @@ export default function App() {
     setView("flashcards");
   };
 
-  const handleShowStudyGuide = async () => {
-    if (!selectedPackage) return;
-    setView("study-guide");
-  };
-
   const toggleDarkMode = () => {
     const next = !darkMode;
     setDarkMode(next);
@@ -203,7 +199,6 @@ export default function App() {
             {view === "quiz" && "Quiz-Modus"}
             {view === "results" && "Auswertung"}
             {view === "flashcards" && "Flashcards"}
-            {view === "study-guide" && "Study Guide"}
             {view === "stats" && "Statistiken"}
             {view === "settings" && "Einstellungen"}
           </span>
@@ -285,7 +280,7 @@ export default function App() {
               setIsSideNavOpen(false);
             }}
             className={`w-full h-12 flex items-center gap-3 px-4 text-sm transition-colors border-l-4 ${
-              view === "library" || view === "package-detail" || view === "quiz" || view === "results" || view === "flashcards" || view === "study-guide"
+              view === "library" || view === "package-detail" || view === "quiz" || view === "results" || view === "flashcards"
                 ? "border-[#0f62fe] bg-[var(--cds-layer-02)] text-[var(--cds-text-primary)] font-semibold" 
                 : "border-transparent text-[var(--cds-text-secondary)] hover:bg-[var(--cds-layer-02)] hover:text-[var(--cds-text-primary)]"
             }`}
@@ -406,7 +401,6 @@ export default function App() {
                   onBack={() => setView("library")}
                   onStartQuiz={(pkg, regenerate) => handleStartQuiz(pkg, regenerate)}
                   onShowFlashcards={handleShowFlashcards}
-                  onShowStudyGuide={handleShowStudyGuide}
                   onViewResultDetails={(result) => {
                     setQuizResults(result);
                     setView("results");
@@ -482,7 +476,6 @@ export default function App() {
                 package={selectedPackage}
                 onBack={() => setView("package-detail")}
                 onShowFlashcards={handleShowFlashcards}
-                onShowStudyGuide={handleShowStudyGuide}
                 onRetry={() => handleStartQuiz(selectedPackage, false)}
                 onRegenerate={() => handleStartQuiz(selectedPackage, true)}
               />
@@ -495,12 +488,6 @@ export default function App() {
               />
             )}
 
-            {view === "study-guide" && selectedPackage && (
-              <StudyGuideView 
-                package={selectedPackage}
-                onBack={() => setView("package-detail")}
-              />
-            )}
           </AnimatePresence>
         </div>
       </main>
@@ -510,9 +497,17 @@ export default function App() {
         <UploadModal 
           isOpen={isUploadModalOpen} 
           onClose={() => setIsUploadModalOpen(false)}
-          onSuccess={() => {
+          onSuccess={async (packageId) => {
             setIsUploadModalOpen(false);
-            fetchPackages();
+            const list = await fetchPackages();
+            // The new package carries its first ten questions already, so the card opens
+            // right away and a quiz start is a cache hit.
+            const created = list.find((p) => p.id === packageId);
+            if (created) {
+              setSelectedPackage(created);
+              setQuestionCount(10);
+              setView("package-detail");
+            }
           }}
         />
       )}

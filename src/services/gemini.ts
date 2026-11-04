@@ -66,22 +66,6 @@ export async function getCachedFlashcards(packageId: string, regenerate: boolean
   return await handleResponse(response);
 }
 
-export async function generateStudyGuide(content: string): Promise<string> {
-  const response = await authFetch("/api/ai/study-guide", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
-  });
-  const data = await handleResponse(response);
-  return data.text || "";
-}
-
-export async function getCachedStudyGuide(packageId: string, regenerate: boolean = false): Promise<string> {
-  const response = await authFetch(`/api/packages/${packageId}/study-guide${regenerate ? "?regenerate=true" : ""}`);
-  const data = await handleResponse(response);
-  return data.text || "";
-}
-
 export async function generateTopicContent(topic: string, grade: number): Promise<string> {
   const response = await authFetch("/api/ai/topic", {
     method: "POST",

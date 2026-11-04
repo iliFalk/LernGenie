@@ -7,7 +7,7 @@ import {
   FLASHCARDS_SCHEMA_VERSION,
 } from "../src/contracts/flashcards";
 import { normaliseAnalysis, validateAnalysis, ANALYSIS_SCHEMA_VERSION } from "../src/contracts/analysis";
-import { normaliseText, validateText, STUDY_GUIDE_SCHEMA_VERSION } from "../src/contracts/text";
+import { normaliseText, validateText } from "../src/contracts/text";
 
 // --- flashcards -------------------------------------------------------------
 
@@ -113,8 +113,4 @@ test("text: validator requires a non-empty string", () => {
   assert.equal(validateText({ text: "   " }).ok, false);
   assert.equal(validateText({}).ok, false);
   assert.equal(validateText(null).ok, false);
-});
-
-test("text: schema version is a positive integer", () => {
-  assert.ok(Number.isInteger(STUDY_GUIDE_SCHEMA_VERSION) && STUDY_GUIDE_SCHEMA_VERSION >= 1);
 });

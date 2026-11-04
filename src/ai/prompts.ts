@@ -152,21 +152,6 @@ Ausgabe-Vertrag — halte ihn exakt ein:
 ${OUTPUT_CONTRACT.analysis}
 `;
 
-const studyGuidePrompt = (content: string): string => `
-Du bist ein KI-Studienassistent. Erstelle einen umfassenden, strukturierten Study Guide aus dem folgenden Material.
-
-Struktur des Guides:
-1. EXEKUTIVE ZUSAMMENFASSUNG: Der Kern des Themas in 3 Sätzen.
-2. SCHLÜSSELKONZEPTE: Detaillierte Erläuterung der wichtigsten Begriffe.
-3. DEEP DIVE: Analyse von Zusammenhängen und "Warum"-Fragen.
-4. SCHNELL-CHECK: 5 Kernpunkte zum Merken.
-
-Verwende Markdown für eine klare Hierarchie.
-
-Material:
-${content}
-`;
-
 const topicPrompt = (topic: string, grade: number): string => `
 Du bist ein Wissens-Kurator. Erstelle eine umfassende "Source of Truth" zum Thema "${topic}" für die Klassenstufe ${grade}.
 
@@ -194,7 +179,7 @@ const textPrompt = (input: Record<string, unknown>): PromptSpec => {
   if (variant === "topic") {
     return { prompt: topicPrompt(String(input.topic ?? ""), Number(input.grade) || 0) };
   }
-  return { prompt: studyGuidePrompt(String(input.content ?? "")), useFlashModel: true };
+  throw new Error(`Unbekannte Text-Variante: ${String(variant)}`);
 };
 
 export function buildPrompt(kind: ArtifactKind, input: Record<string, unknown>): PromptSpec {
