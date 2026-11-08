@@ -186,7 +186,7 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
       </div>
 
       {/* Add more cards from the same material */}
-      <div className="cds--tile flex flex-wrap items-center justify-between gap-3">
+      <div className="cds--tile flex flex-wrap items-center justify-between gap-3" style={{ padding: "8px 12px" }}>
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--cds-text-helper)]">
             Weitere Karten
@@ -228,26 +228,23 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
       {/* Training and repeat passes */}
       {phase !== "stats" && card && (
         <>
-          <div className="flex items-center justify-between text-[11px] font-mono text-[var(--cds-text-helper)]">
-            <span>
-              {phase === "repeat" ? "Wiederholung der offenen Karten" : "Durchgang"}
+          <div className="flex items-center gap-3 text-[11px] font-mono text-[var(--cds-text-helper)]">
+            <span className="whitespace-nowrap">
+              {phase === "repeat" ? "Wiederholung" : "Durchgang"} {index + 1} / {queue.length}
             </span>
-            <span>
-              {index + 1} / {queue.length}
-            </span>
+            <div className="h-1 flex-1 bg-[var(--cds-layer-02)] overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${((index + (flipped ? 0.5 : 0)) / queue.length) * 100}%` }}
+                transition={{ duration: 0.2 }}
+                className={`h-full ${phase === "repeat" ? "bg-[#f1c21b]" : "bg-[#0f62fe]"}`}
+              />
+            </div>
           </div>
 
-          <div className="h-1 w-full bg-[var(--cds-layer-02)] overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${((index + (flipped ? 0.5 : 0)) / queue.length) * 100}%` }}
-              transition={{ duration: 0.2 }}
-              className={`h-full ${phase === "repeat" ? "bg-[#f1c21b]" : "bg-[#0f62fe]"}`}
-            />
-          </div>
-
-          {/* The card: one face visible, the other turned away. */}
-          <div className="fc-scene h-80 w-full">
+          {/* The card: one face visible, the other turned away. The height follows the
+              viewport so the card and both marks stay on one screen. */}
+          <div className="fc-scene w-full" style={{ height: "clamp(13rem, 34vh, 19rem)" }}>
             <div
               className="fc-card cursor-pointer select-none"
               onClick={() => setFlipped((v) => !v)}
@@ -327,11 +324,6 @@ export default function FlashcardsView({ package: pkg, onBack }: FlashcardsViewP
             </button>
           </div>
 
-          {!flipped && (
-            <p className="text-[11px] text-center text-[var(--cds-text-helper)]">
-              Erst umdrehen, dann bewerten.
-            </p>
-          )}
         </>
       )}
 
