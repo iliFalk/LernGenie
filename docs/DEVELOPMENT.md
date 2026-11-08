@@ -34,7 +34,7 @@ llm.ts                Provider-Schicht für Gemini, OpenRouter, CommandCode und 
 | `POST /api/ai/topic` | Das Thema zu Material bestimmen |
 | `GET/POST/DELETE /api/packages[/:id]` | Lernpakete lesen, anlegen und löschen. `PUT /api/packages/:id` speichert `quiz_notes`, die Wünsche zu den Fragen. Der Server verwirft dabei beide Quiz-Ebenen, damit der nächste Start neu erzeugt. |
 | `GET/POST /api/materials` | Materialien zu einem Paket lesen und anlegen. `PUT /api/materials/:id` speichert einen korrigierten `content_text` und verwirft Quiz und Karteikarten des Pakets. |
-| `GET /api/packages/:id/{quiz,flashcards}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 15). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. Die ersten 10 Fragen fordert das Upload-Fenster direkt nach dem Speichern an. |
+| `GET /api/packages/:id/{quiz,flashcards}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 15). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. Die ersten 10 Fragen fordert das Upload-Fenster direkt nach dem Speichern an. Bei den Karteikarten hängt `?more=N` `N` neue Karten an die gespeicherten (5 bis 15). Der Prompt nennt die vorhandenen Vorderseiten, und `mergeFlashcards` verwirft eine doppelte Vorderseite. |
 | `GET/POST /api/results[/:packageId]` | Ergebnisse lesen und schreiben |
 
 Der Nutzerkontext kommt über den Header `x-user-id`. In Telegram liefert die Mini-App die
@@ -120,6 +120,25 @@ Ein Paket trägt zwei Felder, die den Prompt ändern:
 - Beim Speichern verwirft der Server die gespeicherten Sätze. Der nächste Start erzeugt neu.
 - Ein Wunsch ist höchstens 600 Zeichen lang (`MAX_QUIZ_NOTES`).
 - Ein neuer Quelltext verwirft Quiz und Karteikarten, denn beide lesen dasselbe Material.
+
+## Karteikarten-Runde (2026-11-08)
+
+Eine Runde hat drei Phasen: `train` (alle Karten), `repeat` (nur die Karten ohne Häkchen) und
+`stats` (Ergebnis).
+
+- Eine Karte ist eine echte Karte: Vorderseite trägt die Frage, Rückseite die Antwort. Der Umschlag
+  braucht `perspective`, `transform-style: preserve-3d` und `backface-visibility: hidden`. Die
+  Tailwind-Namen aus v3 (`perspective-1000`, `preserve-3d`) fehlen im v4-Build, deshalb stand die
+  Rückseite gespiegelt über der Vorderseite. `index.css` trägt die Regeln unter `.fc-scene`,
+  `.fc-card` und `.fc-face`; die Komponente animiert nur `rotateY`.
+- Zwei Tasten unter der Karte: „−“ (kenne ich nicht) und „+“ (kenne ich). Sie sind erst nach dem
+  Umdrehen aktiv, damit die Antwort vor der Bewertung sichtbar war.
+- „−“ sammelt die Karte für den Wiederholungs-Durchgang. Der startet nach der letzten Karte und
+  läuft nur über diese Karten.
+- Nach dem letzten Durchgang zeigt `stats` die Zahlen (gekonnt, nicht gekonnt, Quote in Prozent) und
+  die Liste der offenen Karten mit Antwort.
+- „Weitere Karten“ fügt 5, 10 oder 15 Karten aus demselben Material hinzu. Die Runde läuft weiter,
+  die gespeicherte Reihenfolge bleibt, neue Karten stehen am Ende.
 
 ## Lokal starten
 

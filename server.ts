@@ -9,6 +9,7 @@ import { generateArtifact } from "./src/ai/gateway";
 import { subjectClassificationPrompt, MAX_QUIZ_NOTES } from "./src/ai/prompts";
 import { ensureCacheSchema, readCachedArtifact, writeCachedArtifact, clearCachedArtifact, clearCachedQuiz } from "./src/ai/store";
 import { clampQuestionCount, type QuizQuestion } from "./src/contracts/quiz";
+import { clampFlashcardCount, mergeFlashcards, DEFAULT_CARDS, type Flashcard } from "./src/contracts/flashcards";
 import type { TextArtifact } from "./src/contracts/text";
 
 // Load environment variables
@@ -133,9 +134,9 @@ async function startServer() {
   };
 
   // The card prompt asks for ten cards. A deviation goes to the log instead of staying invisible.
-  const reportCardCount = (cards: unknown) => {
+  const reportCardCount = (cards: unknown, expected = 10) => {
     const count = Array.isArray(cards) ? cards.length : 0;
-    if (count !== 10) console.log(`[cards] ${count} Karten statt 10`);
+    if (count !== expected) console.log(`[cards] ${count} Karten statt ${expected}`);
   };
 
   const getOrClassifySubject = async (packageId: string, name: string, req: express.Request): Promise<string> => {
@@ -405,10 +406,11 @@ async function startServer() {
       if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert", code: "FORBIDDEN" });
 
       const regenerate = req.query.regenerate === "true";
-      if (!regenerate) {
-        const cached = readCachedArtifact(db, req.params.id, "flashcards");
-        if (cached) return res.json(cached);
-      }
+      // `more=N` appends N new cards to the stored set. Without `more` and without
+      // `regenerate` the stored set is served as it is.
+      const more = clampFlashcardCount(Number(req.query.more));
+      const existing = readCachedArtifact(db, req.params.id, "flashcards") ?? [];
+      if (!regenerate && more === 0 && existing.length > 0) return res.json(existing);
 
       // Generate since not cached (or a stale version) or force regenerate
       const materials = db.prepare("SELECT content_text FROM materials WHERE package_id = ?").all(req.params.id) as { content_text: string }[];
@@ -417,12 +419,20 @@ async function startServer() {
         return res.status(400).json({ error: "Dieses Lernpaket enthält keine Lernmaterialien.", code: "NO_MATERIALS" });
       }
 
-      const result = await generateArtifact("flashcards", { content, grade: pkg.grade ?? 0 }, getAIConfig(req));
+      // An append keeps the stored cards and asks the model for other fronts.
+      const exclude = regenerate ? [] : existing.map((card) => card.front);
+      const result = await generateArtifact<Flashcard[]>("flashcards", {
+        content,
+        grade: pkg.grade ?? 0,
+        count: more > 0 ? more : DEFAULT_CARDS,
+        exclude,
+      }, getAIConfig(req));
       if (!result.ok) return aiFailure(res, result);
-      reportCardCount(result.value);
+      reportCardCount(result.value, more > 0 ? more : DEFAULT_CARDS);
 
-      writeCachedArtifact(db, req.params.id, "flashcards", result.value);
-      res.json(result.value);
+      const value = regenerate || more === 0 ? result.value : mergeFlashcards(existing, result.value);
+      writeCachedArtifact(db, req.params.id, "flashcards", value);
+      res.json(value);
     } catch (error: any) {
       res.status(500).json({ error: error?.message || String(error), code: "INTERNAL" });
     }

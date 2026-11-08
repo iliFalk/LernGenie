@@ -6,6 +6,7 @@
  */
 
 import { clampQuestionCount, MAX_QUESTIONS } from "../contracts/quiz";
+import { clampFlashcardCount, DEFAULT_CARDS } from "../contracts/flashcards";
 
 export type ArtifactKind = "quiz" | "flashcards" | "analysis" | "text";
 
@@ -271,11 +272,15 @@ ${OUTPUT_CONTRACT.quiz}
 `;
 };
 
-const flashcardsPrompt = (content: string, grade: number): string => {
+const flashcardsPrompt = (content: string, grade: number, count = 10, exclude: string[] = []): string => {
   const style = gradeStyle(grade);
   return `
-Erstelle 10 Karteikarten aus dem Material für Klasse ${grade}.
-
+Erstelle ${count} Karteikarten aus dem Material für Klasse ${grade}.
+${exclude.length === 0 ? "" : `
+Diese Vorderseiten gibt es schon. Frage andere Stellen des Materials und andere Aspekte — keine inhaltliche Wiederholung:
+${exclude.map((front) => `- ${front}`).join("\n")}
+${count} Karten kommen dazu.
+`}
 SPRACHE
 - Style: ~80 % of the way to ASD-STE100: one thought per sentence; a verb over an abstract noun;
   active over passive; three or more items go vertical; cut, never decorate.
@@ -373,7 +378,16 @@ export function buildPrompt(kind: ArtifactKind, input: Record<string, unknown>):
       };
     }
     case "flashcards":
-      return { prompt: flashcardsPrompt(String(input.content ?? ""), Number(input.grade) || 0), isJson: true, useFlashModel: true };
+      return {
+        prompt: flashcardsPrompt(
+          String(input.content ?? ""),
+          Number(input.grade) || 0,
+          clampFlashcardCount(Number(input.count) || DEFAULT_CARDS),
+          Array.isArray(input.exclude) ? input.exclude.map(String).filter(Boolean) : [],
+        ),
+        isJson: true,
+        useFlashModel: true,
+      };
     case "analysis":
       return { prompt: analysisPrompt(JSON.stringify(input.history ?? []), Number(input.grade) || 0), isJson: true, useFlashModel: true };
     case "text":

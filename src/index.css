@@ -757,3 +757,32 @@ textarea:focus {
   border-top: 1px solid var(--cds-border-subtle-01);
   margin: 1.5rem 0;
 }
+
+/* ==========================================================================
+   FLASHCARD FLIP
+   The Tailwind v3 names (perspective-1000, preserve-3d, rotate-y-180) do not
+   exist in the v4 build, so both faces painted at once and the back side showed
+   its text mirrored. These rules carry the 3-D part; the component animates
+   only rotateY on .fc-card.
+   ========================================================================== */
+.fc-scene {
+  perspective: 1400px;
+}
+
+.fc-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.fc-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.fc-face--back {
+  transform: rotateY(180deg);
+}

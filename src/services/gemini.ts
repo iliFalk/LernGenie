@@ -84,8 +84,16 @@ export async function generateFlashcards(content: string, grade = 0): Promise<{ 
   return await handleResponse(response);
 }
 
-export async function getCachedFlashcards(packageId: string, regenerate: boolean = false): Promise<{ front: string; back: string }[]> {
-  const response = await authFetch(`/api/packages/${packageId}/flashcards${regenerate ? "?regenerate=true" : ""}`);
+/**
+ * Reads the card set. `more` appends that many new cards to the stored set and returns the merged
+ * list; `regenerate` throws the stored set away.
+ */
+export async function getCachedFlashcards(packageId: string, regenerate: boolean = false, more?: number): Promise<{ front: string; back: string }[]> {
+  const params = new URLSearchParams();
+  if (regenerate) params.set("regenerate", "true");
+  if (more) params.set("more", String(more));
+  const query = params.toString();
+  const response = await authFetch(`/api/packages/${packageId}/flashcards${query ? `?${query}` : ""}`);
   return await handleResponse(response);
 }
 
