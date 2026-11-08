@@ -64,7 +64,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
     <div className="max-w-3xl mx-auto space-y-4">
       
       {/* Carbon Quiz Header & Progress Bar */}
-      <div className="cds--tile space-y-2">
+      <div className="cds--tile space-y-2" style={{ padding: "12px 16px" }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button 
@@ -101,13 +101,16 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
         </div>
       </div>
 
-      {/* Carbon Question Tile */}
+      {/* Carbon Question Tile.
+          Vertical padding is inline: `.cds--tile` in index.css sits outside the Tailwind
+          layer, so a padding utility never wins against it. */}
       <motion.div 
         key={currentIndex}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.15 }}
         className="cds--tile space-y-4"
+        style={{ padding: "12px 16px" }}
       >
         {/* Topic Tag & Question */}
         <div>
@@ -121,13 +124,13 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
               </span>
             )}
           </div>
-          <h2 className="text-lg sm:text-xl font-normal leading-snug text-[var(--cds-text-primary)] mt-2">
+          <h2 className="text-lg sm:text-xl font-normal leading-snug text-[var(--cds-text-primary)] mt-1">
             {currentQuestion.text}
           </h2>
         </div>
 
         {/* Options List */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           {currentQuestion.options.map((option, i) => {
             let borderClass = "border-[var(--cds-border-subtle-01)]";
             let bgClass = "bg-[var(--cds-layer-01)] hover:bg-[var(--cds-layer-02)]";
@@ -168,7 +171,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
                   <span className="flex-1">
                     {option}
                     {isAnswered && currentQuestion.optionRationales?.[i] && (
-                      <span className="block text-[11px] font-normal text-[var(--cds-text-helper)] mt-1 leading-snug">
+                      <span className="block text-[11px] font-normal text-[var(--cds-text-helper)] mt-0.5 leading-snug">
                         {currentQuestion.optionRationales[i]}
                       </span>
                     )}
@@ -199,7 +202,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
           )}
 
           {showHint && !isAnswered && (
-            <div className="cds--inline-notification cds--inline-notification--warning flex items-start gap-3 text-xs">
+            <div className="cds--inline-notification cds--inline-notification--warning flex items-start gap-3 text-xs" style={{ padding: "8px 12px" }}>
               <Idea size={18} className="text-[#f1c21b] shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold block mb-0.5">Hinweis:</span>
@@ -213,7 +216,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
               selectedOption === currentQuestion.correctIndex 
                 ? "cds--inline-notification--success" 
                 : "cds--inline-notification--error"
-            } flex items-start gap-3 text-xs`}>
+            } flex items-start gap-3 text-xs`} style={{ padding: "8px 12px" }}>
               {selectedOption === currentQuestion.correctIndex ? (
                 <Checkmark size={18} className="text-[#24a148] shrink-0 mt-0.5" />
               ) : (
