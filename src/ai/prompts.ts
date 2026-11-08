@@ -266,7 +266,7 @@ SPRACHE
 
 Prinzip "Active Recall": Die Vorderseite fragt gezielt, die Rückseite erklärt knapp.
 
-Ausgabe-Vertrag — halte ihn exakt ein:
+Antworte mit reinem JSON und ohne Text davor oder danach. Halte den Ausgabe-Vertrag exakt ein:
 ${OUTPUT_CONTRACT.flashcards}
 
 Material:
@@ -290,7 +290,7 @@ ${history}
 
 Der Bericht benennt konkrete Stärken (strengths), spezifische Lernbereiche (growthAreas) und eine statistische Auswertung pro Thema (topicPerformance).
 
-Ausgabe-Vertrag — halte ihn exakt ein:
+Antworte mit reinem JSON und ohne Text davor oder danach. Halte den Ausgabe-Vertrag exakt ein:
 ${OUTPUT_CONTRACT.analysis}
 `;
 

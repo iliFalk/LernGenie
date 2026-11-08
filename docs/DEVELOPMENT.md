@@ -147,7 +147,10 @@ Leitfaden. So muss dasselbe Material nicht erneut durchs Modell. Sicherung: Kopi
 - OpenCode Go verlangt zwei Kopfzeilen. Ohne `User-Agent` antwortet der CDN mit HTTP 403
   (Fehlercode 1010). Ohne `x-opencode-session` antwortet das Gateway mit HTTP 400 `MissingSessionID`.
   Beide Kopfzeilen setzt `llm.ts` in der Route `opencode-go`. `response_format: json_object` nimmt
-  das Gateway an.
+  das Gateway an. Ein Teil der vorgeschalteten Upstreams lehnt den Aufruf aber mit HTTP 400
+  `Prompt must contain the word 'json'` ab, wenn der Prompt das Wort JSON nicht nennt. Die anderen
+  Upstreams nehmen denselben Aufruf an. Deshalb nennt jeder JSON-Prompt das Wort JSON.
+  `test/prompt-json.test.ts` prüft diese Regel.
 - Ein bezahltes Modell braucht beim Anbieter ein Kredit-Polster. Ohne `max_tokens` reserviert
   OpenRouter das volle Ausgabefenster des Modells (bis 131072 Token) und lehnt den Aufruf mit
   HTTP 402 ab (`This request requires more credits, or fewer max_tokens`). Jeder Aufruf trägt

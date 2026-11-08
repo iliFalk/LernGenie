@@ -68,7 +68,9 @@ Aufrufe ab, deshalb gibt es kein Guthaben pro Aufruf. Die Modell-ID trägt kein
 Organisations-Präfix (`deepseek-v4.1-flash`), der Key beginnt mit `oc_sk_`. Der Server sendet zwei
 Kopfzeilen, die das Gateway verlangt: `User-Agent: opencode/1.18.0`, sonst antwortet der CDN mit
 HTTP 403 (Fehlercode 1010), und `x-opencode-session: ses_…`, sonst antwortet das Gateway mit HTTP 400
-`MissingSessionID`. `response_format: json_object` nimmt das Gateway an.
+`MissingSessionID`. `response_format: json_object` nimmt das Gateway an. Ein Teil der
+vorgeschalteten Upstreams lehnt den Aufruf aber mit HTTP 400 `Prompt must contain the word 'json'` ab,
+wenn der Prompt das Wort JSON nicht nennt. Deshalb nennt jeder JSON-Prompt das Wort JSON.
 
 Bis 2026-11-04 lief der Dienst auf CommandCode (`https://api.commandcode.ai/provider/v1`, Modell
 `deepseek/deepseek-v4.1-flash`). Diese Route bleibt als Alternative: `AI_PROVIDER=commandcode` plus
