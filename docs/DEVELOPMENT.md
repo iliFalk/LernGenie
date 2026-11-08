@@ -32,8 +32,8 @@ llm.ts                Provider-Schicht für Gemini, OpenRouter, CommandCode und 
 | `POST /api/ai/flashcards` | Karteikarten erzeugen |
 | `POST /api/ai/analyze` | Ein Ergebnis analysieren |
 | `POST /api/ai/topic` | Das Thema zu Material bestimmen |
-| `GET/POST/DELETE /api/packages[/:id]` | Lernpakete lesen, anlegen und löschen |
-| `GET/POST /api/materials` | Materialien zu einem Paket lesen und anlegen |
+| `GET/POST/DELETE /api/packages[/:id]` | Lernpakete lesen, anlegen und löschen. `PUT /api/packages/:id` speichert `quiz_notes`, die Wünsche zu den Fragen. Der Server verwirft dabei beide Quiz-Ebenen, damit der nächste Start neu erzeugt. |
+| `GET/POST /api/materials` | Materialien zu einem Paket lesen und anlegen. `PUT /api/materials/:id` speichert einen korrigierten `content_text` und verwirft Quiz und Karteikarten des Pakets. |
 | `GET /api/packages/:id/{quiz,flashcards}` | Gecachte Inhalte lesen (`?regenerate=true` erneuert sie). Beim Quiz setzt `?count=N` die Länge (5 bis 15). Das gespeicherte Quiz wird nur geliefert, wenn seine Länge `N` gleich ist. Beim Erneuern gehen die bisherigen Fragen als Ausschlussliste in den Prompt. Die ersten 10 Fragen fordert das Upload-Fenster direkt nach dem Speichern an. |
 | `GET/POST /api/results[/:packageId]` | Ergebnisse lesen und schreiben |
 
@@ -105,6 +105,21 @@ Bedingung `explanation <= text` fest.
 
 Messung vorher, Wiener Sachtextformel über den ganzen Satz: Ethik Klasse 6 — Stämme 9.7, Optionen
 11.1, Erklärungen 14.4; Mathe Klasse 6 — 6.9 / 6.8 / 7.4. Ziel ist ±1 Klassenstufe.
+
+## Wünsche zu den Fragen (2026-11-08)
+
+Ein Paket trägt zwei Felder, die den Prompt ändern:
+
+| Feld | Wo | Wirkung |
+|---|---|---|
+| `materials.content_text` | Materialliste, Dokument öffnen, „Bearbeiten“ | der Quelltext, aus dem Fragen und Karteikarten entstehen |
+| `packages.quiz_notes` | Kachel „Fragen anpassen“ | Akzente und Textstellen für die Fragen |
+
+- Ein Wunsch steht im Prompt nach den Regeln und vor dem Ausgabe-Vertrag.
+- Ein Wunsch wiederholt keine Grenze. Wortgrenzen, vier Optionen, eine richtige Option und die Aufgabentypen bleiben verbindlich.
+- Beim Speichern verwirft der Server die gespeicherten Sätze. Der nächste Start erzeugt neu.
+- Ein Wunsch ist höchstens 600 Zeichen lang (`MAX_QUIZ_NOTES`).
+- Ein neuer Quelltext verwirft Quiz und Karteikarten, denn beide lesen dasselbe Material.
 
 ## Lokal starten
 

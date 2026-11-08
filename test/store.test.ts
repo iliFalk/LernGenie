@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 
-import { ensureCacheSchema, readCachedArtifact, writeCachedArtifact } from "../src/ai/store";
+import { ensureCacheSchema, readCachedArtifact, writeCachedArtifact, clearCachedArtifact, clearCachedQuiz } from "../src/ai/store";
 import { QUIZ_SCHEMA_VERSION } from "../src/contracts/quiz";
 
 const setup = (): Database.Database => {
@@ -80,4 +80,24 @@ test("both quiz levels keep their own cached set", () => {
   writeCachedArtifact(db, "p1", "quiz", hard, "hard");
   assert.deepEqual(readCachedArtifact(db, "p1", "quiz", { level: "standard" }), goodQuiz);
   assert.deepEqual(readCachedArtifact(db, "p1", "quiz", { level: "hard" }), hard);
+});
+
+test("clearing a quiz drops both levels and keeps flashcards", () => {
+  const db = setup();
+  writeCachedArtifact(db, "p1", "quiz", goodQuiz, "standard");
+  writeCachedArtifact(db, "p1", "quiz", goodQuiz, "hard");
+  writeCachedArtifact(db, "p1", "flashcards", [{ front: "f", back: "b" }]);
+  clearCachedQuiz(db, "p1");
+  assert.equal(readCachedArtifact(db, "p1", "quiz", { level: "standard" }), null);
+  assert.equal(readCachedArtifact(db, "p1", "quiz", { level: "hard" }), null);
+  assert.notEqual(readCachedArtifact(db, "p1", "flashcards"), null);
+});
+
+test("clearing one artifact leaves the other intact", () => {
+  const db = setup();
+  writeCachedArtifact(db, "p1", "quiz", goodQuiz);
+  writeCachedArtifact(db, "p1", "flashcards", [{ front: "f", back: "b" }]);
+  clearCachedArtifact(db, "p1", "flashcards");
+  assert.notEqual(readCachedArtifact(db, "p1", "quiz"), null);
+  assert.equal(readCachedArtifact(db, "p1", "flashcards"), null);
 });

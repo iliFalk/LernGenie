@@ -410,6 +410,10 @@ export default function App() {
                   onBack={() => setView("library")}
                   onStartQuiz={(pkg, regenerate) => handleStartQuiz(pkg, regenerate)}
                   onShowFlashcards={handleShowFlashcards}
+                  onPackageUpdated={(updated) => {
+                    setPackages((list) => list.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+                    setSelectedPackage(updated);
+                  }}
                   onViewResultDetails={(result) => {
                     setQuizResults(result);
                     setView("results");

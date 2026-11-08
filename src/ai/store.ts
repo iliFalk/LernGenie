@@ -114,3 +114,19 @@ export function writeCachedArtifact(db: CacheDatabase, packageId: string, kind: 
     packageId,
   );
 }
+
+/**
+ * Drops one cached artifact. The rows stay, the columns go null, so the next request
+ * regenerates. Called when the source changes — an edited material or a new wish about
+ * the questions makes every stored set stale, and a stale set would be served as a hit.
+ */
+export function clearCachedArtifact(db: CacheDatabase, packageId: string, kind: CacheKind, level?: string): void {
+  const spec = specFor(kind, level);
+  db.prepare(`UPDATE package_cache SET ${spec.column} = NULL, ${spec.versionColumn} = NULL WHERE package_id = ?`).run(packageId);
+}
+
+/** Drops both quiz levels. A regeneration for one length serves the other level too. */
+export function clearCachedQuiz(db: CacheDatabase, packageId: string): void {
+  clearCachedArtifact(db, packageId, "quiz", "standard");
+  clearCachedArtifact(db, packageId, "quiz", "hard");
+}

@@ -13,10 +13,12 @@ import {
   Copy, 
   Checkmark,
   Calendar,
-  Catalog
+  Catalog,
+  Edit
 } from "@carbon/icons-react";
 import { StudyPackage, QuizResult, Material } from "../types";
 import { authFetch } from "../services/auth";
+import { updateQuizNotes, updateMaterialContent } from "../services/gemini";
 import { copyText } from "../services/clipboard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
@@ -32,10 +34,15 @@ interface PackageDetailViewProps {
   onStartQuiz: (pkg: StudyPackage, regenerate?: boolean) => void;
   onShowFlashcards: () => void;
   onViewResultDetails: (result: QuizResult) => void;
+  /** Keeps the library list and the open package in step after an edit. */
+  onPackageUpdated: (pkg: StudyPackage) => void;
 }
 
 /** Preset lengths offered next to the quiz buttons. The server clamps onto 5-15. */
 const QUESTION_PRESETS = [5, 10, 15];
+
+/** Mirrors MAX_QUIZ_NOTES in src/ai/prompts.ts; the server cuts at the same number. */
+const MAX_NOTES = 600;
 
 export default function PackageDetailView({ 
   pkg, 
@@ -46,13 +53,61 @@ export default function PackageDetailView({
   onBack, 
   onStartQuiz, 
   onShowFlashcards, 
-  onViewResultDetails
+  onViewResultDetails,
+  onPackageUpdated
 }: PackageDetailViewProps) {
   const [results, setResults] = useState<QuizResult[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Wishes about the questions, and the edit state of the open material.
+  const [notes, setNotes] = useState(pkg.quiz_notes ?? "");
+  const [savedNotes, setSavedNotes] = useState(pkg.quiz_notes ?? "");
+  const [notesState, setNotesState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [notesError, setNotesError] = useState("");
+  const [editingMaterial, setEditingMaterial] = useState(false);
+  const [materialDraft, setMaterialDraft] = useState("");
+  const [materialState, setMaterialState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [materialError, setMaterialError] = useState("");
+
+  useEffect(() => {
+    setNotes(pkg.quiz_notes ?? "");
+    setSavedNotes(pkg.quiz_notes ?? "");
+    setNotesState("idle");
+  }, [pkg.id, pkg.quiz_notes]);
+
+  async function handleSaveNotes() {
+    setNotesState("saving");
+    setNotesError("");
+    try {
+      const saved = await updateQuizNotes(pkg.id, notes);
+      setNotes(saved);
+      setSavedNotes(saved);
+      setNotesState("saved");
+      onPackageUpdated({ ...pkg, quiz_notes: saved });
+    } catch (err: any) {
+      setNotesState("error");
+      setNotesError(err?.message || "Speichern fehlgeschlagen");
+    }
+  }
+
+  async function handleSaveMaterial() {
+    if (!selectedMaterial) return;
+    setMaterialState("saving");
+    setMaterialError("");
+    try {
+      const saved = await updateMaterialContent(selectedMaterial.id, materialDraft);
+      setMaterials((list) => list.map((m) => (m.id === selectedMaterial.id ? { ...m, content_text: saved } : m)));
+      setSelectedMaterial((m) => (m ? { ...m, content_text: saved } : m));
+      setMaterialState("saved");
+      setEditingMaterial(false);
+    } catch (err: any) {
+      setMaterialState("error");
+      setMaterialError(err?.message || "Speichern fehlgeschlagen");
+    }
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -257,6 +312,9 @@ export default function PackageDetailView({
                     onClick={() => {
                       setSelectedMaterial(m);
                       setCopied(false);
+                      setEditingMaterial(false);
+                      setMaterialState("idle");
+                      setMaterialError("");
                     }}
                     className="py-3 px-2 flex items-center justify-between hover:bg-[var(--cds-layer-02)] cursor-pointer group transition-colors"
                   >
@@ -278,6 +336,59 @@ export default function PackageDetailView({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Wishes about the questions: the second half of "change the prompt". The source text
+              lives in the material dialog, this block steers which parts it asks about. */}
+          <div className="cds--tile space-y-3">
+            <h2 className="text-sm font-semibold tracking-wide uppercase text-[var(--cds-text-secondary)] border-b border-[var(--cds-border-subtle-01)] pb-2">
+              Fragen anpassen
+            </h2>
+
+            <div>
+              <label className="cds--label" htmlFor="input-quiz-notes">
+                Wünsche zu den Fragen
+              </label>
+              <textarea
+                id="input-quiz-notes"
+                value={notes}
+                onChange={(e) => {
+                  setNotes(e.target.value.slice(0, MAX_NOTES));
+                  setNotesState("idle");
+                }}
+                rows={4}
+                placeholder="Zum Beispiel: mehr Fragen zu den Jahreszeiten, weniger zu einzelnen Wörtern. Oder: frage nach Ursache und Folge."
+                className="w-full text-xs p-2 border border-[var(--cds-border-subtle-01)] bg-[var(--cds-field-01)] text-[var(--cds-text-primary)] resize-y leading-relaxed focus:outline-none focus:border-[#0f62fe]"
+              />
+              <p className="text-[11px] text-[var(--cds-text-helper)] mt-1 leading-tight">
+                {notes.length}/{MAX_NOTES} Zeichen. Die Wünsche setzen den Akzent und wählen die Textstellen.
+                Die Regeln bleiben: Wortgrenzen, vier Optionen, eine richtige Antwort, die Aufgabentypen.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                id="btn-save-quiz-notes"
+                onClick={handleSaveNotes}
+                disabled={notesState === "saving" || notes === savedNotes}
+                className="cds--btn cds--btn--primary justify-center text-xs disabled:opacity-40"
+              >
+                <span>{notesState === "saving" ? "Speichert…" : "Wünsche speichern"}</span>
+              </button>
+
+              {notesState === "saved" && (
+                <span className="text-[11px] font-mono text-[#24a148]">
+                  Gespeichert. Der nächste Start erzeugt neue Fragen.
+                </span>
+              )}
+              {notesState === "error" && (
+                <span className="text-[11px] text-[#da1e28]">{notesError}</span>
+              )}
+            </div>
+
+            <p className="text-[11px] text-[var(--cds-text-helper)] leading-tight border-t border-[var(--cds-border-subtle-01)] pt-2">
+              Den Quelltext selbst änderst du im Material oben: Dokument öffnen, „Bearbeiten“.
+            </p>
           </div>
         </div>
 
@@ -470,6 +581,27 @@ export default function PackageDetailView({
                 <div className="flex items-center">
                   <button 
                     onClick={() => {
+                      if (editingMaterial) {
+                        setEditingMaterial(false);
+                        return;
+                      }
+                      setMaterialDraft(selectedMaterial.content_text ?? "");
+                      setMaterialError("");
+                      setMaterialState("idle");
+                      setEditingMaterial(true);
+                    }}
+                    title={editingMaterial ? "Bearbeiten abbrechen" : "Text bearbeiten"}
+                    className={`w-10 h-10 flex items-center justify-center transition-colors ${
+                      editingMaterial
+                        ? "text-[#0f62fe] bg-[var(--cds-layer-01)]"
+                        : "text-[var(--cds-text-secondary)] hover:text-[var(--cds-text-primary)] hover:bg-[var(--cds-layer-01)]"
+                    }`}
+                  >
+                    <Edit size={18} />
+                  </button>
+
+                  <button 
+                    onClick={() => {
                       if (selectedMaterial.content_text) {
                         copyText(selectedMaterial.content_text);
                         setCopied(true);
@@ -494,38 +626,91 @@ export default function PackageDetailView({
 
               {/* Body */}
               <div className="p-6 overflow-y-auto max-h-[calc(85vh-120px)] bg-[var(--cds-layer-01)]">
-                <div className="markdown-body">
-                  {selectedMaterial.content_text ? (
-                    <MarkdownText>{selectedMaterial.content_text}</MarkdownText>
-                  ) : (
-                    <p className="text-sm text-[var(--cds-text-secondary)] italic text-center py-8">
-                      Kein Textinhalt verfügbar.
+                {editingMaterial ? (
+                  <div>
+                    <label className="cds--label" htmlFor="input-material-text">
+                      Quelltext
+                    </label>
+                    <textarea
+                      id="input-material-text"
+                      value={materialDraft}
+                      onChange={(e) => {
+                        setMaterialDraft(e.target.value);
+                        setMaterialState("idle");
+                      }}
+                      rows={18}
+                      spellCheck={false}
+                      className="w-full text-xs font-mono p-3 border border-[var(--cds-border-subtle-01)] bg-[var(--cds-field-01)] text-[var(--cds-text-primary)] resize-y leading-relaxed focus:outline-none focus:border-[#0f62fe]"
+                    />
+                    <p className="text-[11px] text-[var(--cds-text-helper)] mt-1 leading-tight">
+                      Nur der Text. Markdown bleibt erlaubt. Aus diesem Text entstehen Fragen und Karteikarten.
                     </p>
-                  )}
-                </div>
+                    {materialState === "error" && (
+                      <p className="text-[11px] text-[#da1e28] mt-1">{materialError}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="markdown-body">
+                    {selectedMaterial.content_text ? (
+                      <MarkdownText>{selectedMaterial.content_text}</MarkdownText>
+                    ) : (
+                      <p className="text-sm text-[var(--cds-text-secondary)] italic text-center py-8">
+                        Kein Textinhalt verfügbar.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
+              {materialState === "saved" && !editingMaterial && (
+                <div className="px-6 py-2 text-[11px] font-mono text-[#24a148] border-t border-[var(--cds-border-subtle-01)] bg-[var(--cds-layer-02)]">
+                  Gespeichert. Die gespeicherten Fragen und Karteikarten sind verworfen.
+                </div>
+              )}
+
               {/* Carbon 50/50 Footer */}
-              <div className="grid grid-cols-2 border-t border-[var(--cds-border-subtle-01)]">
-                <button 
-                  onClick={() => setSelectedMaterial(null)}
-                  className="cds--btn cds--btn--secondary justify-center text-xs h-12"
-                >
-                  Schließen
-                </button>
-                <button 
-                  onClick={() => {
-                    if (selectedMaterial.content_text) {
-                      copyText(selectedMaterial.content_text);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    }
-                  }}
-                  className="cds--btn cds--btn--primary justify-center text-xs h-12"
-                >
-                  {copied ? "Kopiert!" : "Inhalt kopieren"}
-                </button>
-              </div>
+              {editingMaterial ? (
+                <div className="grid grid-cols-2 border-t border-[var(--cds-border-subtle-01)]">
+                  <button
+                    onClick={() => {
+                      setEditingMaterial(false);
+                      setMaterialState("idle");
+                    }}
+                    className="cds--btn cds--btn--secondary justify-center text-xs h-12"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    id="btn-save-material"
+                    onClick={handleSaveMaterial}
+                    disabled={materialState === "saving" || !materialDraft.trim() || materialDraft === selectedMaterial.content_text}
+                    className="cds--btn cds--btn--primary justify-center text-xs h-12 disabled:opacity-40"
+                  >
+                    {materialState === "saving" ? "Speichert…" : "Speichern"}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 border-t border-[var(--cds-border-subtle-01)]">
+                  <button
+                    onClick={() => setSelectedMaterial(null)}
+                    className="cds--btn cds--btn--secondary justify-center text-xs h-12"
+                  >
+                    Schließen
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedMaterial.content_text) {
+                        copyText(selectedMaterial.content_text);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }
+                    }}
+                    className="cds--btn cds--btn--primary justify-center text-xs h-12"
+                  >
+                    {copied ? "Kopiert!" : "Inhalt kopieren"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

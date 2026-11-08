@@ -28,6 +28,28 @@ export async function generateQuiz(content: string, grade: number, count: number
   return await handleResponse(response);
 }
 
+/** Saves the wish about the questions. The server drops both cached sets, so the next start regenerates. */
+export async function updateQuizNotes(packageId: string, quizNotes: string): Promise<string> {
+  const response = await authFetch(`/api/packages/${packageId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ quiz_notes: quizNotes }),
+  });
+  const data = await handleResponse(response);
+  return data.quiz_notes ?? "";
+}
+
+/** Saves a corrected source text. Quiz and flashcards are invalidated on the server. */
+export async function updateMaterialContent(materialId: string, contentText: string): Promise<string> {
+  const response = await authFetch(`/api/materials/${materialId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content_text: contentText }),
+  });
+  const data = await handleResponse(response);
+  return data.content_text ?? contentText;
+}
+
 export async function getCachedQuiz(packageId: string, regenerate: boolean = false, count?: number, hard: boolean = false): Promise<Question[]> {
   const params = new URLSearchParams();
   if (regenerate) params.set("regenerate", "true");

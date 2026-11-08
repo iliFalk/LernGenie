@@ -6,8 +6,8 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { callLLM } from "./llm";
 import { generateArtifact } from "./src/ai/gateway";
-import { subjectClassificationPrompt } from "./src/ai/prompts";
-import { ensureCacheSchema, readCachedArtifact, writeCachedArtifact } from "./src/ai/store";
+import { subjectClassificationPrompt, MAX_QUIZ_NOTES } from "./src/ai/prompts";
+import { ensureCacheSchema, readCachedArtifact, writeCachedArtifact, clearCachedArtifact, clearCachedQuiz } from "./src/ai/store";
 import { clampQuestionCount, type QuizQuestion } from "./src/contracts/quiz";
 import type { TextArtifact } from "./src/contracts/text";
 
@@ -62,6 +62,13 @@ db.exec(`
 
 try {
   db.exec("ALTER TABLE packages ADD COLUMN subject TEXT;");
+} catch (e) {
+  // Column already exists or error which can be ignored
+}
+
+// The user's own wish about the questions. Empty or NULL means the prompt carries no wish block.
+try {
+  db.exec("ALTER TABLE packages ADD COLUMN quiz_notes TEXT;");
 } catch (e) {
   // Column already exists or error which can be ignored
 }
@@ -307,6 +314,23 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // The user edits the wish about the questions. The stored sets go stale at once, so the
+  // next quiz start regenerates instead of serving questions the wish no longer matches.
+  app.put("/api/packages/:id", (req, res) => {
+    const userId = getUserId(req);
+    const pkg = db.prepare("SELECT id FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId);
+    if (!pkg) return res.status(403).json({ error: "Unauthorized" });
+
+    const { quiz_notes } = req.body as { quiz_notes?: unknown };
+    if (typeof quiz_notes !== "string") {
+      return res.status(400).json({ error: "quiz_notes muss ein Text sein", code: "BAD_REQUEST" });
+    }
+
+    db.prepare("UPDATE packages SET quiz_notes = ? WHERE id = ?").run(quiz_notes.trim().slice(0, MAX_QUIZ_NOTES), req.params.id);
+    clearCachedQuiz(db, req.params.id);
+    res.json({ success: true, quiz_notes: quiz_notes.trim().slice(0, MAX_QUIZ_NOTES) });
+  });
+
   app.delete("/api/packages/:id", (req, res) => {
     const userId = getUserId(req);
     // Ensure user owns the package
@@ -331,7 +355,7 @@ async function startServer() {
     try {
       const userId = getUserId(req);
       // Verify ownership
-      const pkg = db.prepare("SELECT * FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId) as { grade: number } | undefined;
+      const pkg = db.prepare("SELECT * FROM packages WHERE id = ? AND user_id = ?").get(req.params.id, userId) as { grade: number; quiz_notes?: string | null } | undefined;
       if (!pkg) return res.status(403).json({ error: "Lernpaket nicht gefunden oder nicht autorisiert", code: "FORBIDDEN" });
 
       const regenerate = req.query.regenerate === "true";
@@ -361,7 +385,7 @@ async function startServer() {
 
       const result = await generateArtifact<QuizQuestion[]>(
         "quiz",
-        { content, grade: pkg.grade || 10, count, previous, hard },
+        { content, grade: pkg.grade || 10, count, previous, hard, notes: pkg.quiz_notes ?? "" },
         { ...getAIConfig(req), reasoningEffort: hard ? "low" : undefined },
       );
       if (!result.ok) return aiFailure(res, result);
@@ -413,6 +437,26 @@ async function startServer() {
 
     db.prepare("INSERT INTO materials (id, package_id, name, content_text, mime_type) VALUES (?, ?, ?, ?, ?)").run(id, package_id, name, content_text, mime_type);
     res.json({ success: true });
+  });
+
+  // The user corrects the source text. Quiz and flashcards both read the material, and a
+  // cached set built from the old text would be served as a hit — so both caches go.
+  app.put("/api/materials/:id", (req, res) => {
+    const userId = getUserId(req);
+    const material = db
+      .prepare("SELECT m.id, m.package_id FROM materials m JOIN packages p ON p.id = m.package_id WHERE m.id = ? AND p.user_id = ?")
+      .get(req.params.id, userId) as { id: string; package_id: string } | undefined;
+    if (!material) return res.status(403).json({ error: "Unauthorized" });
+
+    const { content_text } = req.body as { content_text?: unknown };
+    if (typeof content_text !== "string" || !content_text.trim()) {
+      return res.status(400).json({ error: "content_text muss ein Text sein", code: "BAD_REQUEST" });
+    }
+
+    db.prepare("UPDATE materials SET content_text = ? WHERE id = ?").run(content_text, material.id);
+    clearCachedQuiz(db, material.package_id);
+    clearCachedArtifact(db, material.package_id, "flashcards");
+    res.json({ success: true, content_text });
   });
 
   app.get("/api/results", async (req, res) => {

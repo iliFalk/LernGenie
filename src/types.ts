@@ -4,6 +4,8 @@ export interface StudyPackage {
   grade: number;
   created_at?: string;
   subject?: string;
+  /** The user's own wish about the questions. Empty means no wish block in the prompt. */
+  quiz_notes?: string | null;
 }
 
 export interface Material {

@@ -149,7 +149,28 @@ Diese Fragen wurden bereits gestellt. Prüfe andere Textstellen und andere Aspek
 ${previous.map((text) => `- ${text}`).join("\n")}
 `;
 
-const quizPrompt = (count: number, grade: number, content: string, previous: string[] = [], hard = false): string => {
+/** Upper bound for one wish block. A wish steers accents; it does not replace the material. */
+export const MAX_QUIZ_NOTES = 600;
+
+/**
+ * The user's own wish about the questions, as a prompt block.
+ *
+ * It follows the rules on purpose: a wish sets the accent and the part of the material to
+ * ask about, and the rules above it stay binding. The block therefore repeats no limit —
+ * it points at the rules instead, so a limit can never drift between two places.
+ */
+export const quizNotesBlock = (notes: string): string => {
+  const text = notes.trim().slice(0, MAX_QUIZ_NOTES);
+  if (!text) return "";
+  return `
+WÜNSCHE ZUM QUIZ
+${text}
+Die Wünsche setzen den Akzent und wählen die Textstellen. Die Regeln oben bleiben verbindlich:
+Wortgrenzen, genau vier Optionen, eine richtige Option, die Aufgabentypen.
+`;
+};
+
+const quizPrompt = (count: number, grade: number, content: string, previous: string[] = [], hard = false, notes = ""): string => {
   const modules = quizModules(count, grade, hard);
   const style = gradeStyle(grade);
   // A compact instruction matters for the runtime, not for style: measured with the same
@@ -195,7 +216,7 @@ ${quizRules()}
 ${hard ? `
 ${quizHardRules()}
 ` : ""}
-${previousBlock(previous)}
+${quizNotesBlock(notes)}${previousBlock(previous)}
 AUSGABE — nur JSON:
 ${OUTPUT_CONTRACT.quiz}
 Genau eine Option trägt "isCorrect": true.
@@ -346,7 +367,7 @@ export function buildPrompt(kind: ArtifactKind, input: Record<string, unknown>):
       // running into the output limit. Above the ceiling the surplus would too.
       const asked = previous.length > 0 ? Math.min(target + questionSurplus(target), MAX_QUESTIONS) : target;
       return {
-        prompt: quizPrompt(asked, Number(input.grade) || 0, String(input.content ?? ""), previous, Boolean(input.hard)),
+        prompt: quizPrompt(asked, Number(input.grade) || 0, String(input.content ?? ""), previous, Boolean(input.hard), String(input.notes ?? "")),
         isJson: true,
         targetCount: target,
       };
