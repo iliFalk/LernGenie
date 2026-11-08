@@ -61,10 +61,10 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-4">
       
       {/* Carbon Quiz Header & Progress Bar */}
-      <div className="cds--tile p-4 space-y-3">
+      <div className="cds--tile space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button 
@@ -107,7 +107,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.15 }}
-        className="cds--tile p-6 sm:p-8 space-y-6"
+        className="cds--tile space-y-4"
       >
         {/* Topic Tag & Question */}
         <div>
@@ -127,7 +127,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
         </div>
 
         {/* Options List */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {currentQuestion.options.map((option, i) => {
             let borderClass = "border-[var(--cds-border-subtle-01)]";
             let bgClass = "bg-[var(--cds-layer-01)] hover:bg-[var(--cds-layer-02)]";
@@ -159,7 +159,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
                 key={i}
                 onClick={() => handleOptionSelect(i)}
                 disabled={isAnswered}
-                className={`w-full p-4 text-left text-sm transition-colors flex items-center justify-between border ${borderClass} ${bgClass} ${textClass} min-h-[48px]`}
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors flex items-center justify-between border ${borderClass} ${bgClass} ${textClass} min-h-[48px]`}
               >
                 <div className="flex items-start gap-3 flex-1">
                   <span className={`w-6 h-6 shrink-0 text-xs font-mono font-bold flex items-center justify-center ${indicatorBg}`}>
@@ -187,7 +187,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
         </div>
 
         {/* Hint / Explanation Area */}
-        <div className="space-y-3 pt-2">
+        <div className="space-y-2 pt-1">
           {!isAnswered && !showHint && (
             <button
               onClick={() => setShowHint(true)}
@@ -232,7 +232,7 @@ export default function QuizView({ questions, onComplete, onCancel }: QuizViewPr
         </div>
 
         {/* Action Button */}
-        <div className="pt-4 border-t border-[var(--cds-border-subtle-01)]">
+        <div className="pt-3 border-t border-[var(--cds-border-subtle-01)]">
           {!isAnswered ? (
             <button
               disabled={selectedOption === null}
